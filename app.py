@@ -34,22 +34,30 @@ SCOPES = [
 
 @st.cache_resource
 def connect_sheet():
+    try:
+        creds_dict = st.secrets["google"]
 
-    creds_dict = st.secrets["google"]
+        creds = Credentials.from_service_account_info(
+            creds_dict,
+            scopes=SCOPES
+        )
 
-    creds = Credentials.from_service_account_info(
-        creds_dict,
-        scopes=SCOPES
-    )
+        client = gspread.authorize(creds)
 
-    client = gspread.authorize(creds)
+        sheet = client.open_by_key(SHEET_ID)
 
-    sheet = client.open_by_key(SHEET_ID)
+        worksheet = sheet.sheet1
 
-    worksheet = sheet.sheet1
+        return worksheet
 
-    return worksheet
-
+    except Exception as e:
+        st.error("❌ Erro ao conectar com Google Sheets")
+        st.write("Verifique:")
+        st.write("- Se o SHEET_ID está correto")
+        st.write("- Se a planilha foi compartilhada com a conta de serviço")
+        st.write("- Se a API do Google Sheets está ativada")
+        st.write(f"Erro técnico: {e}")
+        st.stop()
 
 # ---------------------------------------------------
 # CARREGAR DADOS
@@ -57,7 +65,6 @@ def connect_sheet():
 
 @st.cache_data(ttl=60)
 def load_data():
-
     worksheet = connect_sheet()
 
     data = worksheet.get_all_records()
@@ -66,7 +73,6 @@ def load_data():
 
     return df
 
-
 df = load_data()
 
 # ---------------------------------------------------
@@ -74,21 +80,17 @@ df = load_data()
 # ---------------------------------------------------
 
 if "Valor" in df.columns:
-
     df["Valor"] = (
         df["Valor"]
         .astype(str)
         .str.replace("R$", "", regex=False)
         .str.replace(",", ".", regex=False)
     )
-
     df["Valor"] = pd.to_numeric(df["Valor"], errors="coerce")
-
 else:
     df["Valor"] = 0
 
 if "Data Publicação" in df.columns:
-
     df["Data Publicação"] = pd.to_datetime(
         df["Data Publicação"],
         dayfirst=True,
@@ -102,25 +104,19 @@ if "Data Publicação" in df.columns:
 col1, col2, col3 = st.columns(3)
 
 with col1:
-
     semana = st.selectbox(
         "Semana",
         ["Todas"] + sorted(df["Semana"].dropna().unique().tolist())
     )
 
 with col2:
-
     empresa = st.selectbox(
         "Empresa",
         ["Todas"] + sorted(df["Empresa"].dropna().unique().tolist())
     )
 
 with col3:
-
-    data = st.date_input(
-        "Data publicação",
-        value=None
-    )
+    data = st.date_input("Data publicação", value=None)
 
 df_filtrado = df.copy()
 
@@ -138,29 +134,21 @@ if data:
 # ---------------------------------------------------
 
 total_posts = len(df_filtrado)
-
 total_valor = df_filtrado["Valor"].sum()
 
 pagos = df_filtrado[df_filtrado["Status Pagamento"] == "Pago"]
-
 a_pagar = df_filtrado[df_filtrado["Status Pagamento"] == "A Pagar"]
 
 valor_pago = pagos["Valor"].sum()
-
 valor_pendente = a_pagar["Valor"].sum()
 
 c1, c2, c3, c4, c5, c6 = st.columns(6)
 
 c1.metric("Posts", total_posts)
-
 c2.metric("Valor total", f"R$ {total_valor:,.2f}")
-
 c3.metric("Pagos", len(pagos))
-
 c4.metric("A pagar", len(a_pagar))
-
 c5.metric("Valor pago", f"R$ {valor_pago:,.2f}")
-
 c6.metric("Valor pendente", f"R$ {valor_pendente:,.2f}")
 
 st.divider()
@@ -172,13 +160,7 @@ st.divider()
 col1, col2 = st.columns(2)
 
 with col1:
-
-    graf_empresa = (
-        df_filtrado
-        .groupby("Empresa")
-        .size()
-        .reset_index(name="Total")
-    )
+    graf_empresa = df_filtrado.groupby("Empresa").size().reset_index(name="Total")
 
     fig = px.bar(
         graf_empresa,
@@ -189,15 +171,8 @@ with col1:
 
     st.plotly_chart(fig, use_container_width=True)
 
-
 with col2:
-
-    graf_semana = (
-        df_filtrado
-        .groupby("Semana")
-        .size()
-        .reset_index(name="Total")
-    )
+    graf_semana = df_filtrado.groupby("Semana").size().reset_index(name="Total")
 
     fig = px.pie(
         graf_semana,
@@ -209,7 +184,7 @@ with col2:
     st.plotly_chart(fig, use_container_width=True)
 
 # ---------------------------------------------------
-# TABELA + ALTERAÇÃO STATUS
+# ATUALIZAR STATUS
 # ---------------------------------------------------
 
 st.subheader("📋 Atualizar status pagamento")
@@ -220,33 +195,24 @@ for index, row in df_filtrado.iterrows():
 
     c1, c2, c3, c4, c5, c6, c7 = st.columns([2,3,1,1,1,1,2])
 
-    c1.write(row["Empresa"])
-    c2.write(row["Tema"])
-    c3.write(row["Semana"])
+    c1.write(row.get("Empresa", ""))
+    c2.write(row.get("Tema", ""))
+    c3.write(row.get("Semana", ""))
 
-    if pd.notnull(row["Data Publicação"]):
+    if pd.notnull(row.get("Data Publicação")):
         c4.write(row["Data Publicação"].strftime("%d/%m/%Y"))
     else:
         c4.write("-")
 
-    c5.write(f"R$ {row['Valor']:.2f}")
-
-    status = row["Status Pagamento"]
-
-    c6.write(status)
+    c5.write(f"R$ {row.get('Valor', 0):.2f}")
+    c6.write(row.get("Status Pagamento", "-"))
 
     if c7.button("✔ Pago", key=f"pago{index}"):
-
         worksheet.update_cell(index + 2, 9, "Pago")
-
         st.cache_data.clear()
-
         st.rerun()
 
     if c7.button("⚠ A pagar", key=f"apagar{index}"):
-
         worksheet.update_cell(index + 2, 9, "A Pagar")
-
         st.cache_data.clear()
-
         st.rerun()
