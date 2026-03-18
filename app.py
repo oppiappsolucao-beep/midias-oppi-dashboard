@@ -90,6 +90,14 @@ st.markdown("""
         box-shadow: 0 2px 10px rgba(15, 23, 42, 0.03);
     }
 
+    .metric-card-green {
+        border-left-color: #10b981 !important;
+    }
+
+    .metric-card-orange {
+        border-left-color: #f59e0b !important;
+    }
+
     .metric-title {
         font-size: 15px;
         color: #475569;
@@ -121,14 +129,6 @@ st.markdown("""
         color: #6b7280;
         font-size: 13px;
         margin-top: -4px;
-        margin-bottom: 12px;
-    }
-
-    .row-card {
-        background: #ffffff;
-        border: 1px solid #edf1f7;
-        border-radius: 18px;
-        padding: 14px 16px;
         margin-bottom: 12px;
     }
 
@@ -201,10 +201,10 @@ def status_badge(status):
         return '<span class="status-pill status-apagar">A pagar</span>'
     return f'<span class="status-pill status-outro">{status if str(status).strip() else "-"}</span>'
 
-def metric_card(title, value, subtitle=""):
+def metric_card(title, value, subtitle="", extra_class=""):
     st.markdown(
         f"""
-        <div class="metric-card">
+        <div class="metric-card {extra_class}">
             <div class="metric-title">{title}</div>
             <div class="metric-value">{value}</div>
             <div class="metric-sub">{subtitle}</div>
@@ -269,7 +269,6 @@ for col in ["Mês", "Semana", "Empresa", "Tema", "Status Pagamento", "Status da 
     if col not in df.columns:
         df[col] = ""
 
-# se mês estiver vazio, tenta derivar da data
 if "Mês" in df.columns:
     df["Mês"] = df["Mês"].astype(str).str.strip()
     mascara_mes_vazio = df["Mês"].eq("") & df["Data Publicação"].notna()
@@ -336,10 +335,23 @@ if data:
 # MÉTRICAS
 # ---------------------------------------------------
 
-status_normalizado = df_filtrado["Status Pagamento"].astype(str).str.strip().str.lower()
+status_pagamento_normalizado = df_filtrado["Status Pagamento"].astype(str).str.strip().str.lower()
+status_arte_normalizado = df_filtrado["Status da arte"].astype(str).str.strip().str.lower()
 
-pagos = df_filtrado[status_normalizado == "pago"]
-a_pagar = df_filtrado[status_normalizado == "a pagar"]
+pagos = df_filtrado[status_pagamento_normalizado == "pago"]
+a_pagar = df_filtrado[status_pagamento_normalizado == "a pagar"]
+
+# linha considerada preenchida para mídia
+linhas_com_conteudo = (
+    df_filtrado["Empresa"].astype(str).str.strip().ne("")
+    | df_filtrado["Tema"].astype(str).str.strip().ne("")
+    | df_filtrado["Tipo de arte"].astype(str).str.strip().ne("")
+    | df_filtrado["Valor"].fillna(0).gt(0)
+    | df_filtrado["Data Publicação"].notna()
+)
+
+postagens_feitas = int(((status_arte_normalizado == "pronto") & linhas_com_conteudo).sum())
+postagens_a_fazer = int(((status_arte_normalizado != "pronto") & linhas_com_conteudo).sum())
 
 total_posts = len(df_filtrado)
 total_valor = float(df_filtrado["Valor"].sum())
@@ -360,6 +372,16 @@ with m5:
     metric_card("Valor pago", format_brl(valor_pago), "somatório dos pagos")
 with m6:
     metric_card("Valor pendente", format_brl(valor_pendente), "somatório em aberto")
+
+st.markdown("<br>", unsafe_allow_html=True)
+
+pf1, pf2 = st.columns(2)
+
+with pf1:
+    metric_card("Postagens feitas", f"{postagens_feitas}", "status da arte = Pronto", "metric-card-green")
+
+with pf2:
+    metric_card("Postagens a fazer", f"{postagens_a_fazer}", "status da arte diferente de Pronto", "metric-card-orange")
 
 st.markdown("<br>", unsafe_allow_html=True)
 
