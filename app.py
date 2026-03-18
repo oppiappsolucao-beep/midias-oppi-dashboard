@@ -35,7 +35,7 @@ SCOPES = [
 @st.cache_resource
 def connect_sheet():
     try:
-        creds_dict = st.secrets["google"]
+        creds_dict = dict(st.secrets["google"])
 
         creds = Credentials.from_service_account_info(
             creds_dict,
@@ -43,9 +43,7 @@ def connect_sheet():
         )
 
         client = gspread.authorize(creds)
-
         sheet = client.open_by_key(SHEET_ID)
-
         worksheet = sheet.sheet1
 
         return worksheet
@@ -55,7 +53,7 @@ def connect_sheet():
         st.write("Verifique:")
         st.write("- Se o SHEET_ID está correto")
         st.write("- Se a planilha foi compartilhada com a conta de serviço")
-        st.write("- Se a API do Google Sheets está ativada")
+        st.write("- Se a Google Sheets API e Google Drive API estão ativadas")
         st.write(f"Erro técnico: {e}")
         st.stop()
 
@@ -66,11 +64,8 @@ def connect_sheet():
 @st.cache_data(ttl=60)
 def load_data():
     worksheet = connect_sheet()
-
     data = worksheet.get_all_records()
-
     df = pd.DataFrame(data)
-
     return df
 
 df = load_data()
@@ -84,11 +79,13 @@ if "Valor" in df.columns:
         df["Valor"]
         .astype(str)
         .str.replace("R$", "", regex=False)
+        .str.replace(".", "", regex=False)
         .str.replace(",", ".", regex=False)
+        .str.strip()
     )
-    df["Valor"] = pd.to_numeric(df["Valor"], errors="coerce")
+    df["Valor"] = pd.to_numeric(df["Valor"], errors="coerce").fillna(0)
 else:
-    df["Valor"] = 0
+    df["Valor"] = 0.0
 
 if "Data Publicação" in df.columns:
     df["Data Publicação"] = pd.to_datetime(
@@ -97,6 +94,13 @@ if "Data Publicação" in df.columns:
         errors="coerce"
     )
 
+for col in ["Semana", "Empresa", "Tema", "Status Pagamento", "Status da arte"]:
+    if col not in df.columns:
+        df[col] = ""
+
+def format_brl(valor):
+    return f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
 # ---------------------------------------------------
 # FILTROS
 # ---------------------------------------------------
@@ -104,16 +108,16 @@ if "Data Publicação" in df.columns:
 col1, col2, col3 = st.columns(3)
 
 with col1:
-    semana = st.selectbox(
-        "Semana",
-        ["Todas"] + sorted(df["Semana"].dropna().unique().tolist())
+    semana_opcoes = ["Todas"] + sorted(
+        [x for x in df["Semana"].dropna().astype(str).unique().tolist() if x.strip()]
     )
+    semana = st.selectbox("Semana", semana_opcoes)
 
 with col2:
-    empresa = st.selectbox(
-        "Empresa",
-        ["Todas"] + sorted(df["Empresa"].dropna().unique().tolist())
+    empresa_opcoes = ["Todas"] + sorted(
+        [x for x in df["Empresa"].dropna().astype(str).unique().tolist() if x.strip()]
     )
+    empresa = st.selectbox("Empresa", empresa_opcoes)
 
 with col3:
     data = st.date_input("Data publicação", value=None)
@@ -121,35 +125,38 @@ with col3:
 df_filtrado = df.copy()
 
 if semana != "Todas":
-    df_filtrado = df_filtrado[df_filtrado["Semana"] == semana]
+    df_filtrado = df_filtrado[df_filtrado["Semana"].astype(str) == semana]
 
 if empresa != "Todas":
-    df_filtrado = df_filtrado[df_filtrado["Empresa"] == empresa]
+    df_filtrado = df_filtrado[df_filtrado["Empresa"].astype(str) == empresa]
 
 if data:
-    df_filtrado = df_filtrado[df_filtrado["Data Publicação"].dt.date == data]
+    df_filtrado = df_filtrado[
+        df_filtrado["Data Publicação"].dt.date == data
+    ]
 
 # ---------------------------------------------------
 # MÉTRICAS
 # ---------------------------------------------------
 
+status_normalizado = df_filtrado["Status Pagamento"].astype(str).str.strip().str.lower()
+
+pagos = df_filtrado[status_normalizado == "pago"]
+a_pagar = df_filtrado[status_normalizado == "a pagar"]
+
 total_posts = len(df_filtrado)
 total_valor = df_filtrado["Valor"].sum()
-
-pagos = df_filtrado[df_filtrado["Status Pagamento"] == "Pago"]
-a_pagar = df_filtrado[df_filtrado["Status Pagamento"] == "A Pagar"]
-
 valor_pago = pagos["Valor"].sum()
 valor_pendente = a_pagar["Valor"].sum()
 
 c1, c2, c3, c4, c5, c6 = st.columns(6)
 
 c1.metric("Posts", total_posts)
-c2.metric("Valor total", f"R$ {total_valor:,.2f}")
+c2.metric("Valor total", format_brl(total_valor))
 c3.metric("Pagos", len(pagos))
 c4.metric("A pagar", len(a_pagar))
-c5.metric("Valor pago", f"R$ {valor_pago:,.2f}")
-c6.metric("Valor pendente", f"R$ {valor_pendente:,.2f}")
+c5.metric("Valor pago", format_brl(valor_pago))
+c6.metric("Valor pendente", format_brl(valor_pendente))
 
 st.divider()
 
@@ -160,59 +167,85 @@ st.divider()
 col1, col2 = st.columns(2)
 
 with col1:
-    graf_empresa = df_filtrado.groupby("Empresa").size().reset_index(name="Total")
+    graf_empresa = (
+        df_filtrado.groupby("Empresa", dropna=False)
+        .size()
+        .reset_index(name="Total")
+    )
 
-    fig = px.bar(
+    fig_empresa = px.bar(
         graf_empresa,
         x="Empresa",
         y="Total",
         title="Posts por empresa"
     )
 
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig_empresa, use_container_width=True)
 
 with col2:
-    graf_semana = df_filtrado.groupby("Semana").size().reset_index(name="Total")
+    graf_semana = (
+        df_filtrado.groupby("Semana", dropna=False)
+        .size()
+        .reset_index(name="Total")
+    )
 
-    fig = px.pie(
+    fig_semana = px.pie(
         graf_semana,
         values="Total",
         names="Semana",
         title="Posts por semana"
     )
 
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig_semana, use_container_width=True)
 
 # ---------------------------------------------------
-# ATUALIZAR STATUS
+# ATUALIZAR STATUS PAGAMENTO
 # ---------------------------------------------------
 
 st.subheader("📋 Atualizar status pagamento")
 
+st.caption("Clique no botão para atualizar a coluna 'Status Pagamento' na planilha.")
+
 worksheet = connect_sheet()
 
+header = st.columns([2, 3, 1.2, 1.2, 1.2, 1.4, 2.4])
+header[0].write("**Empresa**")
+header[1].write("**Tema**")
+header[2].write("**Semana**")
+header[3].write("**Data**")
+header[4].write("**Valor**")
+header[5].write("**Status**")
+header[6].write("**Ações**")
+
 for index, row in df_filtrado.iterrows():
+    c1, c2, c3, c4, c5, c6, c7 = st.columns([2, 3, 1.2, 1.2, 1.2, 1.4, 2.4])
 
-    c1, c2, c3, c4, c5, c6, c7 = st.columns([2,3,1,1,1,1,2])
-
-    c1.write(row.get("Empresa", ""))
-    c2.write(row.get("Tema", ""))
-    c3.write(row.get("Semana", ""))
+    empresa_txt = str(row.get("Empresa", "")).strip()
+    tema_txt = str(row.get("Tema", "")).strip()
+    semana_txt = str(row.get("Semana", "")).strip()
+    status_txt = str(row.get("Status Pagamento", "")).strip() or "-"
+    valor_num = float(row.get("Valor", 0) or 0)
 
     if pd.notnull(row.get("Data Publicação")):
-        c4.write(row["Data Publicação"].strftime("%d/%m/%Y"))
+        data_txt = row["Data Publicação"].strftime("%d/%m/%Y")
     else:
-        c4.write("-")
+        data_txt = "-"
 
-    c5.write(f"R$ {row.get('Valor', 0):.2f}")
-    c6.write(row.get("Status Pagamento", "-"))
+    c1.write(empresa_txt)
+    c2.write(tema_txt)
+    c3.write(semana_txt)
+    c4.write(data_txt)
+    c5.write(format_brl(valor_num))
+    c6.write(status_txt)
 
-    if c7.button("✔ Pago", key=f"pago{index}"):
+    a1, a2 = c7.columns(2)
+
+    if a1.button("✔ Pago", key=f"pago_{index}"):
         worksheet.update_cell(index + 2, 9, "Pago")
         st.cache_data.clear()
         st.rerun()
 
-    if c7.button("⚠ A pagar", key=f"apagar{index}"):
+    if a2.button("⚠ A pagar", key=f"apagar_{index}"):
         worksheet.update_cell(index + 2, 9, "A Pagar")
         st.cache_data.clear()
         st.rerun()
