@@ -4,10 +4,6 @@ import plotly.express as px
 import gspread
 from google.oauth2.service_account import Credentials
 
-# ---------------------------------------------------
-# CONFIG
-# ---------------------------------------------------
-
 st.set_page_config(
     page_title="Mídias - Oppi",
     page_icon="📱",
@@ -17,25 +13,21 @@ st.set_page_config(
 st.title("📱 Dashboard — Mídias Oppi")
 st.caption("Gestão de publicações e pagamentos")
 
-# ---------------------------------------------------
-# PLANILHA
-# ---------------------------------------------------
-
 SHEET_ID = "16I701e6FdfkXYQrCxknZRidTonR3f80SQcUq3tGNw5I"
+SHEET_URL = "https://docs.google.com/spreadsheets/d/16I701e6FdfkXYQrCxknZRidTonR3f80SQcUq3tGNw5I/edit?gid=0#gid=0"
 
 SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
     "https://www.googleapis.com/auth/drive"
 ]
 
-# ---------------------------------------------------
-# CONEXÃO GOOGLE
-# ---------------------------------------------------
-
 @st.cache_resource
 def connect_sheet():
     try:
         creds_dict = dict(st.secrets["google"])
+
+        st.write("SHEET_ID usado:", SHEET_ID)
+        st.write("client_email usado:", creds_dict.get("client_email", "não encontrado"))
 
         creds = Credentials.from_service_account_info(
             creds_dict,
@@ -43,36 +35,29 @@ def connect_sheet():
         )
 
         client = gspread.authorize(creds)
-        sheet = client.open_by_key(SHEET_ID)
-        worksheet = sheet.sheet1
+
+        # tenta abrir pela URL completa
+        sheet = client.open_by_url(SHEET_URL)
+        worksheet = sheet.get_worksheet(0)
 
         return worksheet
 
     except Exception as e:
         st.error("❌ Erro ao conectar com Google Sheets")
         st.write("Verifique:")
-        st.write("- Se o SHEET_ID está correto")
-        st.write("- Se a planilha foi compartilhada com a conta de serviço")
+        st.write("- Se o app está com o código atualizado no GitHub")
+        st.write("- Se a planilha foi compartilhada com a conta de serviço mostrada acima")
         st.write("- Se a Google Sheets API e Google Drive API estão ativadas")
         st.write(f"Erro técnico: {e}")
         st.stop()
-
-# ---------------------------------------------------
-# CARREGAR DADOS
-# ---------------------------------------------------
 
 @st.cache_data(ttl=60)
 def load_data():
     worksheet = connect_sheet()
     data = worksheet.get_all_records()
-    df = pd.DataFrame(data)
-    return df
+    return pd.DataFrame(data)
 
 df = load_data()
-
-# ---------------------------------------------------
-# TRATAMENTO
-# ---------------------------------------------------
 
 if "Valor" in df.columns:
     df["Valor"] = (
@@ -94,16 +79,12 @@ if "Data Publicação" in df.columns:
         errors="coerce"
     )
 
-for col in ["Semana", "Empresa", "Tema", "Status Pagamento", "Status da arte"]:
+for col in ["Semana", "Empresa", "Tema", "Status Pagamento"]:
     if col not in df.columns:
         df[col] = ""
 
 def format_brl(valor):
     return f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-
-# ---------------------------------------------------
-# FILTROS
-# ---------------------------------------------------
 
 col1, col2, col3 = st.columns(3)
 
@@ -131,16 +112,9 @@ if empresa != "Todas":
     df_filtrado = df_filtrado[df_filtrado["Empresa"].astype(str) == empresa]
 
 if data:
-    df_filtrado = df_filtrado[
-        df_filtrado["Data Publicação"].dt.date == data
-    ]
-
-# ---------------------------------------------------
-# MÉTRICAS
-# ---------------------------------------------------
+    df_filtrado = df_filtrado[df_filtrado["Data Publicação"].dt.date == data]
 
 status_normalizado = df_filtrado["Status Pagamento"].astype(str).str.strip().str.lower()
-
 pagos = df_filtrado[status_normalizado == "pago"]
 a_pagar = df_filtrado[status_normalizado == "a pagar"]
 
@@ -150,7 +124,6 @@ valor_pago = pagos["Valor"].sum()
 valor_pendente = a_pagar["Valor"].sum()
 
 c1, c2, c3, c4, c5, c6 = st.columns(6)
-
 c1.metric("Posts", total_posts)
 c2.metric("Valor total", format_brl(total_valor))
 c3.metric("Pagos", len(pagos))
@@ -160,10 +133,6 @@ c6.metric("Valor pendente", format_brl(valor_pendente))
 
 st.divider()
 
-# ---------------------------------------------------
-# GRÁFICOS
-# ---------------------------------------------------
-
 col1, col2 = st.columns(2)
 
 with col1:
@@ -172,14 +141,7 @@ with col1:
         .size()
         .reset_index(name="Total")
     )
-
-    fig_empresa = px.bar(
-        graf_empresa,
-        x="Empresa",
-        y="Total",
-        title="Posts por empresa"
-    )
-
+    fig_empresa = px.bar(graf_empresa, x="Empresa", y="Total", title="Posts por empresa")
     st.plotly_chart(fig_empresa, use_container_width=True)
 
 with col2:
@@ -188,24 +150,10 @@ with col2:
         .size()
         .reset_index(name="Total")
     )
-
-    fig_semana = px.pie(
-        graf_semana,
-        values="Total",
-        names="Semana",
-        title="Posts por semana"
-    )
-
+    fig_semana = px.pie(graf_semana, values="Total", names="Semana", title="Posts por semana")
     st.plotly_chart(fig_semana, use_container_width=True)
 
-# ---------------------------------------------------
-# ATUALIZAR STATUS PAGAMENTO
-# ---------------------------------------------------
-
 st.subheader("📋 Atualizar status pagamento")
-
-st.caption("Clique no botão para atualizar a coluna 'Status Pagamento' na planilha.")
-
 worksheet = connect_sheet()
 
 header = st.columns([2, 3, 1.2, 1.2, 1.2, 1.4, 2.4])
