@@ -98,6 +98,10 @@ st.markdown("""
         border-left-color: #f59e0b !important;
     }
 
+    .metric-card-blue {
+        border-left-color: #3b82f6 !important;
+    }
+
     .metric-title {
         font-size: 15px;
         color: #475569;
@@ -134,7 +138,7 @@ st.markdown("""
 
     .status-pill {
         display: inline-block;
-        padding: 4px 12px;
+        padding: 5px 12px;
         border-radius: 999px;
         font-size: 12px;
         font-weight: 700;
@@ -155,6 +159,21 @@ st.markdown("""
         color: #374151;
     }
 
+    .status-pronto {
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    .status-andamento {
+        background: #fef3c7;
+        color: #92400e;
+    }
+
+    .status-concluido {
+        background: #dbeafe;
+        color: #1d4ed8;
+    }
+
     div[data-testid="stSelectbox"] > div,
     div[data-testid="stDateInput"] > div {
         border-radius: 14px !important;
@@ -164,6 +183,9 @@ st.markdown("""
         border-radius: 12px !important;
         font-weight: 700 !important;
         height: 42px !important;
+        width: 100%;
+        white-space: normal !important;
+        line-height: 1.1 !important;
     }
 
     hr {
@@ -193,12 +215,22 @@ def ordenar_meses(lista):
     ordem = {mes: i for i, mes in enumerate(MESES_ORDEM)}
     return sorted(lista, key=lambda x: ordem.get(x, 999))
 
-def status_badge(status):
+def status_pagamento_badge(status):
     s = str(status).strip().lower()
     if s == "pago":
         return '<span class="status-pill status-pago">Pago</span>'
     if s == "a pagar":
         return '<span class="status-pill status-apagar">A pagar</span>'
+    return f'<span class="status-pill status-outro">{status if str(status).strip() else "-"}</span>'
+
+def status_arte_badge(status):
+    s = str(status).strip().lower()
+    if s == "pronto":
+        return '<span class="status-pill status-pronto">Pronto</span>'
+    if s == "em andamento":
+        return '<span class="status-pill status-andamento">Em andamento</span>'
+    if s == "concluído" or s == "concluido":
+        return '<span class="status-pill status-concluido">Concluído</span>'
     return f'<span class="status-pill status-outro">{status if str(status).strip() else "-"}</span>'
 
 def metric_card(title, value, subtitle="", extra_class=""):
@@ -341,7 +373,6 @@ status_arte_normalizado = df_filtrado["Status da arte"].astype(str).str.strip().
 pagos = df_filtrado[status_pagamento_normalizado == "pago"]
 a_pagar = df_filtrado[status_pagamento_normalizado == "a pagar"]
 
-# linha considerada preenchida para mídia
 linhas_com_conteudo = (
     df_filtrado["Empresa"].astype(str).str.strip().ne("")
     | df_filtrado["Tema"].astype(str).str.strip().ne("")
@@ -352,6 +383,9 @@ linhas_com_conteudo = (
 
 postagens_feitas = int(((status_arte_normalizado == "pronto") & linhas_com_conteudo).sum())
 postagens_a_fazer = int(((status_arte_normalizado != "pronto") & linhas_com_conteudo).sum())
+
+em_andamento_qtd = int(((status_arte_normalizado == "em andamento") & linhas_com_conteudo).sum())
+concluido_qtd = int((((status_arte_normalizado == "concluído") | (status_arte_normalizado == "concluido")) & linhas_com_conteudo).sum())
 
 total_posts = len(df_filtrado)
 total_valor = float(df_filtrado["Valor"].sum())
@@ -375,13 +409,19 @@ with m6:
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-pf1, pf2 = st.columns(2)
+pf1, pf2, pf3, pf4 = st.columns(4)
 
 with pf1:
     metric_card("Postagens feitas", f"{postagens_feitas}", "status da arte = Pronto", "metric-card-green")
 
 with pf2:
-    metric_card("Postagens a fazer", f"{postagens_a_fazer}", "status da arte diferente de Pronto", "metric-card-orange")
+    metric_card("Postagens a fazer", f"{postagens_a_fazer}", "status diferente de Pronto", "metric-card-orange")
+
+with pf3:
+    metric_card("Em andamento", f"{em_andamento_qtd}", "status da arte = Em andamento", "metric-card-orange")
+
+with pf4:
+    metric_card("Concluído", f"{concluido_qtd}", "status da arte = Concluído", "metric-card-blue")
 
 st.markdown("<br>", unsafe_allow_html=True)
 
@@ -523,35 +563,35 @@ with g4:
 st.markdown("<br>", unsafe_allow_html=True)
 
 # ---------------------------------------------------
-# ATUALIZAR STATUS PAGAMENTO
+# ATUALIZAR STATUS DA ARTE
 # ---------------------------------------------------
 
 st.markdown('<div class="table-card">', unsafe_allow_html=True)
-st.markdown('<div class="section-title">✏️ Atualizar status pagamento</div>', unsafe_allow_html=True)
-st.markdown('<div class="small-note">Clique no botão para atualizar a coluna "Status Pagamento" diretamente na planilha.</div>', unsafe_allow_html=True)
+st.markdown('<div class="section-title">✏️ Atualizar status da arte</div>', unsafe_allow_html=True)
+st.markdown('<div class="small-note">Clique no botão para atualizar a coluna "Status da arte" diretamente na planilha.</div>', unsafe_allow_html=True)
 
 worksheet = connect_sheet()
 
-header = st.columns([1.2, 1.8, 1.2, 2.0, 1.1, 1.1, 1.2, 1.7])
+header = st.columns([1.1, 1.6, 1.1, 1.9, 1.0, 1.0, 1.3, 2.2])
 header[0].write("**Mês**")
 header[1].write("**Empresa**")
 header[2].write("**Semana**")
 header[3].write("**Tema**")
 header[4].write("**Data**")
 header[5].write("**Valor**")
-header[6].write("**Status**")
+header[6].write("**Status da arte**")
 header[7].write("**Ações**")
 
 st.markdown("<hr>", unsafe_allow_html=True)
 
 for index, row in df_filtrado.iterrows():
-    c1, c2, c3, c4, c5, c6, c7, c8 = st.columns([1.2, 1.8, 1.2, 2.0, 1.1, 1.1, 1.2, 1.7])
+    c1, c2, c3, c4, c5, c6, c7, c8 = st.columns([1.1, 1.6, 1.1, 1.9, 1.0, 1.0, 1.3, 2.2])
 
     mes_txt = str(row.get("Mês", "")).strip()
     empresa_txt = str(row.get("Empresa", "")).strip()
     semana_txt = str(row.get("Semana", "")).strip()
     tema_txt = str(row.get("Tema", "")).strip()
-    status_txt = str(row.get("Status Pagamento", "")).strip()
+    status_arte_txt = str(row.get("Status da arte", "")).strip()
     valor_num = float(row.get("Valor", 0) or 0)
 
     if pd.notnull(row.get("Data Publicação")):
@@ -565,17 +605,22 @@ for index, row in df_filtrado.iterrows():
     c4.write(tema_txt or "-")
     c5.write(data_txt)
     c6.write(format_brl(valor_num))
-    c7.markdown(status_badge(status_txt), unsafe_allow_html=True)
+    c7.markdown(status_arte_badge(status_arte_txt), unsafe_allow_html=True)
 
-    a1, a2 = c8.columns(2)
+    a1, a2, a3 = c8.columns(3)
 
-    if a1.button("Pago", key=f"pago_{index}"):
-        worksheet.update_cell(index + 2, 9, "Pago")
+    if a1.button("Pronto", key=f"pronto_{index}"):
+        worksheet.update_cell(index + 2, 8, "Pronto")
         st.cache_data.clear()
         st.rerun()
 
-    if a2.button("A pagar", key=f"apagar_{index}"):
-        worksheet.update_cell(index + 2, 9, "A Pagar")
+    if a2.button("Em andamento", key=f"andamento_{index}"):
+        worksheet.update_cell(index + 2, 8, "Em andamento")
+        st.cache_data.clear()
+        st.rerun()
+
+    if a3.button("Concluído", key=f"concluido_{index}"):
+        worksheet.update_cell(index + 2, 8, "Concluído")
         st.cache_data.clear()
         st.rerun()
 
