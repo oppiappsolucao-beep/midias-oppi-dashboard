@@ -75,19 +75,22 @@ st.markdown("""
     .table-card {
         background: #ffffff;
         border: 1px solid #e7ebf3;
-        border-radius: 22px;
+        border-radius: 24px;
         padding: 18px 18px 16px 18px;
-        box-shadow: 0 2px 10px rgba(15, 23, 42, 0.03);
+        box-shadow: 0 6px 20px rgba(15, 23, 42, 0.04);
     }
 
     .metric-card {
-        background: #ffffff;
+        background: linear-gradient(180deg, #ffffff 0%, #fbfcff 100%);
         border: 1px solid #e7ebf3;
-        border-left: 6px solid #e11d48;
-        border-radius: 22px;
-        padding: 18px 20px;
-        min-height: 130px;
-        box-shadow: 0 2px 10px rgba(15, 23, 42, 0.03);
+        border-left: 7px solid #e11d48;
+        border-radius: 24px;
+        padding: 18px 20px 18px 22px;
+        min-height: 148px;
+        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
     }
 
     .metric-card-green {
@@ -104,22 +107,25 @@ st.markdown("""
 
     .metric-title {
         font-size: 15px;
-        color: #475569;
-        font-weight: 700;
-        margin-bottom: 10px;
+        color: #334155;
+        font-weight: 800;
+        margin-bottom: 8px;
+        letter-spacing: 0.1px;
     }
 
     .metric-value {
-        font-size: 34px;
-        color: #111827;
-        font-weight: 800;
-        line-height: 1.05;
-        margin-bottom: 8px;
+        font-size: 42px;
+        color: #0f172a;
+        font-weight: 900;
+        line-height: 1;
+        margin: 6px 0 10px 0;
+        letter-spacing: -0.8px;
     }
 
     .metric-sub {
         font-size: 13px;
-        color: #6b7280;
+        color: #64748b;
+        line-height: 1.45;
     }
 
     .section-title {
