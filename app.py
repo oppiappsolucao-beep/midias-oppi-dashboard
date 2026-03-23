@@ -494,13 +494,33 @@ with g2:
         .reset_index()
     )
 
+    graf_status["Status Pagamento"] = graf_status["Status Pagamento"].astype(str).str.strip()
+    graf_status = graf_status[
+        (graf_status["Status Pagamento"] != "") &
+        (graf_status["Valor"] > 0)
+    ]
+
     if not graf_status.empty and graf_status["Valor"].sum() > 0:
-        fig_status = px.pie(graf_status, values="Valor", names="Status Pagamento", hole=0.58)
+        fig_status = px.pie(
+            graf_status,
+            values="Valor",
+            names="Status Pagamento",
+            hole=0.58
+        )
+
+        fig_status.update_traces(
+            texttemplate="R$ %{value:,.2f}",
+            textposition="inside",
+            hovertemplate="<b>%{label}</b><br>Valor: R$ %{value:,.2f}<extra></extra>"
+        )
+
         fig_status.update_layout(
             margin=dict(l=10, r=10, t=10, b=10),
             height=380,
-            paper_bgcolor="white"
+            paper_bgcolor="white",
+            showlegend=True
         )
+
         st.plotly_chart(fig_status, use_container_width=True)
     else:
         st.info("Sem valores para esse filtro.")
