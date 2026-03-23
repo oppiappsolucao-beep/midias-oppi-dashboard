@@ -43,7 +43,7 @@ st.markdown("""
     .block-container {
         padding-top: 1.5rem;
         padding-bottom: 2rem;
-        max-width: 1400px;
+        max-width: 1450px;
     }
 
     .top-title {
@@ -142,6 +142,7 @@ st.markdown("""
         border-radius: 999px;
         font-size: 12px;
         font-weight: 700;
+        white-space: nowrap;
     }
 
     .status-pago {
@@ -174,18 +175,48 @@ st.markdown("""
         color: #1d4ed8;
     }
 
+    .row-card {
+        background: #fbfcfe;
+        border: 1px solid #e8edf5;
+        border-radius: 18px;
+        padding: 14px 16px;
+        margin-bottom: 12px;
+    }
+
+    .row-main {
+        font-size: 17px;
+        font-weight: 700;
+        color: #16233b;
+        margin-bottom: 6px;
+    }
+
+    .row-meta {
+        color: #667085;
+        font-size: 13px;
+        line-height: 1.5;
+    }
+
+    .row-valor {
+        font-size: 24px;
+        font-weight: 800;
+        color: #111827;
+        margin-top: 4px;
+    }
+
     div[data-testid="stSelectbox"] > div,
-    div[data-testid="stDateInput"] > div {
+    div[data-testid="stDateInput"] > div,
+    div[data-testid="stTextInput"] > div {
         border-radius: 14px !important;
     }
 
     .stButton > button {
         border-radius: 12px !important;
         font-weight: 700 !important;
-        height: 42px !important;
+        min-height: 44px !important;
         width: 100%;
         white-space: normal !important;
-        line-height: 1.1 !important;
+        line-height: 1.15 !important;
+        padding: 0.55rem 0.8rem !important;
     }
 
     hr {
@@ -229,7 +260,7 @@ def status_arte_badge(status):
         return '<span class="status-pill status-pronto">Pronto</span>'
     if s == "em andamento":
         return '<span class="status-pill status-andamento">Em andamento</span>'
-    if s == "concluído" or s == "concluido":
+    if s in ("concluído", "concluido"):
         return '<span class="status-pill status-concluido">Concluído</span>'
     return f'<span class="status-pill status-outro">{status if str(status).strip() else "-"}</span>'
 
@@ -383,7 +414,6 @@ linhas_com_conteudo = (
 
 postagens_feitas = int(((status_arte_normalizado == "pronto") & linhas_com_conteudo).sum())
 postagens_a_fazer = int(((status_arte_normalizado != "pronto") & linhas_com_conteudo).sum())
-
 em_andamento_qtd = int(((status_arte_normalizado == "em andamento") & linhas_com_conteudo).sum())
 concluido_qtd = int((((status_arte_normalizado == "concluído") | (status_arte_normalizado == "concluido")) & linhas_com_conteudo).sum())
 
@@ -413,13 +443,10 @@ pf1, pf2, pf3, pf4 = st.columns(4)
 
 with pf1:
     metric_card("Postagens feitas", f"{postagens_feitas}", "status da arte = Pronto", "metric-card-green")
-
 with pf2:
     metric_card("Postagens a fazer", f"{postagens_a_fazer}", "status diferente de Pronto", "metric-card-orange")
-
 with pf3:
     metric_card("Em andamento", f"{em_andamento_qtd}", "status da arte = Em andamento", "metric-card-orange")
-
 with pf4:
     metric_card("Concluído", f"{concluido_qtd}", "status da arte = Concluído", "metric-card-blue")
 
@@ -442,12 +469,7 @@ with g1:
     )
 
     if not graf_empresa.empty:
-        fig_empresa = px.bar(
-            graf_empresa,
-            x="Empresa",
-            y="Total",
-            text="Total"
-        )
+        fig_empresa = px.bar(graf_empresa, x="Empresa", y="Total", text="Total")
         fig_empresa.update_layout(
             margin=dict(l=10, r=10, t=10, b=10),
             height=380,
@@ -473,12 +495,7 @@ with g2:
     )
 
     if not graf_status.empty and graf_status["Valor"].sum() > 0:
-        fig_status = px.pie(
-            graf_status,
-            values="Valor",
-            names="Status Pagamento",
-            hole=0.58
-        )
+        fig_status = px.pie(graf_status, values="Valor", names="Status Pagamento", hole=0.58)
         fig_status.update_layout(
             margin=dict(l=10, r=10, t=10, b=10),
             height=380,
@@ -491,107 +508,34 @@ with g2:
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-g3, g4 = st.columns(2)
-
-with g3:
-    st.markdown('<div class="section-card">', unsafe_allow_html=True)
-    st.markdown('<div class="section-title">🗓️ Publicações por semana</div>', unsafe_allow_html=True)
-
-    graf_semana = (
-        df_filtrado.groupby("Semana", dropna=False)
-        .size()
-        .reset_index(name="Total")
-    )
-
-    if not graf_semana.empty:
-        fig_semana = px.bar(
-            graf_semana,
-            x="Semana",
-            y="Total",
-            text="Total"
-        )
-        fig_semana.update_layout(
-            margin=dict(l=10, r=10, t=10, b=10),
-            height=380,
-            paper_bgcolor="white",
-            plot_bgcolor="white",
-            xaxis_title="",
-            yaxis_title="Quantidade"
-        )
-        fig_semana.update_traces(textposition="outside")
-        st.plotly_chart(fig_semana, use_container_width=True)
-    else:
-        st.info("Sem dados para esse filtro.")
-    st.markdown('</div>', unsafe_allow_html=True)
-
-with g4:
-    st.markdown('<div class="section-card">', unsafe_allow_html=True)
-    st.markdown('<div class="section-title">💰 Valor por empresa</div>', unsafe_allow_html=True)
-
-    graf_valor_empresa = (
-        df_filtrado.groupby("Empresa", dropna=False)["Valor"]
-        .sum()
-        .reset_index()
-        .sort_values("Valor", ascending=False)
-    )
-
-    if not graf_valor_empresa.empty and graf_valor_empresa["Valor"].sum() > 0:
-        fig_valor_empresa = px.bar(
-            graf_valor_empresa,
-            x="Valor",
-            y="Empresa",
-            orientation="h",
-            text="Valor"
-        )
-        fig_valor_empresa.update_traces(
-            texttemplate="R$ %{x:,.2f}",
-            textposition="outside"
-        )
-        fig_valor_empresa.update_layout(
-            margin=dict(l=10, r=10, t=10, b=10),
-            height=380,
-            paper_bgcolor="white",
-            plot_bgcolor="white",
-            xaxis_title="Valor (R$)",
-            yaxis_title=""
-        )
-        st.plotly_chart(fig_valor_empresa, use_container_width=True)
-    else:
-        st.info("Sem valores para esse filtro.")
-    st.markdown('</div>', unsafe_allow_html=True)
-
-st.markdown("<br>", unsafe_allow_html=True)
-
 # ---------------------------------------------------
 # ATUALIZAR STATUS DA ARTE
 # ---------------------------------------------------
 
 st.markdown('<div class="table-card">', unsafe_allow_html=True)
 st.markdown('<div class="section-title">✏️ Atualizar status da arte</div>', unsafe_allow_html=True)
-st.markdown('<div class="small-note">Clique no botão para atualizar a coluna "Status da arte" diretamente na planilha.</div>', unsafe_allow_html=True)
+st.markdown('<div class="small-note">Atualize a coluna "Status da arte" diretamente pela interface abaixo.</div>', unsafe_allow_html=True)
+
+busca = st.text_input("Buscar por empresa ou tema", placeholder="Ex.: Faiser, mulheres, internet...")
+
+df_status = df_filtrado.copy()
+
+if busca.strip():
+    termo = busca.strip().lower()
+    df_status = df_status[
+        df_status["Empresa"].astype(str).str.lower().str.contains(termo, na=False)
+        | df_status["Tema"].astype(str).str.lower().str.contains(termo, na=False)
+    ]
 
 worksheet = connect_sheet()
 
-header = st.columns([1.1, 1.6, 1.1, 1.9, 1.0, 1.0, 1.3, 2.2])
-header[0].write("**Mês**")
-header[1].write("**Empresa**")
-header[2].write("**Semana**")
-header[3].write("**Tema**")
-header[4].write("**Data**")
-header[5].write("**Valor**")
-header[6].write("**Status da arte**")
-header[7].write("**Ações**")
-
-st.markdown("<hr>", unsafe_allow_html=True)
-
-for index, row in df_filtrado.iterrows():
-    c1, c2, c3, c4, c5, c6, c7, c8 = st.columns([1.1, 1.6, 1.1, 1.9, 1.0, 1.0, 1.3, 2.2])
-
-    mes_txt = str(row.get("Mês", "")).strip()
-    empresa_txt = str(row.get("Empresa", "")).strip()
-    semana_txt = str(row.get("Semana", "")).strip()
-    tema_txt = str(row.get("Tema", "")).strip()
-    status_arte_txt = str(row.get("Status da arte", "")).strip()
+for index, row in df_status.iterrows():
+    empresa_txt = str(row.get("Empresa", "")).strip() or "-"
+    semana_txt = str(row.get("Semana", "")).strip() or "-"
+    tema_txt = str(row.get("Tema", "")).strip() or "-"
+    mes_txt = str(row.get("Mês", "")).strip() or "-"
+    tipo_txt = str(row.get("Tipo de arte", "")).strip() or "-"
+    status_arte_txt = str(row.get("Status da arte", "")).strip() or "-"
     valor_num = float(row.get("Valor", 0) or 0)
 
     if pd.notnull(row.get("Data Publicação")):
@@ -599,29 +543,53 @@ for index, row in df_filtrado.iterrows():
     else:
         data_txt = "-"
 
-    c1.write(mes_txt or "-")
-    c2.write(empresa_txt or "-")
-    c3.write(semana_txt or "-")
-    c4.write(tema_txt or "-")
-    c5.write(data_txt)
-    c6.write(format_brl(valor_num))
-    c7.markdown(status_arte_badge(status_arte_txt), unsafe_allow_html=True)
+    st.markdown('<div class="row-card">', unsafe_allow_html=True)
 
-    a1, a2, a3 = c8.columns(3)
+    left, mid, right = st.columns([3.3, 1.3, 3.2])
 
-    if a1.button("Pronto", key=f"pronto_{index}"):
-        worksheet.update_cell(index + 2, 8, "Pronto")
-        st.cache_data.clear()
-        st.rerun()
+    with left:
+        st.markdown(f'<div class="row-main">{tema_txt}</div>', unsafe_allow_html=True)
+        st.markdown(
+            f'<div class="row-meta"><b>Empresa:</b> {empresa_txt} &nbsp;&nbsp; <b>Mês:</b> {mes_txt} &nbsp;&nbsp; <b>Semana:</b> {semana_txt}</div>',
+            unsafe_allow_html=True
+        )
+        st.markdown(
+            f'<div class="row-meta"><b>Tipo de arte:</b> {tipo_txt} &nbsp;&nbsp; <b>Data:</b> {data_txt}</div>',
+            unsafe_allow_html=True
+        )
 
-    if a2.button("Em andamento", key=f"andamento_{index}"):
-        worksheet.update_cell(index + 2, 8, "Em andamento")
-        st.cache_data.clear()
-        st.rerun()
+    with mid:
+        st.markdown(f'<div class="row-meta"><b>Valor</b></div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="row-valor">{format_brl(valor_num)}</div>', unsafe_allow_html=True)
 
-    if a3.button("Concluído", key=f"concluido_{index}"):
-        worksheet.update_cell(index + 2, 8, "Concluído")
-        st.cache_data.clear()
-        st.rerun()
+    with right:
+        info_col, buttons_col = st.columns([1.05, 2.2])
+
+        with info_col:
+            st.markdown("**Status atual**")
+            st.markdown(status_arte_badge(status_arte_txt), unsafe_allow_html=True)
+
+        with buttons_col:
+            b1, b2, b3 = st.columns(3)
+
+            if b1.button("Pronto", key=f"pronto_{index}"):
+                worksheet.update_cell(index + 2, 8, "Pronto")
+                st.cache_data.clear()
+                st.rerun()
+
+            if b2.button("Em andamento", key=f"andamento_{index}"):
+                worksheet.update_cell(index + 2, 8, "Em andamento")
+                st.cache_data.clear()
+                st.rerun()
+
+            if b3.button("Concluído", key=f"concluido_{index}"):
+                worksheet.update_cell(index + 2, 8, "Concluído")
+                st.cache_data.clear()
+                st.rerun()
+
+    st.markdown('</div>', unsafe_allow_html=True)
+
+if df_status.empty:
+    st.info("Nenhum registro encontrado com esse filtro.")
 
 st.markdown('</div>', unsafe_allow_html=True)
