@@ -204,7 +204,6 @@ st.markdown("""
     }
 
     div[data-testid="stSelectbox"] > div,
-    div[data-testid="stDateInput"] > div,
     div[data-testid="stTextInput"] > div {
         border-radius: 14px !important;
     }
@@ -361,7 +360,7 @@ st.markdown("""
 
 st.markdown('<div class="filter-card">', unsafe_allow_html=True)
 
-f1, f2, f3, f4 = st.columns(4)
+f1, f2, f3 = st.columns(3)
 
 with f1:
     meses_disponiveis = [x for x in df["Mês"].dropna().astype(str).unique().tolist() if x.strip()]
@@ -375,9 +374,6 @@ with f3:
     empresas_disponiveis = [x for x in df["Empresa"].dropna().astype(str).unique().tolist() if str(x).strip()]
     empresa = st.selectbox("Empresa", ["Todas"] + sorted(empresas_disponiveis))
 
-with f4:
-    data = st.date_input("Data publicação", value=None)
-
 st.markdown('</div>', unsafe_allow_html=True)
 
 df_filtrado = df.copy()
@@ -390,9 +386,6 @@ if semana != "Todas":
 
 if empresa != "Todas":
     df_filtrado = df_filtrado[df_filtrado["Empresa"].astype(str) == empresa]
-
-if data:
-    df_filtrado = df_filtrado[df_filtrado["Data Publicação"].dt.date == data]
 
 # ---------------------------------------------------
 # MÉTRICAS
