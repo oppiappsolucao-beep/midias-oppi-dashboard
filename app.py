@@ -61,9 +61,17 @@ st.markdown("""
         display: flex;
         justify-content: center;
         align-items: center;
-        margin-top: 0.2rem;
+        margin-top: 0.25rem;
         margin-bottom: 10px;
         overflow: visible;
+    }
+
+    .logo-shell {
+        width: 78px;
+        height: 78px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
 
     .logo-round {
@@ -71,7 +79,9 @@ st.markdown("""
         height: 74px;
         border-radius: 50%;
         object-fit: cover;
+        object-position: center center;
         display: block;
+        transform: translateX(0px);
     }
 
     .top-title {
@@ -314,7 +324,9 @@ def render_logo(path: Path):
     st.markdown(
         f'''
         <div class="logo-wrap">
-            <img class="logo-round" src="data:{mime};base64,{img_base64}">
+            <div class="logo-shell">
+                <img class="logo-round" src="data:{mime};base64,{img_base64}">
+            </div>
         </div>
         ''',
         unsafe_allow_html=True
