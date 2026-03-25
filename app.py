@@ -228,6 +228,16 @@ st.markdown("""
         color: #1d4ed8;
     }
 
+    .status-pausado {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    .status-pendente {
+        background: #dbeafe;
+        color: #1d4ed8;
+    }
+
     .row-card {
         background: #fbfcfe;
         border: 1px solid #e8edf5;
@@ -371,6 +381,10 @@ def status_arte_badge(status):
         return '<span class="status-pill status-pronto">Pronto</span>'
     if s == "em andamento":
         return '<span class="status-pill status-andamento">Em andamento</span>'
+    if s == "pausado":
+        return '<span class="status-pill status-pausado">Pausado</span>'
+    if s == "pendente":
+        return '<span class="status-pill status-pendente">Pendente</span>'
     if s in ("concluído", "concluido"):
         return '<span class="status-pill status-concluido">Concluído</span>'
     return f'<span class="status-pill status-outro">{status if str(status).strip() else "-"}</span>'
@@ -743,7 +757,7 @@ for index, row in df_status.iterrows():
 
     st.markdown('<div class="row-card">', unsafe_allow_html=True)
 
-    left, mid, right = st.columns([3.3, 1.3, 3.2])
+    left, mid, right = st.columns([3.3, 1.3, 4.2])
 
     with left:
         st.markdown(f'<div class="row-main">{tema_txt}</div>', unsafe_allow_html=True)
@@ -761,14 +775,14 @@ for index, row in df_status.iterrows():
         st.markdown(f'<div class="row-valor">{format_brl(valor_num)}</div>', unsafe_allow_html=True)
 
     with right:
-        info_col, buttons_col = st.columns([1.05, 2.2])
+        info_col, buttons_col = st.columns([1.0, 3.0])
 
         with info_col:
             st.markdown("**Status atual**")
             st.markdown(status_arte_badge(status_arte_txt), unsafe_allow_html=True)
 
         with buttons_col:
-            b1, b2, b3 = st.columns(3)
+            b1, b2, b3, b4 = st.columns(4)
 
             if b1.button("Pronto", key=f"pronto_{index}"):
                 worksheet.update_cell(index + 2, 8, "Pronto")
@@ -780,8 +794,13 @@ for index, row in df_status.iterrows():
                 st.cache_data.clear()
                 st.rerun()
 
-            if b3.button("Concluído", key=f"concluido_{index}"):
-                worksheet.update_cell(index + 2, 8, "Concluído")
+            if b3.button("Pausado", key=f"pausado_{index}"):
+                worksheet.update_cell(index + 2, 8, "Pausado")
+                st.cache_data.clear()
+                st.rerun()
+
+            if b4.button("Pendente", key=f"pendente_{index}"):
+                worksheet.update_cell(index + 2, 8, "Pendente")
                 st.cache_data.clear()
                 st.rerun()
 
