@@ -315,35 +315,7 @@ st.markdown("""
         text-align: center;
         font-size: 16px;
         color: #60708a;
-        margin-bottom: 18px;
-    }
-
-    .login-access-box {
-        text-align: center;
-        background: #f8fafc;
-        border: 1px solid #e2e8f0;
-        border-radius: 14px;
-        padding: 12px 14px;
-        margin-bottom: 18px;
-    }
-
-    .login-access-title {
-        font-size: 13px;
-        font-weight: 700;
-        color: #64748b;
-        margin-bottom: 6px;
-        letter-spacing: 0.2px;
-        text-transform: uppercase;
-    }
-
-    .login-access-text {
-        font-size: 15px;
-        color: #0f172a;
-        line-height: 1.6;
-    }
-
-    .login-access-text b {
-        color: #0f2d63;
+        margin-bottom: 24px;
     }
 
     .login-card {
@@ -458,19 +430,6 @@ def show_login():
     )
 
     st.markdown('<div class="login-subtitle">Acesse o dashboard</div>', unsafe_allow_html=True)
-
-    st.markdown(
-        f'''
-        <div class="login-access-box">
-            <div class="login-access-title">Acesso para entrar</div>
-            <div class="login-access-text">
-                <b>Usuário:</b> {APP_USER}<br>
-                <b>Senha:</b> {APP_PASS}
-            </div>
-        </div>
-        ''',
-        unsafe_allow_html=True
-    )
 
     st.markdown('<div class="login-card">', unsafe_allow_html=True)
 
