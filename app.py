@@ -31,9 +31,7 @@ MESES_ORDEM = [
     "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
 ]
 
-# Se no repositório o arquivo estiver como "logo-oppi.png", mantenha assim.
-# Se estiver como "LOGOS.png", troque aqui.
-LOGO_PATH = Path("logo-oppi.png")
+LOGO_PATH = Path("LOGOS.png")
 
 # ---------------------------------------------------
 # CSS
@@ -46,7 +44,7 @@ st.markdown("""
     }
 
     .block-container {
-        padding-top: 2.8rem;
+        padding-top: 3.2rem;
         padding-bottom: 2rem;
         max-width: 1450px;
     }
@@ -59,8 +57,8 @@ st.markdown("""
         display: flex;
         justify-content: center;
         align-items: center;
-        margin-top: 0.3rem;
-        margin-bottom: 0.8rem;
+        margin-top: 0.2rem;
+        margin-bottom: 0.9rem;
     }
 
     .top-title {
@@ -68,7 +66,7 @@ st.markdown("""
         align-items: center;
         justify-content: center;
         gap: 16px;
-        margin-top: 0.2rem;
+        margin-top: 0.1rem;
         margin-bottom: 0.2rem;
         text-align: center;
         flex-wrap: wrap;
@@ -251,7 +249,7 @@ st.markdown("""
 
     @media (max-width: 900px) {
         .block-container {
-            padding-top: 1.8rem;
+            padding-top: 2rem;
         }
 
         .top-title .text {
@@ -379,11 +377,9 @@ if "Mês" in df.columns:
 # ---------------------------------------------------
 
 if LOGO_PATH.exists():
-    st.markdown('<div class="logo-wrap">', unsafe_allow_html=True)
-    st.image(str(LOGO_PATH), width=150)
-    st.markdown('</div>', unsafe_allow_html=True)
-else:
-    st.warning("Arquivo da logo não encontrado. Verifique se o nome está correto no LOGO_PATH.")
+    c1, c2, c3 = st.columns([1, 1.2, 1])
+    with c2:
+        st.image(str(LOGO_PATH), use_container_width=True)
 
 st.markdown("""
 <div class="top-title">
