@@ -18,6 +18,16 @@ st.set_page_config(
 )
 
 # ---------------------------------------------------
+# LOGIN CONFIG
+# ---------------------------------------------------
+
+APP_USER = "operacao"
+APP_PASS = "100316"
+
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+
+# ---------------------------------------------------
 # PLANILHA
 # ---------------------------------------------------
 
@@ -112,7 +122,8 @@ st.markdown("""
 
     .filter-card,
     .section-card,
-    .table-card {
+    .table-card,
+    .login-card {
         background: #ffffff;
         border: 1px solid #e7ebf3;
         border-radius: 24px;
@@ -250,7 +261,9 @@ st.markdown("""
     }
 
     div[data-testid="stSelectbox"] > div,
-    div[data-testid="stTextInput"] > div {
+    div[data-testid="stTextInput"] > div,
+    div[data-testid="stTextInput"] input,
+    div[data-testid="stTextInput"] > div > div input {
         border-radius: 14px !important;
     }
 
@@ -262,6 +275,55 @@ st.markdown("""
         white-space: normal !important;
         line-height: 1.15 !important;
         padding: 0.55rem 0.8rem !important;
+    }
+
+    .login-top-blank {
+        height: 58px;
+        background: #ffffff;
+        border-radius: 24px;
+        margin-bottom: 14px;
+        box-shadow: 0 2px 10px rgba(15, 23, 42, 0.03);
+    }
+
+    .login-title {
+        text-align: center;
+        font-size: 34px;
+        font-weight: 800;
+        color: #0f2d63;
+        margin-top: 2px;
+        margin-bottom: 4px;
+    }
+
+    .login-subtitle {
+        text-align: center;
+        font-size: 16px;
+        color: #60708a;
+        margin-bottom: 28px;
+    }
+
+    .login-wrap {
+        width: min(1200px, 96vw);
+        margin: 0 auto;
+    }
+
+    .login-card {
+        padding: 18px 16px 16px 16px;
+    }
+
+    .login-footer {
+        text-align: center;
+        color: #a7b0c2;
+        font-size: 14px;
+        margin-top: 28px;
+    }
+
+    .login-button .stButton > button {
+        background: #0b1730 !important;
+        color: #ffffff !important;
+        border: none !important;
+        min-height: 52px !important;
+        border-radius: 14px !important;
+        box-shadow: none !important;
     }
 
     hr {
@@ -330,6 +392,39 @@ def render_logo(path: Path):
         ''',
         unsafe_allow_html=True
     )
+
+def show_login():
+    st.markdown('<div class="login-wrap">', unsafe_allow_html=True)
+    st.markdown('<div class="login-top-blank"></div>', unsafe_allow_html=True)
+    st.markdown('<div class="login-title">💬 Oppi</div>', unsafe_allow_html=True)
+    st.markdown('<div class="login-subtitle">Acesse o dashboard</div>', unsafe_allow_html=True)
+    st.markdown('<div class="login-card">', unsafe_allow_html=True)
+
+    usuario = st.text_input("Usuário", placeholder="Digite seu usuário", key="login_usuario")
+    senha = st.text_input("Senha", placeholder="Digite sua senha", type="password", key="login_senha")
+
+    st.markdown('<div class="login-button">', unsafe_allow_html=True)
+    entrar = st.button("Entrar", key="btn_login")
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    if entrar:
+        if usuario == APP_USER and senha == APP_PASS:
+            st.session_state.logged_in = True
+            st.rerun()
+        else:
+            st.error("Usuário ou senha incorretos.")
+
+    st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown('<div class="login-footer">Acesso restrito</div>', unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
+
+# ---------------------------------------------------
+# LOGIN
+# ---------------------------------------------------
+
+if not st.session_state.logged_in:
+    show_login()
+    st.stop()
 
 # ---------------------------------------------------
 # CONEXÃO GOOGLE
