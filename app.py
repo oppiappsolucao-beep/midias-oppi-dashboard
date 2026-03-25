@@ -1,4 +1,5 @@
 import base64
+import os
 from pathlib import Path
 
 import gspread
@@ -465,6 +466,48 @@ def show_login():
     st.markdown('<div class="login-footer">Acesso restrito</div>', unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
+def get_google_creds_dict():
+    try:
+        return dict(st.secrets["google"])
+    except Exception:
+        pass
+
+    private_key = os.getenv("GOOGLE_PRIVATE_KEY", "").replace("\\n", "\n")
+
+    env_creds = {
+        "type": os.getenv("GOOGLE_TYPE", "service_account"),
+        "project_id": os.getenv("GOOGLE_PROJECT_ID", ""),
+        "private_key_id": os.getenv("GOOGLE_PRIVATE_KEY_ID", ""),
+        "private_key": private_key,
+        "client_email": os.getenv("GOOGLE_CLIENT_EMAIL", ""),
+        "client_id": os.getenv("GOOGLE_CLIENT_ID", ""),
+        "auth_uri": os.getenv("GOOGLE_AUTH_URI", "https://accounts.google.com/o/oauth2/auth"),
+        "token_uri": os.getenv("GOOGLE_TOKEN_URI", "https://oauth2.googleapis.com/token"),
+        "auth_provider_x509_cert_url": os.getenv(
+            "GOOGLE_AUTH_PROVIDER_X509_CERT_URL",
+            "https://www.googleapis.com/oauth2/v1/certs"
+        ),
+        "client_x509_cert_url": os.getenv("GOOGLE_CLIENT_X509_CERT_URL", ""),
+        "universe_domain": os.getenv("GOOGLE_UNIVERSE_DOMAIN", "googleapis.com"),
+    }
+
+    campos_obrigatorios = [
+        "project_id",
+        "private_key_id",
+        "private_key",
+        "client_email",
+        "client_id"
+    ]
+
+    faltando = [campo for campo in campos_obrigatorios if not env_creds.get(campo)]
+    if faltando:
+        raise ValueError(
+            "Credenciais Google ausentes no EasyPanel. "
+            f"Campos faltando: {', '.join(faltando)}"
+        )
+
+    return env_creds
+
 # ---------------------------------------------------
 # LOGIN
 # ---------------------------------------------------
@@ -480,7 +523,7 @@ if not st.session_state.logged_in:
 @st.cache_resource
 def connect_sheet():
     try:
-        creds_dict = dict(st.secrets["google"])
+        creds_dict = get_google_creds_dict()
         creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
         client = gspread.authorize(creds)
         sheet = client.open_by_key(SHEET_ID)
@@ -492,6 +535,7 @@ def connect_sheet():
         st.write("- Se o SHEET_ID está correto")
         st.write("- Se a planilha foi compartilhada com a conta de serviço")
         st.write("- Se a Google Sheets API e a Google Drive API estão ativadas")
+        st.write("- Se as credenciais foram cadastradas no EasyPanel > Ambiente")
         st.write(f"Erro técnico: {e}")
         st.stop()
 
