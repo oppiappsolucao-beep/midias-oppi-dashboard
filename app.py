@@ -79,9 +79,8 @@ st.markdown("""
         height: 74px;
         border-radius: 50%;
         object-fit: cover;
-        object-position: center center;
+        object-position: 58% center;
         display: block;
-        transform: translateX(0px);
     }
 
     .top-title {
