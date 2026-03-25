@@ -31,6 +31,8 @@ MESES_ORDEM = [
     "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
 ]
 
+# Se no repositório o arquivo estiver como "logo-oppi.png", mantenha assim.
+# Se estiver como "LOGOS.png", troque aqui.
 LOGO_PATH = Path("logo-oppi.png")
 
 # ---------------------------------------------------
@@ -44,22 +46,21 @@ st.markdown("""
     }
 
     .block-container {
-        padding-top: 1.2rem;
+        padding-top: 2.8rem;
         padding-bottom: 2rem;
         max-width: 1450px;
+    }
+
+    header[data-testid="stHeader"] {
+        background: transparent;
     }
 
     .logo-wrap {
         display: flex;
         justify-content: center;
-        margin-bottom: 10px;
-    }
-
-    .logo-wrap img {
-        width: 120px;
-        max-width: 100%;
-        height: auto;
-        display: block;
+        align-items: center;
+        margin-top: 0.3rem;
+        margin-bottom: 0.8rem;
     }
 
     .top-title {
@@ -67,19 +68,19 @@ st.markdown("""
         align-items: center;
         justify-content: center;
         gap: 16px;
-        margin-bottom: 6px;
+        margin-top: 0.2rem;
+        margin-bottom: 0.2rem;
         text-align: center;
-    }
-
-    .top-title .emoji {
-        font-size: 44px;
+        flex-wrap: wrap;
     }
 
     .top-title .text {
         font-size: 42px;
         font-weight: 800;
         color: #16233b;
-        line-height: 1.1;
+        line-height: 1.15;
+        margin: 0;
+        padding: 0;
     }
 
     .subtitle {
@@ -247,6 +248,20 @@ st.markdown("""
         margin-top: 0.7rem !important;
         margin-bottom: 0.7rem !important;
     }
+
+    @media (max-width: 900px) {
+        .block-container {
+            padding-top: 1.8rem;
+        }
+
+        .top-title .text {
+            font-size: 30px;
+        }
+
+        .subtitle {
+            font-size: 16px;
+        }
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -365,8 +380,10 @@ if "Mês" in df.columns:
 
 if LOGO_PATH.exists():
     st.markdown('<div class="logo-wrap">', unsafe_allow_html=True)
-    st.image(str(LOGO_PATH), width=120)
+    st.image(str(LOGO_PATH), width=150)
     st.markdown('</div>', unsafe_allow_html=True)
+else:
+    st.warning("Arquivo da logo não encontrado. Verifique se o nome está correto no LOGO_PATH.")
 
 st.markdown("""
 <div class="top-title">
