@@ -3,6 +3,7 @@ import pandas as pd
 import plotly.express as px
 import gspread
 from google.oauth2.service_account import Credentials
+from pathlib import Path
 
 # ---------------------------------------------------
 # CONFIG
@@ -30,6 +31,8 @@ MESES_ORDEM = [
     "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
 ]
 
+LOGO_PATH = Path("logo-oppi.png")
+
 # ---------------------------------------------------
 # CSS
 # ---------------------------------------------------
@@ -41,16 +44,31 @@ st.markdown("""
     }
 
     .block-container {
-        padding-top: 1.5rem;
+        padding-top: 1.2rem;
         padding-bottom: 2rem;
         max-width: 1450px;
+    }
+
+    .logo-wrap {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 10px;
+    }
+
+    .logo-wrap img {
+        width: 120px;
+        max-width: 100%;
+        height: auto;
+        display: block;
     }
 
     .top-title {
         display: flex;
         align-items: center;
+        justify-content: center;
         gap: 16px;
         margin-bottom: 6px;
+        text-align: center;
     }
 
     .top-title .emoji {
@@ -68,6 +86,7 @@ st.markdown("""
         color: #6b7280;
         font-size: 20px;
         margin-bottom: 26px;
+        text-align: center;
     }
 
     .filter-card,
@@ -75,19 +94,22 @@ st.markdown("""
     .table-card {
         background: #ffffff;
         border: 1px solid #e7ebf3;
-        border-radius: 22px;
+        border-radius: 24px;
         padding: 18px 18px 16px 18px;
-        box-shadow: 0 2px 10px rgba(15, 23, 42, 0.03);
+        box-shadow: 0 6px 20px rgba(15, 23, 42, 0.04);
     }
 
     .metric-card {
-        background: #ffffff;
+        background: linear-gradient(180deg, #ffffff 0%, #fbfcff 100%);
         border: 1px solid #e7ebf3;
-        border-left: 6px solid #e11d48;
-        border-radius: 22px;
-        padding: 18px 20px;
-        min-height: 130px;
-        box-shadow: 0 2px 10px rgba(15, 23, 42, 0.03);
+        border-left: 7px solid #e11d48;
+        border-radius: 24px;
+        padding: 18px 20px 18px 22px;
+        min-height: 148px;
+        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
     }
 
     .metric-card-green {
@@ -104,22 +126,25 @@ st.markdown("""
 
     .metric-title {
         font-size: 15px;
-        color: #475569;
-        font-weight: 700;
-        margin-bottom: 10px;
+        color: #334155;
+        font-weight: 800;
+        margin-bottom: 8px;
+        letter-spacing: 0.1px;
     }
 
     .metric-value {
-        font-size: 34px;
-        color: #111827;
-        font-weight: 800;
-        line-height: 1.05;
-        margin-bottom: 8px;
+        font-size: 42px;
+        color: #0f172a;
+        font-weight: 900;
+        line-height: 1;
+        margin: 6px 0 10px 0;
+        letter-spacing: -0.8px;
     }
 
     .metric-sub {
         font-size: 13px;
-        color: #6b7280;
+        color: #64748b;
+        line-height: 1.45;
     }
 
     .section-title {
@@ -245,14 +270,6 @@ def ordenar_meses(lista):
     ordem = {mes: i for i, mes in enumerate(MESES_ORDEM)}
     return sorted(lista, key=lambda x: ordem.get(x, 999))
 
-def status_pagamento_badge(status):
-    s = str(status).strip().lower()
-    if s == "pago":
-        return '<span class="status-pill status-pago">Pago</span>'
-    if s == "a pagar":
-        return '<span class="status-pill status-apagar">A pagar</span>'
-    return f'<span class="status-pill status-outro">{status if str(status).strip() else "-"}</span>'
-
 def status_arte_badge(status):
     s = str(status).strip().lower()
     if s == "pronto":
@@ -343,12 +360,16 @@ if "Mês" in df.columns:
         df.loc[mascara_mes_vazio, "Mês"] = df.loc[mascara_mes_vazio, "Data Publicação"].dt.month.map(mapa_meses)
 
 # ---------------------------------------------------
-# TOPO
+# TOPO COM LOGO
 # ---------------------------------------------------
+
+if LOGO_PATH.exists():
+    st.markdown('<div class="logo-wrap">', unsafe_allow_html=True)
+    st.image(str(LOGO_PATH), width=120)
+    st.markdown('</div>', unsafe_allow_html=True)
 
 st.markdown("""
 <div class="top-title">
-    <div class="emoji">📱</div>
     <div class="text">Dashboard — Mídias Oppi</div>
 </div>
 <div class="subtitle">Gestão de publicações e pagamentos</div>
