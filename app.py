@@ -102,10 +102,6 @@ st.markdown("""
         text-align: center;
     }
 
-    .top-title .emoji {
-        font-size: 44px;
-    }
-
     .top-title .text {
         font-size: 42px;
         font-weight: 800;
@@ -285,36 +281,73 @@ st.markdown("""
         box-shadow: 0 2px 10px rgba(15, 23, 42, 0.03);
     }
 
+    .login-wrap {
+        width: min(1200px, 96vw);
+        margin: 0 auto;
+    }
+
+    .login-head {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 14px;
+        margin-bottom: 6px;
+    }
+
+    .login-logo {
+        width: 46px;
+        height: 46px;
+        border-radius: 50%;
+        object-fit: cover;
+        object-position: 58% center;
+        display: block;
+    }
+
     .login-title {
         text-align: center;
         font-size: 34px;
         font-weight: 800;
         color: #0f2d63;
-        margin-top: 2px;
-        margin-bottom: 4px;
+        margin: 0;
     }
 
     .login-subtitle {
         text-align: center;
         font-size: 16px;
         color: #60708a;
-        margin-bottom: 28px;
+        margin-bottom: 18px;
     }
 
-    .login-wrap {
-        width: min(1200px, 96vw);
-        margin: 0 auto;
+    .login-access-box {
+        text-align: center;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 14px;
+        padding: 12px 14px;
+        margin-bottom: 18px;
+    }
+
+    .login-access-title {
+        font-size: 13px;
+        font-weight: 700;
+        color: #64748b;
+        margin-bottom: 6px;
+        letter-spacing: 0.2px;
+        text-transform: uppercase;
+    }
+
+    .login-access-text {
+        font-size: 15px;
+        color: #0f172a;
+        line-height: 1.6;
+    }
+
+    .login-access-text b {
+        color: #0f2d63;
     }
 
     .login-card {
         padding: 18px 16px 16px 16px;
-    }
-
-    .login-footer {
-        text-align: center;
-        color: #a7b0c2;
-        font-size: 14px;
-        margin-top: 28px;
     }
 
     .login-button .stButton > button {
@@ -324,6 +357,13 @@ st.markdown("""
         min-height: 52px !important;
         border-radius: 14px !important;
         box-shadow: none !important;
+    }
+
+    .login-footer {
+        text-align: center;
+        color: #a7b0c2;
+        font-size: 14px;
+        margin-top: 28px;
     }
 
     hr {
@@ -393,11 +433,45 @@ def render_logo(path: Path):
         unsafe_allow_html=True
     )
 
+def login_logo_html(path: Path):
+    if not path.exists():
+        return ""
+    mime = "image/png"
+    if path.suffix.lower() in [".jpg", ".jpeg"]:
+        mime = "image/jpeg"
+    img_base64 = base64.b64encode(path.read_bytes()).decode()
+    return f'<img class="login-logo" src="data:{mime};base64,{img_base64}">'
+
 def show_login():
     st.markdown('<div class="login-wrap">', unsafe_allow_html=True)
     st.markdown('<div class="login-top-blank"></div>', unsafe_allow_html=True)
-    st.markdown('<div class="login-title">💬 Oppi</div>', unsafe_allow_html=True)
+
+    logo_html = login_logo_html(LOGO_PATH)
+    st.markdown(
+        f'''
+        <div class="login-head">
+            {logo_html}
+            <div class="login-title">Oppi</div>
+        </div>
+        ''',
+        unsafe_allow_html=True
+    )
+
     st.markdown('<div class="login-subtitle">Acesse o dashboard</div>', unsafe_allow_html=True)
+
+    st.markdown(
+        f'''
+        <div class="login-access-box">
+            <div class="login-access-title">Acesso para entrar</div>
+            <div class="login-access-text">
+                <b>Usuário:</b> {APP_USER}<br>
+                <b>Senha:</b> {APP_PASS}
+            </div>
+        </div>
+        ''',
+        unsafe_allow_html=True
+    )
+
     st.markdown('<div class="login-card">', unsafe_allow_html=True)
 
     usuario = st.text_input("Usuário", placeholder="Digite seu usuário", key="login_usuario")
