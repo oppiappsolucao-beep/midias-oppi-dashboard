@@ -48,15 +48,22 @@ st.markdown("""
     }
 
     .block-container {
-        padding-top: 1.2rem;
+        padding-top: 2.6rem;
         padding-bottom: 2rem;
         max-width: 1450px;
+    }
+
+    header[data-testid="stHeader"] {
+        background: transparent;
     }
 
     .logo-wrap {
         display: flex;
         justify-content: center;
+        align-items: center;
+        margin-top: 0.2rem;
         margin-bottom: 10px;
+        overflow: visible;
     }
 
     .logo-round {
