@@ -279,7 +279,6 @@ st.markdown("""
         border-radius: 14px !important;
     }
 
-    /* BOTÕES GERAIS */
     .stButton {
         width: 100%;
     }
@@ -879,7 +878,7 @@ for index, row in df_status.iterrows():
                 st.cache_data.clear()
                 st.rerun()
 
-            if b2.button("Em andamento", key=f"andamento_{index}"):
+            if b2.button("Em andament", key=f"andamento_{index}"):
                 worksheet.update_cell(index + 2, 8, "Em andamento")
                 st.cache_data.clear()
                 st.rerun()
