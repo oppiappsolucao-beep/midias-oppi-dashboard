@@ -284,7 +284,7 @@ st.markdown("""
         font-weight: 700 !important;
         min-height: 44px !important;
         width: 100%;
-        white-space: normal !important;
+        white-space: nowrap !important;
         line-height: 1.15 !important;
         padding: 0.55rem 0.8rem !important;
     }
