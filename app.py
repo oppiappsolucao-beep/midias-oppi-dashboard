@@ -287,6 +287,10 @@ st.markdown("""
         white-space: nowrap !important;
         line-height: 1.15 !important;
         padding: 0.55rem 0.8rem !important;
+        text-align: center !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
     }
 
     .login-top-blank {
