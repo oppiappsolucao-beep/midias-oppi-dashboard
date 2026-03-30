@@ -270,7 +270,8 @@ st.markdown("""
     div[data-testid="stSelectbox"] > div,
     div[data-testid="stTextInput"] > div,
     div[data-testid="stTextInput"] input,
-    div[data-testid="stTextInput"] > div > div input {
+    div[data-testid="stTextInput"] > div > div input,
+    div[data-testid="stMultiSelect"] > div {
         border-radius: 14px !important;
     }
 
@@ -603,7 +604,7 @@ st.markdown("""
 
 st.markdown('<div class="filter-card">', unsafe_allow_html=True)
 
-f1, f2, f3 = st.columns(3)
+f1, f2, f3, f4 = st.columns(4)
 
 with f1:
     meses_disponiveis = [x for x in df["Mês"].dropna().astype(str).unique().tolist() if x.strip()]
@@ -617,6 +618,25 @@ with f3:
     empresas_disponiveis = [x for x in df["Empresa"].dropna().astype(str).unique().tolist() if str(x).strip()]
     empresa = st.selectbox("Empresa", ["Todas"] + sorted(empresas_disponiveis))
 
+with f4:
+    datas_disponiveis_dt = (
+        df["Data Publicação"]
+        .dropna()
+        .dt.normalize()
+        .drop_duplicates()
+        .sort_values()
+        .tolist()
+    )
+    datas_disponiveis_str = [d.strftime("%d/%m/%Y") for d in datas_disponiveis_dt]
+    datas_selecionadas_str = st.multiselect(
+        "Datas publicação",
+        options=datas_disponiveis_str,
+        default=[]
+    )
+    datas_selecionadas_dt = {
+        pd.to_datetime(d, dayfirst=True).normalize() for d in datas_selecionadas_str
+    }
+
 st.markdown('</div>', unsafe_allow_html=True)
 
 df_filtrado = df.copy()
@@ -629,6 +649,11 @@ if semana != "Todas":
 
 if empresa != "Todas":
     df_filtrado = df_filtrado[df_filtrado["Empresa"].astype(str) == empresa]
+
+if datas_selecionadas_dt:
+    df_filtrado = df_filtrado[
+        df_filtrado["Data Publicação"].dt.normalize().isin(datas_selecionadas_dt)
+    ]
 
 # ---------------------------------------------------
 # MÉTRICAS
