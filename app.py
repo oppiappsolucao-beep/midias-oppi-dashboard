@@ -846,7 +846,7 @@ for index, row in df_status.iterrows():
 
     st.markdown('<div class="row-card">', unsafe_allow_html=True)
 
-    left, mid, right = st.columns([3.3, 1.3, 4.2])
+    left, mid, right = st.columns([3.2, 1.2, 4.6])
 
     with left:
         st.markdown(f'<div class="row-main">{tema_txt}</div>', unsafe_allow_html=True)
@@ -864,21 +864,21 @@ for index, row in df_status.iterrows():
         st.markdown(f'<div class="row-valor">{format_brl(valor_num)}</div>', unsafe_allow_html=True)
 
     with right:
-        info_col, buttons_col = st.columns([1.0, 3.0])
+        info_col, buttons_col = st.columns([1.0, 4.0])
 
         with info_col:
             st.markdown("**Status atual**")
             st.markdown(status_arte_badge(status_arte_txt), unsafe_allow_html=True)
 
         with buttons_col:
-            b1, b2, b3, b4 = st.columns([1, 1, 1, 1], gap="small")
+            b1, b2, b3, b4 = st.columns([1.05, 1.55, 1.05, 1.15], gap="small")
 
             if b1.button("Pronto", key=f"pronto_{index}"):
                 worksheet.update_cell(index + 2, 8, "Pronto")
                 st.cache_data.clear()
                 st.rerun()
 
-            if b2.button("Em andament", key=f"andamento_{index}"):
+            if b2.button("Em andamento", key=f"andamento_{index}"):
                 worksheet.update_cell(index + 2, 8, "Em andamento")
                 st.cache_data.clear()
                 st.rerun()
