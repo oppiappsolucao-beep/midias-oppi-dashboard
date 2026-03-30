@@ -279,18 +279,30 @@ st.markdown("""
         border-radius: 14px !important;
     }
 
+    /* BOTÕES GERAIS */
+    .stButton {
+        width: 100%;
+    }
+
     .stButton > button {
         border-radius: 12px !important;
         font-weight: 700 !important;
+        font-size: 15px !important;
+        height: 44px !important;
         min-height: 44px !important;
-        width: 100%;
+        max-height: 44px !important;
+        width: 100% !important;
+        min-width: 100% !important;
+        padding: 0 10px !important;
+        margin: 0 !important;
         white-space: nowrap !important;
-        line-height: 1.15 !important;
-        padding: 0.55rem 0.8rem !important;
+        line-height: 1 !important;
         text-align: center !important;
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
+        box-sizing: border-box !important;
+        overflow: hidden !important;
     }
 
     .login-top-blank {
@@ -347,6 +359,7 @@ st.markdown("""
         color: #ffffff !important;
         border: none !important;
         min-height: 52px !important;
+        height: 52px !important;
         border-radius: 14px !important;
         box-shadow: none !important;
     }
@@ -859,7 +872,7 @@ for index, row in df_status.iterrows():
             st.markdown(status_arte_badge(status_arte_txt), unsafe_allow_html=True)
 
         with buttons_col:
-            b1, b2, b3, b4 = st.columns(4)
+            b1, b2, b3, b4 = st.columns([1, 1, 1, 1], gap="small")
 
             if b1.button("Pronto", key=f"pronto_{index}"):
                 worksheet.update_cell(index + 2, 8, "Pronto")
