@@ -870,6 +870,17 @@ for index, row in df_status.iterrows():
             unsafe_allow_html=True
         )
 
+        novo_tema = st.text_input(
+            "Editar nome da atividade",
+            value=tema_txt,
+            key=f"tema_input_{index}"
+        )
+
+        if st.button("Salvar nome", key=f"salvar_tema_{index}"):
+            worksheet.update_cell(index + 2, 4, novo_tema)
+            st.cache_data.clear()
+            st.rerun()
+
     with mid:
         st.markdown(f'<div class="row-meta"><b>Valor</b></div>', unsafe_allow_html=True)
         st.markdown(f'<div class="row-valor">{format_brl(valor_num)}</div>', unsafe_allow_html=True)
