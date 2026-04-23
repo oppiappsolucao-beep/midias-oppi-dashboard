@@ -401,9 +401,6 @@ def parse_data_publicacao(valor):
     if pd.isna(valor):
         return pd.NaT
 
-    if isinstance(valor, pd.Timestamp):
-        return valor
-
     texto = str(valor).strip()
     if not texto:
         return pd.NaT
@@ -414,10 +411,7 @@ def parse_data_publicacao(valor):
         except Exception:
             pass
 
-    try:
-        return pd.to_datetime(texto, dayfirst=True, errors="coerce")
-    except Exception:
-        return pd.NaT
+    return pd.to_datetime(texto, dayfirst=True, errors="coerce")
 
 def status_arte_badge(status):
     s = str(status).strip().lower()
@@ -598,19 +592,18 @@ df = load_data()
 # TRATAMENTO
 # ---------------------------------------------------
 
+for col in ["Mês", "Semana", "Empresa", "Tema", "Status Pagamento", "Status da arte", "Tipo de arte", "Data Publicação"]:
+    if col not in df.columns:
+        df[col] = ""
+
+df["Data Publicação Raw"] = df["Data Publicação"].astype(str).str.strip()
+
 if "Valor" in df.columns:
     df["Valor"] = pd.to_numeric(normalizar_valor(df["Valor"]), errors="coerce").fillna(0)
 else:
     df["Valor"] = 0.0
 
-if "Data Publicação" in df.columns:
-    df["Data Publicação"] = df["Data Publicação"].apply(parse_data_publicacao)
-else:
-    df["Data Publicação"] = pd.NaT
-
-for col in ["Mês", "Semana", "Empresa", "Tema", "Status Pagamento", "Status da arte", "Tipo de arte"]:
-    if col not in df.columns:
-        df[col] = ""
+df["Data Publicação"] = df["Data Publicação Raw"].apply(parse_data_publicacao)
 
 if "Mês" in df.columns:
     df["Mês"] = df["Mês"].astype(str).str.strip()
@@ -657,14 +650,16 @@ with f3:
     empresa = st.selectbox("Empresa", ["Todas"] + sorted(empresas_disponiveis))
 
 with f4:
-    datas_validas = df["Data Publicação"].dropna()
-    datas_disponiveis_dt = (
-        datas_validas.dt.normalize()
-        .drop_duplicates()
-        .sort_values()
-        .tolist()
-    )
-    datas_disponiveis_str = [d.strftime("%d/%m/%Y") for d in datas_disponiveis_dt]
+    datas_disponiveis_str = [
+        x for x in df["Data Publicação Raw"].dropna().astype(str).unique().tolist()
+        if str(x).strip() and str(x).strip().lower() != "nan"
+    ]
+
+    def chave_data(txt):
+        dt = parse_data_publicacao(txt)
+        return dt if pd.notna(dt) else pd.Timestamp.max
+
+    datas_disponiveis_str = sorted(set(datas_disponiveis_str), key=chave_data)
 
     datas_selecionadas_str = st.multiselect(
         "Datas publicação",
@@ -672,11 +667,6 @@ with f4:
         default=[],
         placeholder="Selecione uma ou mais datas"
     )
-
-    datas_selecionadas_dt = {
-        pd.to_datetime(d, format="%d/%m/%Y").normalize()
-        for d in datas_selecionadas_str
-    }
 
 st.markdown('</div>', unsafe_allow_html=True)
 
@@ -691,9 +681,9 @@ if semana != "Todas":
 if empresa != "Todas":
     df_filtrado = df_filtrado[df_filtrado["Empresa"].astype(str) == empresa]
 
-if datas_selecionadas_dt:
+if datas_selecionadas_str:
     df_filtrado = df_filtrado[
-        df_filtrado["Data Publicação"].dt.normalize().isin(datas_selecionadas_dt)
+        df_filtrado["Data Publicação Raw"].isin(datas_selecionadas_str)
     ]
 
 # ---------------------------------------------------
@@ -863,7 +853,7 @@ for index, row in df_status.iterrows():
     if pd.notnull(row.get("Data Publicação")):
         data_txt = row["Data Publicação"].strftime("%d/%m/%Y")
     else:
-        data_txt = "-"
+        data_txt = str(row.get("Data Publicação Raw", "")).strip() or "-"
 
     st.markdown('<div class="row-card">', unsafe_allow_html=True)
 
