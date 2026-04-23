@@ -397,6 +397,28 @@ def ordenar_meses(lista):
     ordem = {mes: i for i, mes in enumerate(MESES_ORDEM)}
     return sorted(lista, key=lambda x: ordem.get(x, 999))
 
+def parse_data_publicacao(valor):
+    if pd.isna(valor):
+        return pd.NaT
+
+    if isinstance(valor, pd.Timestamp):
+        return valor
+
+    texto = str(valor).strip()
+    if not texto:
+        return pd.NaT
+
+    for fmt in ("%d/%m/%Y", "%d/%m/%y", "%Y-%m-%d", "%d-%m-%Y", "%d-%m-%y"):
+        try:
+            return pd.to_datetime(texto, format=fmt, errors="raise")
+        except Exception:
+            pass
+
+    try:
+        return pd.to_datetime(texto, dayfirst=True, errors="coerce")
+    except Exception:
+        return pd.NaT
+
 def status_arte_badge(status):
     s = str(status).strip().lower()
     if s == "pronto":
@@ -582,11 +604,7 @@ else:
     df["Valor"] = 0.0
 
 if "Data Publicação" in df.columns:
-    df["Data Publicação"] = pd.to_datetime(
-        df["Data Publicação"],
-        dayfirst=True,
-        errors="coerce"
-    )
+    df["Data Publicação"] = df["Data Publicação"].apply(parse_data_publicacao)
 else:
     df["Data Publicação"] = pd.NaT
 
@@ -639,22 +657,25 @@ with f3:
     empresa = st.selectbox("Empresa", ["Todas"] + sorted(empresas_disponiveis))
 
 with f4:
+    datas_validas = df["Data Publicação"].dropna()
     datas_disponiveis_dt = (
-        df["Data Publicação"]
-        .dropna()
-        .dt.normalize()
+        datas_validas.dt.normalize()
         .drop_duplicates()
         .sort_values()
         .tolist()
     )
     datas_disponiveis_str = [d.strftime("%d/%m/%Y") for d in datas_disponiveis_dt]
+
     datas_selecionadas_str = st.multiselect(
         "Datas publicação",
         options=datas_disponiveis_str,
-        default=[]
+        default=[],
+        placeholder="Selecione uma ou mais datas"
     )
+
     datas_selecionadas_dt = {
-        pd.to_datetime(d, dayfirst=True).normalize() for d in datas_selecionadas_str
+        pd.to_datetime(d, format="%d/%m/%Y").normalize()
+        for d in datas_selecionadas_str
     }
 
 st.markdown('</div>', unsafe_allow_html=True)
