@@ -1,7 +1,9 @@
 import base64
 import html
+import io
 import textwrap
 import os
+import re
 from pathlib import Path
 from datetime import date
 
@@ -11,6 +13,12 @@ import plotly.express as px
 import streamlit as st
 import streamlit.components.v1 as components
 from google.oauth2.service_account import Credentials
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.lib.units import mm
+from reportlab.platypus import Image as RLImage
+from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 # ---------------------------------------------------
 # CONFIG
@@ -458,6 +466,28 @@ st.markdown("""
 
     div[role="dialog"] > div {
         background: #ffffff !important;
+    }
+
+    @media (max-width: 768px) {
+        div[role="dialog"] {
+            width: calc(100vw - 18px) !important;
+            max-width: calc(100vw - 18px) !important;
+            padding: 10px !important;
+            border-radius: 18px !important;
+        }
+
+        div[role="dialog"] > div {
+            padding-left: 4px !important;
+            padding-right: 4px !important;
+        }
+
+        div[role="dialog"] div[data-testid="stButton"] button,
+        div[role="dialog"] div[data-testid="stDownloadButton"] button {
+            font-size: 13px !important;
+            min-height: 42px !important;
+            height: 42px !important;
+            padding: 0 8px !important;
+        }
     }
 
     .presentation-popup {
@@ -1072,6 +1102,21 @@ def get_traffic_form_values():
     }
 
 
+TRAFFIC_FORM_KEYS = [
+    "trafego_empresa",
+    "trafego_campanha",
+    "trafego_plataforma",
+    "trafego_periodo_inicio",
+    "trafego_periodo_fim",
+    "trafego_investimento",
+    "trafego_custo_dia",
+    "trafego_alcance",
+    "trafego_visualizacoes",
+    "trafego_contatos",
+    "trafego_custo_contato",
+]
+
+
 def traffic_form_missing_fields(values):
     labels = {
         "empresa": "nome da empresa",
@@ -1083,10 +1128,181 @@ def traffic_form_missing_fields(values):
         "custo_dia": "custo médio por dia",
         "alcance": "alcance",
         "visualizacoes": "visualizações",
-        "contatos": "contatos",
+        "contatos": "contatos gerados",
         "custo_contato": "custo médio por contato",
     }
     return [labels[key] for key, value in values.items() if not value]
+
+
+def clear_traffic_form():
+    for key in TRAFFIC_FORM_KEYS:
+        st.session_state.pop(key, None)
+
+
+def safe_filename(value):
+    cleaned = re.sub(r"[^A-Za-z0-9_-]+", "_", str(value).strip())
+    cleaned = cleaned.strip("_")
+    return cleaned or "campanha"
+
+
+def build_traffic_pdf(values):
+    buffer = io.BytesIO()
+
+    document = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        rightMargin=20 * mm,
+        leftMargin=20 * mm,
+        topMargin=18 * mm,
+        bottomMargin=18 * mm,
+    )
+
+    styles = getSampleStyleSheet()
+
+    brand_style = ParagraphStyle(
+        "OppiBrand",
+        parent=styles["Normal"],
+        fontName="Helvetica-Bold",
+        fontSize=10,
+        leading=12,
+        textColor=colors.HexColor("#C026D3"),
+        spaceAfter=2,
+    )
+
+    title_style = ParagraphStyle(
+        "OppiTitle",
+        parent=styles["Heading1"],
+        fontName="Helvetica-Bold",
+        fontSize=24,
+        leading=28,
+        textColor=colors.HexColor("#16233B"),
+        spaceAfter=4,
+    )
+
+    body_style = ParagraphStyle(
+        "OppiBody",
+        parent=styles["BodyText"],
+        fontName="Helvetica",
+        fontSize=12.5,
+        leading=18,
+        textColor=colors.HexColor("#334155"),
+        spaceAfter=10,
+    )
+
+    safe = {key: html.escape(str(value)) for key, value in values.items()}
+
+    story = []
+
+    logo_element = None
+    if LOGO_PATH.exists():
+        try:
+            logo_element = RLImage(str(LOGO_PATH), width=18 * mm, height=18 * mm)
+        except Exception:
+            logo_element = None
+
+    brand_text = Paragraph(
+        '<font color="#C026D3"><b>OPPI TECH</b></font><br/>'
+        '<font color="#64748B" size="8">GESTÃO DE TRÁFEGO</font>',
+        brand_style,
+    )
+
+    if logo_element:
+        brand_table = Table(
+            [[logo_element, brand_text]],
+            colWidths=[22 * mm, 125 * mm],
+        )
+    else:
+        brand_table = Table(
+            [[brand_text]],
+            colWidths=[147 * mm],
+        )
+
+    brand_table.setStyle(
+        TableStyle(
+            [
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+                ("TOPPADDING", (0, 0), (-1, -1), 0),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+            ]
+        )
+    )
+
+    story.append(brand_table)
+    story.append(Spacer(1, 8))
+    story.append(Paragraph("Apresentação de resultados", title_style))
+
+    accent = Table([[""]], colWidths=[32 * mm], rowHeights=[2.4 * mm])
+    accent.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#A855F7")),
+                ("BOX", (0, 0), (-1, -1), 0, colors.HexColor("#A855F7")),
+            ]
+        )
+    )
+    story.append(accent)
+    story.append(Spacer(1, 14))
+
+    paragraphs = [
+        "Bom dia, estes são os resultados dos anúncios.",
+        (
+            f'A empresa <b>{safe["empresa"]}</b> realizou uma campanha '
+            f'na plataforma <b>{safe["plataforma"]}</b>.'
+        ),
+        f'A campanha apresentada é <b>{safe["campanha"]}</b>.',
+        (
+            f'O período analisado foi de <b>{safe["periodo_inicio"]}</b> '
+            f'até <b>{safe["periodo_fim"]}</b>.'
+        ),
+        (
+            f'Durante esse período, foram investidos '
+            f'<b>R$ {safe["investimento"]}</b> em anúncios.'
+        ),
+        (
+            f'O custo médio por dia foi de '
+            f'<b>R$ {safe["custo_dia"]}</b>.'
+        ),
+        (
+            f'A campanha alcançou <b>{safe["alcance"]}</b> pessoas '
+            f'e recebeu <b>{safe["visualizacoes"]}</b> visualizações.'
+        ),
+        (
+            f'Foram gerados <b>{safe["contatos"]}</b> contatos, '
+            f'com um custo médio de <b>R$ {safe["custo_contato"]}</b> por contato.'
+        ),
+    ]
+
+    for paragraph in paragraphs:
+        story.append(Paragraph(paragraph, body_style))
+
+    story.append(Spacer(1, 12))
+
+    footer = Table(
+        [[Paragraph(
+            '<font color="#64748B" size="8">Relatório gerado pelo painel interno da Oppi Tech.</font>',
+            styles["Normal"],
+        )]],
+        colWidths=[170 * mm],
+    )
+
+    footer.setStyle(
+        TableStyle(
+            [
+                ("TOPPADDING", (0, 0), (-1, -1), 6),
+                ("LINEABOVE", (0, 0), (-1, -1), 0.6, colors.HexColor("#E2E8F0")),
+                ("LEFTPADDING", (0, 0), (-1, -1), 0),
+            ]
+        )
+    )
+
+    story.append(footer)
+    document.build(story)
+
+    pdf_bytes = buffer.getvalue()
+    buffer.close()
+    return pdf_bytes
 
 
 @st.dialog("Apresentação de resultados", width="large")
@@ -1105,7 +1321,7 @@ def show_traffic_presentation(values):
 
             body {{
                 margin: 0;
-                padding: 6px 8px 4px 8px;
+                padding: 5px 8px 2px 8px;
                 background: #ffffff;
                 color: #16233b;
                 font-family: Inter, Arial, sans-serif;
@@ -1114,49 +1330,80 @@ def show_traffic_presentation(values):
             .popup {{
                 width: 100%;
                 background: #ffffff;
-                border-radius: 18px;
-                padding: 4px 4px 0 4px;
+                padding: 0;
             }}
 
             .kicker {{
                 color: #C026D3;
-                font-size: 12px;
+                font-size: 11px;
                 font-weight: 900;
                 letter-spacing: 1.5px;
                 text-transform: uppercase;
-                margin-bottom: 10px;
+                margin-bottom: 8px;
             }}
 
             .title {{
                 color: #16233b;
-                font-size: 30px;
+                font-size: 27px;
                 font-weight: 900;
-                line-height: 1.12;
-                margin-bottom: 12px;
+                line-height: 1.08;
+                margin-bottom: 10px;
             }}
 
             .line {{
-                width: 72px;
+                width: 68px;
                 height: 5px;
                 border-radius: 999px;
                 background: linear-gradient(90deg, #7C3AED 0%, #C026D3 100%);
-                margin-bottom: 22px;
+                margin-bottom: 17px;
             }}
 
             .text {{
                 color: #334155;
-                font-size: 18px;
-                line-height: 1.72;
+                font-size: 17px;
+                line-height: 1.52;
                 font-weight: 500;
             }}
 
             .text p {{
-                margin: 0 0 14px 0;
+                margin: 0 0 11px 0;
             }}
 
             .text strong {{
                 color: #16233b;
                 font-weight: 900;
+            }}
+
+            @media (max-width: 600px) {{
+                body {{
+                    padding: 2px 3px 0 3px;
+                }}
+
+                .kicker {{
+                    font-size: 10px;
+                    margin-bottom: 6px;
+                }}
+
+                .title {{
+                    font-size: 21px;
+                    line-height: 1.05;
+                    margin-bottom: 8px;
+                }}
+
+                .line {{
+                    width: 54px;
+                    height: 4px;
+                    margin-bottom: 13px;
+                }}
+
+                .text {{
+                    font-size: 15px;
+                    line-height: 1.42;
+                }}
+
+                .text p {{
+                    margin-bottom: 9px;
+                }}
             }}
         </style>
     </head>
@@ -1168,41 +1415,13 @@ def show_traffic_presentation(values):
 
             <div class="text">
                 <p>Bom dia, estes são os resultados dos anúncios.</p>
-
-                <p>
-                    A empresa <strong>{safe["empresa"]}</strong> realizou uma campanha
-                    na plataforma <strong>{safe["plataforma"]}</strong>.
-                </p>
-
-                <p>
-                    A campanha apresentada é <strong>{safe["campanha"]}</strong>.
-                </p>
-
-                <p>
-                    O período analisado foi de <strong>{safe["periodo_inicio"]}</strong>
-                    até <strong>{safe["periodo_fim"]}</strong>.
-                </p>
-
-                <p>
-                    Durante esse período, foram investidos
-                    <strong>R$ {safe["investimento"]}</strong> em anúncios.
-                </p>
-
-                <p>
-                    O custo médio por dia foi de
-                    <strong>R$ {safe["custo_dia"]}</strong>.
-                </p>
-
-                <p>
-                    A campanha alcançou <strong>{safe["alcance"]}</strong> pessoas
-                    e recebeu <strong>{safe["visualizacoes"]}</strong> visualizações.
-                </p>
-
-                <p>
-                    Foram gerados <strong>{safe["contatos"]}</strong> contatos,
-                    com um custo médio de <strong>R$ {safe["custo_contato"]}</strong>
-                    por contato.
-                </p>
+                <p>A empresa <strong>{safe["empresa"]}</strong> realizou uma campanha na plataforma <strong>{safe["plataforma"]}</strong>.</p>
+                <p>A campanha apresentada é <strong>{safe["campanha"]}</strong>.</p>
+                <p>O período analisado foi de <strong>{safe["periodo_inicio"]}</strong> até <strong>{safe["periodo_fim"]}</strong>.</p>
+                <p>Durante esse período, foram investidos <strong>R$ {safe["investimento"]}</strong> em anúncios.</p>
+                <p>O custo médio por dia foi de <strong>R$ {safe["custo_dia"]}</strong>.</p>
+                <p>A campanha alcançou <strong>{safe["alcance"]}</strong> pessoas e recebeu <strong>{safe["visualizacoes"]}</strong> visualizações.</p>
+                <p>Foram gerados <strong>{safe["contatos"]}</strong> contatos, com um custo médio de <strong>R$ {safe["custo_contato"]}</strong> por contato.</p>
             </div>
         </div>
     </body>
@@ -1211,12 +1430,32 @@ def show_traffic_presentation(values):
 
     components.html(
         popup_html,
-        height=620,
-        scrolling=False
+        height=650,
+        scrolling=True
     )
 
-    if st.button("Fechar apresentação", use_container_width=True, key="btn_fechar_apresentacao"):
-        st.rerun()
+    pdf_bytes = build_traffic_pdf(values)
+    file_name = f"resultados_{safe_filename(values['empresa'])}_{safe_filename(values['campanha'])}.pdf"
+
+    st.download_button(
+        "Baixar PDF com a logo da Oppi",
+        data=pdf_bytes,
+        file_name=file_name,
+        mime="application/pdf",
+        use_container_width=True,
+        key="btn_baixar_pdf_apresentacao",
+    )
+
+    c1, c2 = st.columns(2)
+
+    with c1:
+        if st.button("Voltar para editar", use_container_width=True, key="btn_voltar_editar"):
+            st.rerun()
+
+    with c2:
+        if st.button("Nova apresentação", use_container_width=True, key="btn_nova_apresentacao"):
+            clear_traffic_form()
+            st.rerun()
 
 
 def render_gestao_trafego():
