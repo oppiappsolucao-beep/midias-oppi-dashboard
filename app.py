@@ -1,5 +1,6 @@
 import base64
 import html
+import textwrap
 import os
 from pathlib import Path
 
@@ -995,7 +996,7 @@ def traffic_form_missing_fields(values):
 def show_traffic_presentation(values):
     safe = {key: html.escape(value) for key, value in values.items()}
 
-    st.markdown(
+    popup_html = textwrap.dedent(
         f"""
         <div class="presentation-popup">
             <div class="presentation-popup-kicker">Oppi Tech</div>
@@ -1037,9 +1038,10 @@ def show_traffic_presentation(values):
                 </p>
             </div>
         </div>
-        """,
-        unsafe_allow_html=True
-    )
+        """
+    ).strip()
+
+    st.markdown(popup_html, unsafe_allow_html=True)
 
     if st.button("Fechar apresentação", use_container_width=True, key="btn_fechar_apresentacao"):
         st.rerun()
