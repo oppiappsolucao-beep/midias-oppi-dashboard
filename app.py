@@ -1,4 +1,5 @@
 import base64
+import html
 import os
 from pathlib import Path
 
@@ -444,6 +445,92 @@ st.markdown("""
 
 
     /* ---------------------------------------------------
+       APRESENTAÇÃO EM POP-UP
+       --------------------------------------------------- */
+
+    div[role="dialog"] {
+        border-radius: 24px !important;
+        overflow: hidden !important;
+    }
+
+    div[role="dialog"] > div {
+        background: #ffffff !important;
+    }
+
+    .presentation-popup {
+        background: #ffffff;
+        border-radius: 22px;
+        padding: 4px 8px 8px 8px;
+        color: #16233b;
+        font-family: Inter, system-ui, -apple-system, Segoe UI, Arial, sans-serif;
+    }
+
+    .presentation-popup-kicker {
+        color: #C026D3;
+        font-size: 12px;
+        font-weight: 900;
+        letter-spacing: 1.5px;
+        text-transform: uppercase;
+        margin-bottom: 10px;
+    }
+
+    .presentation-popup-title {
+        color: #16233b;
+        font-size: 30px;
+        font-weight: 900;
+        line-height: 1.12;
+        margin-bottom: 12px;
+    }
+
+    .presentation-popup-line {
+        width: 72px;
+        height: 5px;
+        border-radius: 999px;
+        background: linear-gradient(90deg, #7C3AED 0%, #C026D3 100%);
+        margin-bottom: 22px;
+    }
+
+    .presentation-popup-text {
+        color: #334155;
+        font-size: 18px;
+        line-height: 1.75;
+        font-weight: 500;
+    }
+
+    .presentation-popup-text p {
+        margin: 0 0 14px 0;
+    }
+
+    .presentation-popup-text strong {
+        color: #16233b;
+        font-weight: 900;
+    }
+
+    .traffic-action-wrap {
+        margin-top: 22px;
+        padding-top: 18px;
+        border-top: 1px solid #e7ebf3;
+    }
+
+    .traffic-action-wrap .stButton > button {
+        background: linear-gradient(90deg, #7C3AED 0%, #C026D3 100%) !important;
+        color: #ffffff !important;
+        border: none !important;
+        border-radius: 14px !important;
+        min-height: 50px !important;
+        height: 50px !important;
+        font-size: 16px !important;
+        font-weight: 900 !important;
+        box-shadow: 0 10px 22px rgba(124, 58, 237, 0.20) !important;
+    }
+
+    .traffic-action-wrap .stButton > button:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 14px 26px rgba(124, 58, 237, 0.26) !important;
+    }
+
+
+    /* ---------------------------------------------------
        MENU LATERAL RECOLHÍVEL
        --------------------------------------------------- */
 
@@ -873,6 +960,92 @@ def traffic_input(key, placeholder):
     )
 
 
+def get_traffic_form_values():
+    return {
+        "empresa": str(st.session_state.get("trafego_empresa", "")).strip(),
+        "plataforma": str(st.session_state.get("trafego_plataforma", "")).strip(),
+        "periodo_inicio": str(st.session_state.get("trafego_periodo_inicio", "")).strip(),
+        "periodo_fim": str(st.session_state.get("trafego_periodo_fim", "")).strip(),
+        "investimento": str(st.session_state.get("trafego_investimento", "")).strip(),
+        "custo_dia": str(st.session_state.get("trafego_custo_dia", "")).strip(),
+        "alcance": str(st.session_state.get("trafego_alcance", "")).strip(),
+        "visualizacoes": str(st.session_state.get("trafego_visualizacoes", "")).strip(),
+        "contatos": str(st.session_state.get("trafego_contatos", "")).strip(),
+        "custo_contato": str(st.session_state.get("trafego_custo_contato", "")).strip(),
+    }
+
+
+def traffic_form_missing_fields(values):
+    labels = {
+        "empresa": "nome da empresa",
+        "plataforma": "plataforma",
+        "periodo_inicio": "início do período",
+        "periodo_fim": "fim do período",
+        "investimento": "valor investido",
+        "custo_dia": "custo médio por dia",
+        "alcance": "alcance",
+        "visualizacoes": "visualizações",
+        "contatos": "contatos",
+        "custo_contato": "custo médio por contato",
+    }
+    return [labels[key] for key, value in values.items() if not value]
+
+
+@st.dialog("Apresentação de resultados", width="large")
+def show_traffic_presentation(values):
+    safe = {key: html.escape(value) for key, value in values.items()}
+
+    st.markdown(
+        f"""
+        <div class="presentation-popup">
+            <div class="presentation-popup-kicker">Oppi Tech</div>
+            <div class="presentation-popup-title">Apresentação de resultados</div>
+            <div class="presentation-popup-line"></div>
+
+            <div class="presentation-popup-text">
+                <p>Bom dia, estes são os resultados dos anúncios.</p>
+
+                <p>
+                    A empresa <strong>{safe["empresa"]}</strong> realizou uma campanha
+                    na plataforma <strong>{safe["plataforma"]}</strong>.
+                </p>
+
+                <p>
+                    O período analisado foi de <strong>{safe["periodo_inicio"]}</strong>
+                    até <strong>{safe["periodo_fim"]}</strong>.
+                </p>
+
+                <p>
+                    Durante esse período, foram investidos
+                    <strong>R$ {safe["investimento"]}</strong> em anúncios.
+                </p>
+
+                <p>
+                    O custo médio por dia foi de
+                    <strong>R$ {safe["custo_dia"]}</strong>.
+                </p>
+
+                <p>
+                    A campanha alcançou <strong>{safe["alcance"]}</strong> pessoas
+                    e recebeu <strong>{safe["visualizacoes"]}</strong> visualizações.
+                </p>
+
+                <p>
+                    Foram gerados <strong>{safe["contatos"]}</strong> contatos,
+                    com um custo médio de <strong>R$ {safe["custo_contato"]}</strong>
+                    por contato.
+                </p>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    if st.button("Fechar apresentação", use_container_width=True, key="btn_fechar_apresentacao"):
+        st.rerun()
+
+
+
 def render_gestao_trafego():
     st.markdown('<div class="traffic-card">', unsafe_allow_html=True)
     st.markdown(
@@ -954,6 +1127,26 @@ def render_gestao_trafego():
         traffic_input("trafego_custo_contato", "0,00")
     with r6e:
         st.markdown('<div class="sentence-piece">por contato.</div>', unsafe_allow_html=True)
+
+    st.markdown('<div class="traffic-action-wrap">', unsafe_allow_html=True)
+    abrir_apresentacao = st.button(
+        "Abrir apresentação",
+        use_container_width=True,
+        key="btn_abrir_apresentacao"
+    )
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    if abrir_apresentacao:
+        values = get_traffic_form_values()
+        missing = traffic_form_missing_fields(values)
+
+        if missing:
+            st.warning(
+                "Preencha todos os campos antes de abrir a apresentação. "
+                f"Faltando: {', '.join(missing)}."
+            )
+        else:
+            show_traffic_presentation(values)
 
     st.markdown('</div>', unsafe_allow_html=True)
 
