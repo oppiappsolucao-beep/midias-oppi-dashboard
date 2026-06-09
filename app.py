@@ -28,6 +28,9 @@ APP_PASS = "100316"
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 
+if "area_dashboard" not in st.session_state:
+    st.session_state.area_dashboard = "Gestão de Tráfego"
+
 # ---------------------------------------------------
 # PLANILHA
 # ---------------------------------------------------
@@ -374,6 +377,92 @@ st.markdown("""
         margin-top: 0.7rem !important;
         margin-bottom: 0.7rem !important;
     }
+
+    .area-switch-card {
+        background: #ffffff;
+        border: 1px solid #e7ebf3;
+        border-radius: 20px;
+        padding: 14px 18px 8px 18px;
+        box-shadow: 0 6px 20px rgba(15, 23, 42, 0.04);
+        margin-bottom: 18px;
+    }
+
+    .traffic-card {
+        background: #ffffff;
+        border: 1px solid #e7ebf3;
+        border-radius: 26px;
+        padding: 28px 30px 30px 30px;
+        box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
+        max-width: 1180px;
+        margin: 0 auto;
+    }
+
+    .traffic-greeting {
+        color: #16233b;
+        font-size: 28px;
+        font-weight: 900;
+        line-height: 1.25;
+        margin-bottom: 24px;
+        text-align: center;
+    }
+
+    .traffic-divider {
+        height: 1px;
+        background: #e7ebf3;
+        margin: 4px 0 24px 0;
+    }
+
+    .sentence-piece {
+        color: #334155;
+        font-size: 18px;
+        font-weight: 600;
+        line-height: 1.35;
+        padding-top: 10px;
+    }
+
+    .traffic-space {
+        height: 8px;
+    }
+
+    .traffic-card div[data-testid="stTextInput"] input {
+        background: #fbfcff !important;
+        border: 1px solid #d9e0eb !important;
+        border-radius: 12px !important;
+        color: #0f172a !important;
+        font-size: 17px !important;
+        font-weight: 700 !important;
+        height: 44px !important;
+        padding: 0 12px !important;
+    }
+
+    .traffic-card div[data-testid="stTextInput"] input:focus {
+        border-color: #0f2d63 !important;
+        box-shadow: 0 0 0 2px rgba(15, 45, 99, 0.10) !important;
+    }
+
+    @media (max-width: 768px) {
+        .top-title .text {
+            font-size: 32px;
+        }
+
+        .subtitle {
+            font-size: 17px;
+        }
+
+        .traffic-card {
+            padding: 20px 16px 22px 16px;
+        }
+
+        .traffic-greeting {
+            font-size: 23px;
+        }
+
+        .sentence-piece {
+            font-size: 16px;
+            padding-top: 7px;
+        }
+    }
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -546,11 +635,138 @@ def get_google_creds_dict():
     return env_creds
 
 # ---------------------------------------------------
+# TOPO E NAVEGAÇÃO
+# ---------------------------------------------------
+
+def render_dashboard_top():
+    render_logo(LOGO_PATH)
+
+    st.markdown(
+        """
+        <div class="top-title">
+            <div class="text">Dashboard — Oppi</div>
+        </div>
+        <div class="subtitle">Gestão de Tráfego e Mídias</div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    st.markdown('<div class="area-switch-card">', unsafe_allow_html=True)
+    area = st.selectbox(
+        "Área do dashboard",
+        options=["Gestão de Tráfego", "Mídias"],
+        key="area_dashboard"
+    )
+    st.markdown('</div>', unsafe_allow_html=True)
+    return area
+
+
+def traffic_input(key, placeholder):
+    return st.text_input(
+        label=key,
+        placeholder=placeholder,
+        key=key,
+        label_visibility="collapsed"
+    )
+
+
+def render_gestao_trafego():
+    st.markdown('<div class="traffic-card">', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="traffic-greeting">Bom dia, estes são os resultados dos anúncios.</div>',
+        unsafe_allow_html=True
+    )
+    st.markdown('<div class="traffic-divider"></div>', unsafe_allow_html=True)
+
+    r1a, r1b, r1c, r1d, r1e = st.columns([1.0, 2.3, 1.75, 2.0, 0.25], gap="small")
+    with r1a:
+        st.markdown('<div class="sentence-piece">A empresa</div>', unsafe_allow_html=True)
+    with r1b:
+        traffic_input("trafego_empresa", "Nome da empresa")
+    with r1c:
+        st.markdown('<div class="sentence-piece">realizou uma campanha na plataforma</div>', unsafe_allow_html=True)
+    with r1d:
+        traffic_input("trafego_plataforma", "Ex.: Meta Ads")
+    with r1e:
+        st.markdown('<div class="sentence-piece">.</div>', unsafe_allow_html=True)
+
+    st.markdown('<div class="traffic-space"></div>', unsafe_allow_html=True)
+
+    r2a, r2b, r2c, r2d, r2e = st.columns([1.45, 1.55, 0.45, 1.55, 3.05], gap="small")
+    with r2a:
+        st.markdown('<div class="sentence-piece">O período analisado foi de</div>', unsafe_allow_html=True)
+    with r2b:
+        traffic_input("trafego_periodo_inicio", "dd/mm/aaaa")
+    with r2c:
+        st.markdown('<div class="sentence-piece">até</div>', unsafe_allow_html=True)
+    with r2d:
+        traffic_input("trafego_periodo_fim", "dd/mm/aaaa")
+    with r2e:
+        st.markdown('<div class="sentence-piece">.</div>', unsafe_allow_html=True)
+
+    st.markdown('<div class="traffic-space"></div>', unsafe_allow_html=True)
+
+    r3a, r3b, r3c = st.columns([2.0, 1.55, 3.05], gap="small")
+    with r3a:
+        st.markdown('<div class="sentence-piece">Durante esse período, foram investidos R$</div>', unsafe_allow_html=True)
+    with r3b:
+        traffic_input("trafego_investimento", "0,00")
+    with r3c:
+        st.markdown('<div class="sentence-piece">em anúncios.</div>', unsafe_allow_html=True)
+
+    st.markdown('<div class="traffic-space"></div>', unsafe_allow_html=True)
+
+    r4a, r4b, r4c = st.columns([1.75, 1.55, 3.3], gap="small")
+    with r4a:
+        st.markdown('<div class="sentence-piece">O custo médio por dia foi de R$</div>', unsafe_allow_html=True)
+    with r4b:
+        traffic_input("trafego_custo_dia", "0,00")
+    with r4c:
+        st.markdown('<div class="sentence-piece">.</div>', unsafe_allow_html=True)
+
+    st.markdown('<div class="traffic-space"></div>', unsafe_allow_html=True)
+
+    r5a, r5b, r5c, r5d, r5e = st.columns([1.25, 1.4, 1.1, 1.4, 1.45], gap="small")
+    with r5a:
+        st.markdown('<div class="sentence-piece">A campanha alcançou</div>', unsafe_allow_html=True)
+    with r5b:
+        traffic_input("trafego_alcance", "Quantidade")
+    with r5c:
+        st.markdown('<div class="sentence-piece">pessoas e recebeu</div>', unsafe_allow_html=True)
+    with r5d:
+        traffic_input("trafego_visualizacoes", "Quantidade")
+    with r5e:
+        st.markdown('<div class="sentence-piece">visualizações.</div>', unsafe_allow_html=True)
+
+    st.markdown('<div class="traffic-space"></div>', unsafe_allow_html=True)
+
+    r6a, r6b, r6c, r6d, r6e = st.columns([1.15, 1.25, 2.0, 1.3, 1.15], gap="small")
+    with r6a:
+        st.markdown('<div class="sentence-piece">Foram gerados</div>', unsafe_allow_html=True)
+    with r6b:
+        traffic_input("trafego_contatos", "Quantidade")
+    with r6c:
+        st.markdown('<div class="sentence-piece">contatos, com um custo médio de R$</div>', unsafe_allow_html=True)
+    with r6d:
+        traffic_input("trafego_custo_contato", "0,00")
+    with r6e:
+        st.markdown('<div class="sentence-piece">por contato.</div>', unsafe_allow_html=True)
+
+    st.markdown('</div>', unsafe_allow_html=True)
+
+
+# ---------------------------------------------------
 # LOGIN
 # ---------------------------------------------------
 
 if not st.session_state.logged_in:
     show_login()
+    st.stop()
+
+area_dashboard = render_dashboard_top()
+
+if area_dashboard == "Gestão de Tráfego":
+    render_gestao_trafego()
     st.stop()
 
 # ---------------------------------------------------
@@ -617,17 +833,13 @@ if "Mês" in df.columns:
         df.loc[mascara_mes_vazio, "Mês"] = df.loc[mascara_mes_vazio, "Data Publicação"].dt.month.map(mapa_meses)
 
 # ---------------------------------------------------
-# TOPO COM LOGO
+# MÍDIAS
 # ---------------------------------------------------
 
-render_logo(LOGO_PATH)
-
-st.markdown("""
-<div class="top-title">
-    <div class="text">Dashboard — Mídias Oppi</div>
-</div>
-<div class="subtitle">Gestão de publicações e pagamentos</div>
-""", unsafe_allow_html=True)
+st.markdown(
+    '<div class="section-title">📱 Gestão de publicações e pagamentos</div>',
+    unsafe_allow_html=True
+)
 
 # ---------------------------------------------------
 # FILTROS
