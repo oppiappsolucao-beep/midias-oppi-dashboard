@@ -876,7 +876,7 @@ def traffic_input(key, placeholder):
 def render_gestao_trafego():
     st.markdown('<div class="traffic-card">', unsafe_allow_html=True)
     st.markdown(
-        '<div class="traffic-greeting">Bom dia, estes são os resultados dos anúncios.</div>',
+        '<div class="traffic-greeting">Apresentação de resultados</div>',
         unsafe_allow_html=True
     )
     st.markdown('<div class="traffic-divider"></div>', unsafe_allow_html=True)
