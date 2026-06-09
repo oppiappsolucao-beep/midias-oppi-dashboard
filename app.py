@@ -1070,6 +1070,7 @@ def traffic_input(key, placeholder):
 
     value = st.text_input(
         label=key,
+        value="",
         placeholder=placeholder,
         key=widget_key,
         label_visibility="collapsed"
@@ -1150,13 +1151,13 @@ def traffic_form_missing_fields(values):
 
 
 def clear_traffic_form():
-    for key in TRAFFIC_FORM_KEYS:
-        if key in st.session_state:
-            del st.session_state[key]
+    reset_token = st.session_state.get("traffic_form_reset_token", 0)
 
-    st.session_state["traffic_form_reset_token"] = (
-        st.session_state.get("traffic_form_reset_token", 0) + 1
-    )
+    for key in TRAFFIC_FORM_KEYS:
+        st.session_state.pop(key, None)
+        st.session_state.pop(f"{key}_{reset_token}", None)
+
+    st.session_state["traffic_form_reset_token"] = reset_token + 1
 
 
 def safe_filename(value):
@@ -1475,6 +1476,7 @@ def show_traffic_presentation(values):
     with c2:
         if st.button("Nova apresentação", use_container_width=True, key="btn_nova_apresentacao"):
             clear_traffic_form()
+            st.session_state["abrir_apresentacao"] = False
             st.rerun()
 
 
