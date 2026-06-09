@@ -965,6 +965,7 @@ def traffic_input(key, placeholder):
 def get_traffic_form_values():
     return {
         "empresa": str(st.session_state.get("trafego_empresa", "")).strip(),
+        "campanha": str(st.session_state.get("trafego_campanha", "")).strip(),
         "plataforma": str(st.session_state.get("trafego_plataforma", "")).strip(),
         "periodo_inicio": str(st.session_state.get("trafego_periodo_inicio", "")).strip(),
         "periodo_fim": str(st.session_state.get("trafego_periodo_fim", "")).strip(),
@@ -980,6 +981,7 @@ def get_traffic_form_values():
 def traffic_form_missing_fields(values):
     labels = {
         "empresa": "nome da empresa",
+        "campanha": "nome da campanha",
         "plataforma": "plataforma",
         "periodo_inicio": "início do período",
         "periodo_fim": "fim do período",
@@ -1079,6 +1081,10 @@ def show_traffic_presentation(values):
                 </p>
 
                 <p>
+                    A campanha apresentada é <strong>{safe["campanha"]}</strong>.
+                </p>
+
+                <p>
                     O período analisado foi de <strong>{safe["periodo_inicio"]}</strong>
                     até <strong>{safe["periodo_fim"]}</strong>.
                 </p>
@@ -1111,7 +1117,7 @@ def show_traffic_presentation(values):
 
     components.html(
         popup_html,
-        height=570,
+        height=620,
         scrolling=False
     )
 
@@ -1137,6 +1143,16 @@ def render_gestao_trafego():
     with r1d:
         traffic_input("trafego_plataforma", "Ex.: Meta Ads")
     with r1e:
+        st.markdown('<div class="sentence-piece">.</div>', unsafe_allow_html=True)
+
+    st.markdown('<div class="traffic-space"></div>', unsafe_allow_html=True)
+
+    rc1, rc2, rc3 = st.columns([1.25, 2.6, 3.7], gap="small")
+    with rc1:
+        st.markdown('<div class="sentence-piece">O nome da campanha é</div>', unsafe_allow_html=True)
+    with rc2:
+        traffic_input("trafego_campanha", "Nome da campanha")
+    with rc3:
         st.markdown('<div class="sentence-piece">.</div>', unsafe_allow_html=True)
 
     st.markdown('<div class="traffic-space"></div>', unsafe_allow_html=True)
