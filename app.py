@@ -448,7 +448,7 @@ st.markdown("""
        --------------------------------------------------- */
 
     section[data-testid="stSidebar"] {
-        background: linear-gradient(180deg, #08111f 0%, #050914 100%) !important;
+        background: linear-gradient(180deg, #0F172A 0%, #050816 100%) !important;
         border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
     }
 
@@ -481,7 +481,7 @@ st.markdown("""
     }
 
     .sidebar-brand-title {
-        color: #ffffff;
+        color: #F8FAFC;
         font-size: 15px;
         font-weight: 900;
         line-height: 1.05;
@@ -489,7 +489,7 @@ st.markdown("""
     }
 
     .sidebar-brand-subtitle {
-        color: #facc15;
+        color: #C026D3;
         font-size: 10px;
         font-weight: 800;
         line-height: 1.2;
@@ -499,7 +499,7 @@ st.markdown("""
     }
 
     .sidebar-nav-label {
-        color: #94a3b8;
+        color: #A1A1AA;
         font-size: 10px;
         font-weight: 900;
         letter-spacing: 1.6px;
@@ -508,7 +508,7 @@ st.markdown("""
     }
 
     .sidebar-help {
-        color: #64748b;
+        color: #A1A1AA;
         font-size: 11px;
         line-height: 1.45;
         padding: 10px 4px 0 4px;
@@ -530,13 +530,13 @@ st.markdown("""
 
     section[data-testid="stSidebar"] div[data-testid="stRadio"] label:hover {
         background: rgba(255, 255, 255, 0.10) !important;
-        border-color: rgba(250, 204, 21, 0.55) !important;
+        border-color: rgba(192, 38, 211, 0.60) !important;
     }
 
     section[data-testid="stSidebar"] div[data-testid="stRadio"] label:has(input:checked) {
-        background: rgba(250, 204, 21, 0.12) !important;
-        border-color: #facc15 !important;
-        box-shadow: 0 0 0 1px rgba(250, 204, 21, 0.10) inset !important;
+        background: linear-gradient(90deg, rgba(124, 58, 237, 0.24) 0%, rgba(192, 38, 211, 0.16) 100%) !important;
+        border-color: #C026D3 !important;
+        box-shadow: 0 0 0 1px rgba(192, 38, 211, 0.14) inset !important;
     }
 
     section[data-testid="stSidebar"] div[data-testid="stRadio"] label p {
@@ -554,8 +554,8 @@ st.markdown("""
     }
 
     section[data-testid="stSidebar"] .stButton > button {
-        background: #facc15 !important;
-        color: #111827 !important;
+        background: linear-gradient(90deg, #7C3AED 0%, #C026D3 100%) !important;
+        color: #ffffff !important;
         border: none !important;
         border-radius: 10px !important;
         font-size: 12px !important;
@@ -563,18 +563,18 @@ st.markdown("""
         min-height: 42px !important;
         height: 42px !important;
         margin-top: 16px !important;
-        box-shadow: 0 8px 18px rgba(250, 204, 21, 0.16) !important;
+        box-shadow: 0 8px 18px rgba(124, 58, 237, 0.28) !important;
     }
 
     section[data-testid="stSidebar"] .stButton > button:hover {
-        background: #fde047 !important;
-        color: #111827 !important;
+        background: linear-gradient(90deg, #6D28D9 0%, #A21CAF 100%) !important;
+        color: #ffffff !important;
     }
 
     button[data-testid="stSidebarCollapseButton"],
     button[data-testid="collapsedControl"] {
-        background: #facc15 !important;
-        color: #111827 !important;
+        background: linear-gradient(90deg, #7C3AED 0%, #C026D3 100%) !important;
+        color: #ffffff !important;
         border-radius: 9px !important;
         border: none !important;
         box-shadow: 0 6px 16px rgba(15, 23, 42, 0.18) !important;
@@ -582,8 +582,17 @@ st.markdown("""
 
     button[data-testid="stSidebarCollapseButton"] svg,
     button[data-testid="collapsedControl"] svg {
-        fill: #111827 !important;
-        color: #111827 !important;
+        fill: #ffffff !important;
+        color: #ffffff !important;
+    }
+
+    section[data-testid="stSidebar"] div[data-testid="stRadio"] label:has(input:checked) > div:first-child > div {
+        background-color: #C026D3 !important;
+        border-color: #C026D3 !important;
+    }
+
+    section[data-testid="stSidebar"] div[data-testid="stRadio"] label:hover > div:first-child > div {
+        border-color: #C026D3 !important;
     }
 
     @media (max-width: 768px) {
