@@ -44,6 +44,9 @@ if "logged_in" not in st.session_state:
 if "area_dashboard" not in st.session_state:
     st.session_state.area_dashboard = "Gestão de Tráfego"
 
+if "traffic_form_reset_token" not in st.session_state:
+    st.session_state.traffic_form_reset_token = 0
+
 # ---------------------------------------------------
 # PLANILHA
 # ---------------------------------------------------
@@ -1062,22 +1065,34 @@ def render_dashboard_top(area):
 
 
 def traffic_input(key, placeholder):
-    return st.text_input(
+    reset_token = st.session_state.get("traffic_form_reset_token", 0)
+    widget_key = f"{key}_{reset_token}"
+
+    value = st.text_input(
         label=key,
         placeholder=placeholder,
-        key=key,
+        key=widget_key,
         label_visibility="collapsed"
     )
+
+    st.session_state[key] = value
+    return value
 
 
 def traffic_date_input(key):
-    return st.date_input(
+    reset_token = st.session_state.get("traffic_form_reset_token", 0)
+    widget_key = f"{key}_{reset_token}"
+
+    value = st.date_input(
         label=key,
         value=None,
         format="DD/MM/YYYY",
-        key=key,
+        key=widget_key,
         label_visibility="collapsed"
     )
+
+    st.session_state[key] = value
+    return value
 
 
 def format_date_br(value):
@@ -1136,7 +1151,12 @@ def traffic_form_missing_fields(values):
 
 def clear_traffic_form():
     for key in TRAFFIC_FORM_KEYS:
-        st.session_state.pop(key, None)
+        if key in st.session_state:
+            del st.session_state[key]
+
+    st.session_state["traffic_form_reset_token"] = (
+        st.session_state.get("traffic_form_reset_token", 0) + 1
+    )
 
 
 def safe_filename(value):
