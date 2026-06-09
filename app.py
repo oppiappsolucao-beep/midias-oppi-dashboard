@@ -3,6 +3,7 @@ import html
 import textwrap
 import os
 from pathlib import Path
+from datetime import date
 
 import gspread
 import pandas as pd
@@ -533,6 +534,83 @@ st.markdown("""
 
 
     /* ---------------------------------------------------
+       FORMULÁRIO DE GESTÃO DE TRÁFEGO
+       --------------------------------------------------- */
+
+    .traffic-intro {
+        color: #64748b;
+        font-size: 15px;
+        line-height: 1.5;
+        text-align: center;
+        margin-top: -10px;
+        margin-bottom: 24px;
+    }
+
+    .traffic-section {
+        background: #fbfcff;
+        border: 1px solid #e7ebf3;
+        border-radius: 18px;
+        padding: 16px 18px 14px 18px;
+        margin-bottom: 14px;
+    }
+
+    .traffic-section-title {
+        color: #16233b;
+        font-size: 16px;
+        font-weight: 900;
+        margin-bottom: 3px;
+    }
+
+    .traffic-section-subtitle {
+        color: #64748b;
+        font-size: 12px;
+        line-height: 1.35;
+        margin-bottom: 10px;
+    }
+
+    .traffic-field-label {
+        color: #334155;
+        font-size: 13px;
+        font-weight: 800;
+        margin-bottom: 6px;
+    }
+
+    .traffic-card div[data-testid="stDateInput"] input {
+        background: #ffffff !important;
+        border: 1px solid #d9e0eb !important;
+        border-radius: 12px !important;
+        color: #0f172a !important;
+        font-size: 16px !important;
+        font-weight: 700 !important;
+        height: 44px !important;
+        padding: 0 12px !important;
+    }
+
+    .traffic-card div[data-testid="stDateInput"] input:focus {
+        border-color: #7C3AED !important;
+        box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.10) !important;
+    }
+
+    .traffic-card div[data-testid="stTextInput"] input {
+        background: #ffffff !important;
+    }
+
+    @media (max-width: 768px) {
+        .traffic-card {
+            padding: 20px 16px 22px 16px !important;
+        }
+
+        .traffic-greeting {
+            font-size: 24px !important;
+        }
+
+        .traffic-section {
+            padding: 14px 12px 12px 12px !important;
+        }
+    }
+
+
+    /* ---------------------------------------------------
        MENU LATERAL RECOLHÍVEL
        --------------------------------------------------- */
 
@@ -962,13 +1040,29 @@ def traffic_input(key, placeholder):
     )
 
 
+def traffic_date_input(key):
+    return st.date_input(
+        label=key,
+        value=None,
+        format="DD/MM/YYYY",
+        key=key,
+        label_visibility="collapsed"
+    )
+
+
+def format_date_br(value):
+    if isinstance(value, date):
+        return value.strftime("%d/%m/%Y")
+    return ""
+
+
 def get_traffic_form_values():
     return {
         "empresa": str(st.session_state.get("trafego_empresa", "")).strip(),
         "campanha": str(st.session_state.get("trafego_campanha", "")).strip(),
         "plataforma": str(st.session_state.get("trafego_plataforma", "")).strip(),
-        "periodo_inicio": str(st.session_state.get("trafego_periodo_inicio", "")).strip(),
-        "periodo_fim": str(st.session_state.get("trafego_periodo_fim", "")).strip(),
+        "periodo_inicio": format_date_br(st.session_state.get("trafego_periodo_inicio")),
+        "periodo_fim": format_date_br(st.session_state.get("trafego_periodo_fim")),
         "investimento": str(st.session_state.get("trafego_investimento", "")).strip(),
         "custo_dia": str(st.session_state.get("trafego_custo_dia", "")).strip(),
         "alcance": str(st.session_state.get("trafego_alcance", "")).strip(),
@@ -983,8 +1077,8 @@ def traffic_form_missing_fields(values):
         "empresa": "nome da empresa",
         "campanha": "nome da campanha",
         "plataforma": "plataforma",
-        "periodo_inicio": "início do período",
-        "periodo_fim": "fim do período",
+        "periodo_inicio": "data inicial",
+        "periodo_fim": "data final",
         "investimento": "valor investido",
         "custo_dia": "custo médio por dia",
         "alcance": "alcance",
@@ -1127,113 +1221,147 @@ def show_traffic_presentation(values):
 
 def render_gestao_trafego():
     st.markdown('<div class="traffic-card">', unsafe_allow_html=True)
+
     st.markdown(
         '<div class="traffic-greeting">Apresentação de resultados</div>',
         unsafe_allow_html=True
     )
+
+    st.markdown(
+        '<div class="traffic-intro">Preencha os dados da campanha e abra a apresentação para gerar uma tela pronta para print.</div>',
+        unsafe_allow_html=True
+    )
+
     st.markdown('<div class="traffic-divider"></div>', unsafe_allow_html=True)
 
-    r1a, r1b, r1c, r1d, r1e = st.columns([1.0, 2.3, 1.75, 2.0, 0.25], gap="small")
-    with r1a:
-        st.markdown('<div class="sentence-piece">A empresa</div>', unsafe_allow_html=True)
-    with r1b:
+    # ---------------------------------------------------
+    # IDENTIFICAÇÃO
+    # ---------------------------------------------------
+    st.markdown(
+        """
+        <div class="traffic-section">
+            <div class="traffic-section-title">📌 Identificação da campanha</div>
+            <div class="traffic-section-subtitle">Informe para qual cliente e campanha os resultados serão apresentados.</div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    i1, i2, i3 = st.columns(3, gap="medium")
+
+    with i1:
+        st.markdown('<div class="traffic-field-label">Empresa</div>', unsafe_allow_html=True)
         traffic_input("trafego_empresa", "Nome da empresa")
-    with r1c:
-        st.markdown('<div class="sentence-piece">realizou uma campanha na plataforma</div>', unsafe_allow_html=True)
-    with r1d:
+
+    with i2:
+        st.markdown('<div class="traffic-field-label">Nome da campanha</div>', unsafe_allow_html=True)
+        traffic_input("trafego_campanha", "Ex.: Campanha Junho")
+
+    with i3:
+        st.markdown('<div class="traffic-field-label">Plataforma</div>', unsafe_allow_html=True)
         traffic_input("trafego_plataforma", "Ex.: Meta Ads")
-    with r1e:
-        st.markdown('<div class="sentence-piece">.</div>', unsafe_allow_html=True)
 
-    st.markdown('<div class="traffic-space"></div>', unsafe_allow_html=True)
+    # ---------------------------------------------------
+    # PERÍODO
+    # ---------------------------------------------------
+    st.markdown(
+        """
+        <div class="traffic-section">
+            <div class="traffic-section-title">📅 Período analisado</div>
+            <div class="traffic-section-subtitle">Clique nos campos abaixo para selecionar as datas pelo calendário.</div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
-    rc1, rc2, rc3 = st.columns([1.25, 2.6, 3.7], gap="small")
-    with rc1:
-        st.markdown('<div class="sentence-piece">O nome da campanha é</div>', unsafe_allow_html=True)
-    with rc2:
-        traffic_input("trafego_campanha", "Nome da campanha")
-    with rc3:
-        st.markdown('<div class="sentence-piece">.</div>', unsafe_allow_html=True)
+    p1, p2 = st.columns(2, gap="medium")
 
-    st.markdown('<div class="traffic-space"></div>', unsafe_allow_html=True)
+    with p1:
+        st.markdown('<div class="traffic-field-label">Data inicial</div>', unsafe_allow_html=True)
+        traffic_date_input("trafego_periodo_inicio")
 
-    r2a, r2b, r2c, r2d, r2e = st.columns([1.45, 1.55, 0.45, 1.55, 3.05], gap="small")
-    with r2a:
-        st.markdown('<div class="sentence-piece">O período analisado foi de</div>', unsafe_allow_html=True)
-    with r2b:
-        traffic_input("trafego_periodo_inicio", "dd/mm/aaaa")
-    with r2c:
-        st.markdown('<div class="sentence-piece">até</div>', unsafe_allow_html=True)
-    with r2d:
-        traffic_input("trafego_periodo_fim", "dd/mm/aaaa")
-    with r2e:
-        st.markdown('<div class="sentence-piece">.</div>', unsafe_allow_html=True)
+    with p2:
+        st.markdown('<div class="traffic-field-label">Data final</div>', unsafe_allow_html=True)
+        traffic_date_input("trafego_periodo_fim")
 
-    st.markdown('<div class="traffic-space"></div>', unsafe_allow_html=True)
+    # ---------------------------------------------------
+    # INVESTIMENTO
+    # ---------------------------------------------------
+    st.markdown(
+        """
+        <div class="traffic-section">
+            <div class="traffic-section-title">💰 Investimento</div>
+            <div class="traffic-section-subtitle">Preencha os valores da campanha no período selecionado.</div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
-    r3a, r3b, r3c = st.columns([2.0, 1.55, 3.05], gap="small")
-    with r3a:
-        st.markdown('<div class="sentence-piece">Durante esse período, foram investidos R$</div>', unsafe_allow_html=True)
-    with r3b:
-        traffic_input("trafego_investimento", "0,00")
-    with r3c:
-        st.markdown('<div class="sentence-piece">em anúncios.</div>', unsafe_allow_html=True)
+    v1, v2 = st.columns(2, gap="medium")
 
-    st.markdown('<div class="traffic-space"></div>', unsafe_allow_html=True)
+    with v1:
+        st.markdown('<div class="traffic-field-label">Valor investido em anúncios</div>', unsafe_allow_html=True)
+        traffic_input("trafego_investimento", "Ex.: 2.500,00")
 
-    r4a, r4b, r4c = st.columns([1.75, 1.55, 3.3], gap="small")
-    with r4a:
-        st.markdown('<div class="sentence-piece">O custo médio por dia foi de R$</div>', unsafe_allow_html=True)
-    with r4b:
-        traffic_input("trafego_custo_dia", "0,00")
-    with r4c:
-        st.markdown('<div class="sentence-piece">.</div>', unsafe_allow_html=True)
+    with v2:
+        st.markdown('<div class="traffic-field-label">Custo médio por dia</div>', unsafe_allow_html=True)
+        traffic_input("trafego_custo_dia", "Ex.: 100,00")
 
-    st.markdown('<div class="traffic-space"></div>', unsafe_allow_html=True)
+    # ---------------------------------------------------
+    # RESULTADOS
+    # ---------------------------------------------------
+    st.markdown(
+        """
+        <div class="traffic-section">
+            <div class="traffic-section-title">📊 Resultados dos anúncios</div>
+            <div class="traffic-section-subtitle">Informe os principais indicadores entregues pela campanha.</div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
-    r5a, r5b, r5c, r5d, r5e = st.columns([1.25, 1.4, 1.1, 1.4, 1.45], gap="small")
-    with r5a:
-        st.markdown('<div class="sentence-piece">A campanha alcançou</div>', unsafe_allow_html=True)
-    with r5b:
-        traffic_input("trafego_alcance", "Quantidade")
-    with r5c:
-        st.markdown('<div class="sentence-piece">pessoas e recebeu</div>', unsafe_allow_html=True)
-    with r5d:
-        traffic_input("trafego_visualizacoes", "Quantidade")
-    with r5e:
-        st.markdown('<div class="sentence-piece">visualizações.</div>', unsafe_allow_html=True)
+    r1, r2, r3, r4 = st.columns(4, gap="medium")
 
-    st.markdown('<div class="traffic-space"></div>', unsafe_allow_html=True)
+    with r1:
+        st.markdown('<div class="traffic-field-label">Pessoas alcançadas</div>', unsafe_allow_html=True)
+        traffic_input("trafego_alcance", "Ex.: 15.000")
 
-    r6a, r6b, r6c, r6d, r6e = st.columns([1.15, 1.25, 2.0, 1.3, 1.15], gap="small")
-    with r6a:
-        st.markdown('<div class="sentence-piece">Foram gerados</div>', unsafe_allow_html=True)
-    with r6b:
-        traffic_input("trafego_contatos", "Quantidade")
-    with r6c:
-        st.markdown('<div class="sentence-piece">contatos, com um custo médio de R$</div>', unsafe_allow_html=True)
-    with r6d:
-        traffic_input("trafego_custo_contato", "0,00")
-    with r6e:
-        st.markdown('<div class="sentence-piece">por contato.</div>', unsafe_allow_html=True)
+    with r2:
+        st.markdown('<div class="traffic-field-label">Visualizações</div>', unsafe_allow_html=True)
+        traffic_input("trafego_visualizacoes", "Ex.: 25.000")
+
+    with r3:
+        st.markdown('<div class="traffic-field-label">Contatos gerados</div>', unsafe_allow_html=True)
+        traffic_input("trafego_contatos", "Ex.: 120")
+
+    with r4:
+        st.markdown('<div class="traffic-field-label">Custo médio por contato</div>', unsafe_allow_html=True)
+        traffic_input("trafego_custo_contato", "Ex.: 12,50")
 
     st.markdown('<div class="traffic-action-wrap">', unsafe_allow_html=True)
+
     abrir_apresentacao = st.button(
         "Abrir apresentação",
         use_container_width=True,
         key="btn_abrir_apresentacao"
     )
+
     st.markdown('</div>', unsafe_allow_html=True)
 
     if abrir_apresentacao:
         values = get_traffic_form_values()
         missing = traffic_form_missing_fields(values)
 
+        inicio = st.session_state.get("trafego_periodo_inicio")
+        fim = st.session_state.get("trafego_periodo_fim")
+
         if missing:
             st.warning(
                 "Preencha todos os campos antes de abrir a apresentação. "
                 f"Faltando: {', '.join(missing)}."
             )
+        elif isinstance(inicio, date) and isinstance(fim, date) and fim < inicio:
+            st.warning("A data final não pode ser anterior à data inicial.")
         else:
             show_traffic_presentation(values)
 
