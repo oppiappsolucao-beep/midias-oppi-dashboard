@@ -8,6 +8,7 @@ import gspread
 import pandas as pd
 import plotly.express as px
 import streamlit as st
+import streamlit.components.v1 as components
 from google.oauth2.service_account import Credentials
 
 # ---------------------------------------------------
@@ -996,14 +997,80 @@ def traffic_form_missing_fields(values):
 def show_traffic_presentation(values):
     safe = {key: html.escape(value) for key, value in values.items()}
 
-    popup_html = textwrap.dedent(
-        f"""
-        <div class="presentation-popup">
-            <div class="presentation-popup-kicker">Oppi Tech</div>
-            <div class="presentation-popup-title">Apresentação de resultados</div>
-            <div class="presentation-popup-line"></div>
+    popup_html = f"""
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8">
+        <style>
+            * {{
+                box-sizing: border-box;
+            }}
 
-            <div class="presentation-popup-text">
+            body {{
+                margin: 0;
+                padding: 6px 8px 4px 8px;
+                background: #ffffff;
+                color: #16233b;
+                font-family: Inter, Arial, sans-serif;
+            }}
+
+            .popup {{
+                width: 100%;
+                background: #ffffff;
+                border-radius: 18px;
+                padding: 4px 4px 0 4px;
+            }}
+
+            .kicker {{
+                color: #C026D3;
+                font-size: 12px;
+                font-weight: 900;
+                letter-spacing: 1.5px;
+                text-transform: uppercase;
+                margin-bottom: 10px;
+            }}
+
+            .title {{
+                color: #16233b;
+                font-size: 30px;
+                font-weight: 900;
+                line-height: 1.12;
+                margin-bottom: 12px;
+            }}
+
+            .line {{
+                width: 72px;
+                height: 5px;
+                border-radius: 999px;
+                background: linear-gradient(90deg, #7C3AED 0%, #C026D3 100%);
+                margin-bottom: 22px;
+            }}
+
+            .text {{
+                color: #334155;
+                font-size: 18px;
+                line-height: 1.72;
+                font-weight: 500;
+            }}
+
+            .text p {{
+                margin: 0 0 14px 0;
+            }}
+
+            .text strong {{
+                color: #16233b;
+                font-weight: 900;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="popup">
+            <div class="kicker">Oppi Tech</div>
+            <div class="title">Apresentação de resultados</div>
+            <div class="line"></div>
+
+            <div class="text">
                 <p>Bom dia, estes são os resultados dos anúncios.</p>
 
                 <p>
@@ -1038,14 +1105,18 @@ def show_traffic_presentation(values):
                 </p>
             </div>
         </div>
-        """
-    ).strip()
+    </body>
+    </html>
+    """
 
-    st.markdown(popup_html, unsafe_allow_html=True)
+    components.html(
+        popup_html,
+        height=570,
+        scrolling=False
+    )
 
     if st.button("Fechar apresentação", use_container_width=True, key="btn_fechar_apresentacao"):
         st.rerun()
-
 
 
 def render_gestao_trafego():
