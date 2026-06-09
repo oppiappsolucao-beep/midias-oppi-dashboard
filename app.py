@@ -13,9 +13,10 @@ from google.oauth2.service_account import Credentials
 # ---------------------------------------------------
 
 st.set_page_config(
-    page_title="Mídias - Oppi",
-    page_icon="📱",
-    layout="wide"
+    page_title="Dashboard - Oppi",
+    page_icon="📊",
+    layout="wide",
+    initial_sidebar_state="expanded"
 )
 
 # ---------------------------------------------------
@@ -440,6 +441,151 @@ st.markdown("""
         box-shadow: 0 0 0 2px rgba(15, 45, 99, 0.10) !important;
     }
 
+
+
+    /* ---------------------------------------------------
+       MENU LATERAL RECOLHÍVEL
+       --------------------------------------------------- */
+
+    section[data-testid="stSidebar"] {
+        background: linear-gradient(180deg, #08111f 0%, #050914 100%) !important;
+        border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+    }
+
+    section[data-testid="stSidebar"] > div {
+        background: transparent !important;
+    }
+
+    section[data-testid="stSidebar"] [data-testid="stSidebarContent"] {
+        padding-top: 18px !important;
+    }
+
+    .sidebar-brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 4px 16px 4px;
+        margin-bottom: 14px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    .sidebar-brand-logo {
+        width: 42px;
+        height: 42px;
+        border-radius: 50%;
+        object-fit: cover;
+        object-position: 58% center;
+        display: block;
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        background: #ffffff;
+    }
+
+    .sidebar-brand-title {
+        color: #ffffff;
+        font-size: 15px;
+        font-weight: 900;
+        line-height: 1.05;
+        letter-spacing: 0.3px;
+    }
+
+    .sidebar-brand-subtitle {
+        color: #facc15;
+        font-size: 10px;
+        font-weight: 800;
+        line-height: 1.2;
+        margin-top: 3px;
+        letter-spacing: 0.6px;
+        text-transform: uppercase;
+    }
+
+    .sidebar-nav-label {
+        color: #94a3b8;
+        font-size: 10px;
+        font-weight: 900;
+        letter-spacing: 1.6px;
+        margin: 2px 0 10px 2px;
+        text-transform: uppercase;
+    }
+
+    .sidebar-help {
+        color: #64748b;
+        font-size: 11px;
+        line-height: 1.45;
+        padding: 10px 4px 0 4px;
+    }
+
+    section[data-testid="stSidebar"] div[data-testid="stRadio"] > div {
+        gap: 8px !important;
+    }
+
+    section[data-testid="stSidebar"] div[data-testid="stRadio"] label {
+        background: rgba(255, 255, 255, 0.055) !important;
+        border: 1px solid rgba(255, 255, 255, 0.11) !important;
+        border-radius: 12px !important;
+        padding: 11px 10px !important;
+        margin: 0 !important;
+        min-height: 42px !important;
+        transition: all 0.16s ease !important;
+    }
+
+    section[data-testid="stSidebar"] div[data-testid="stRadio"] label:hover {
+        background: rgba(255, 255, 255, 0.10) !important;
+        border-color: rgba(250, 204, 21, 0.55) !important;
+    }
+
+    section[data-testid="stSidebar"] div[data-testid="stRadio"] label:has(input:checked) {
+        background: rgba(250, 204, 21, 0.12) !important;
+        border-color: #facc15 !important;
+        box-shadow: 0 0 0 1px rgba(250, 204, 21, 0.10) inset !important;
+    }
+
+    section[data-testid="stSidebar"] div[data-testid="stRadio"] label p {
+        color: #f8fafc !important;
+        font-size: 14px !important;
+        font-weight: 800 !important;
+    }
+
+    section[data-testid="stSidebar"] div[data-testid="stRadio"] label:has(input:checked) p {
+        color: #ffffff !important;
+    }
+
+    section[data-testid="stSidebar"] div[data-testid="stRadio"] label > div:first-child {
+        transform: scale(0.90);
+    }
+
+    section[data-testid="stSidebar"] .stButton > button {
+        background: #facc15 !important;
+        color: #111827 !important;
+        border: none !important;
+        border-radius: 10px !important;
+        font-size: 12px !important;
+        font-weight: 900 !important;
+        min-height: 42px !important;
+        height: 42px !important;
+        margin-top: 16px !important;
+        box-shadow: 0 8px 18px rgba(250, 204, 21, 0.16) !important;
+    }
+
+    section[data-testid="stSidebar"] .stButton > button:hover {
+        background: #fde047 !important;
+        color: #111827 !important;
+    }
+
+    button[data-testid="stSidebarCollapseButton"],
+    button[data-testid="collapsedControl"] {
+        background: #facc15 !important;
+        color: #111827 !important;
+        border-radius: 9px !important;
+        border: none !important;
+        box-shadow: 0 6px 16px rgba(15, 23, 42, 0.18) !important;
+    }
+
+    button[data-testid="stSidebarCollapseButton"] svg,
+    button[data-testid="collapsedControl"] svg {
+        fill: #111827 !important;
+        color: #111827 !important;
+    }
+
     @media (max-width: 768px) {
         .top-title .text {
             font-size: 32px;
@@ -638,27 +784,73 @@ def get_google_creds_dict():
 # TOPO E NAVEGAÇÃO
 # ---------------------------------------------------
 
-def render_dashboard_top():
+def sidebar_logo_html(path: Path):
+    if not path.exists():
+        return ""
+
+    mime = "image/png"
+    if path.suffix.lower() in [".jpg", ".jpeg"]:
+        mime = "image/jpeg"
+
+    img_base64 = base64.b64encode(path.read_bytes()).decode()
+    return f'<img class="sidebar-brand-logo" src="data:{mime};base64,{img_base64}">'
+
+
+def render_sidebar_navigation():
+    logo_html = sidebar_logo_html(LOGO_PATH)
+
+    with st.sidebar:
+        st.markdown(
+            f"""
+            <div class="sidebar-brand">
+                {logo_html}
+                <div>
+                    <div class="sidebar-brand-title">OPPI TECH</div>
+                    <div class="sidebar-brand-subtitle">Painel interno</div>
+                </div>
+            </div>
+            <div class="sidebar-nav-label">Navegação</div>
+            """,
+            unsafe_allow_html=True
+        )
+
+        area = st.radio(
+            "Navegação",
+            options=["Gestão de Tráfego", "Mídias"],
+            format_func=lambda opcao: (
+                "📊  Gestão de Tráfego" if opcao == "Gestão de Tráfego" else "📱  Mídias"
+            ),
+            key="area_dashboard",
+            label_visibility="collapsed"
+        )
+
+        sair = st.button("SAIR DA CONTA", key="btn_logout_sidebar")
+        if sair:
+            st.session_state.logged_in = False
+            st.rerun()
+
+        st.markdown(
+            '<div class="sidebar-help">Use a seta na lateral para recolher ou abrir o menu.</div>',
+            unsafe_allow_html=True
+        )
+
+    return area
+
+
+def render_dashboard_top(area):
     render_logo(LOGO_PATH)
 
+    subtitulo = "Resultados dos anúncios" if area == "Gestão de Tráfego" else "Gestão de publicações e pagamentos"
+
     st.markdown(
-        """
+        f"""
         <div class="top-title">
             <div class="text">Dashboard — Oppi</div>
         </div>
-        <div class="subtitle">Gestão de Tráfego e Mídias</div>
+        <div class="subtitle">{subtitulo}</div>
         """,
         unsafe_allow_html=True
     )
-
-    st.markdown('<div class="area-switch-card">', unsafe_allow_html=True)
-    area = st.selectbox(
-        "Área do dashboard",
-        options=["Gestão de Tráfego", "Mídias"],
-        key="area_dashboard"
-    )
-    st.markdown('</div>', unsafe_allow_html=True)
-    return area
 
 
 def traffic_input(key, placeholder):
@@ -763,7 +955,8 @@ if not st.session_state.logged_in:
     show_login()
     st.stop()
 
-area_dashboard = render_dashboard_top()
+area_dashboard = render_sidebar_navigation()
+render_dashboard_top(area_dashboard)
 
 if area_dashboard == "Gestão de Tráfego":
     render_gestao_trafego()
