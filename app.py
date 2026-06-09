@@ -525,6 +525,8 @@ st.markdown("""
         padding: 11px 10px !important;
         margin: 0 !important;
         min-height: 42px !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
         transition: all 0.16s ease !important;
     }
 
@@ -825,9 +827,9 @@ def render_sidebar_navigation():
 
         area = st.radio(
             "Navegação",
-            options=["Gestão de Tráfego", "Mídias"],
+            options=["Mídias", "Gestão de Tráfego"],
             format_func=lambda opcao: (
-                "📊  Gestão de Tráfego" if opcao == "Gestão de Tráfego" else "📱  Mídias"
+                "📱  Mídias" if opcao == "Mídias" else "📊  Gestão de Tráfego"
             ),
             key="area_dashboard",
             label_visibility="collapsed"
