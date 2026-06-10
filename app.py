@@ -1671,11 +1671,60 @@ def connect_sheet():
 # CARREGAR DADOS
 # ---------------------------------------------------
 
+def make_unique_headers(headers):
+    """
+    Normaliza os títulos da primeira linha da planilha e garante que
+    todos sejam únicos. Isso evita falhas do gspread quando existem
+    colunas vazias ou títulos repetidos.
+    """
+    unique_headers = []
+    occurrences = {}
+
+    for position, header in enumerate(headers, start=1):
+        clean_header = str(header).replace("\u00a0", " ").strip()
+
+        if not clean_header:
+            clean_header = f"__coluna_sem_titulo_{position}"
+
+        occurrences[clean_header] = occurrences.get(clean_header, 0) + 1
+
+        if occurrences[clean_header] > 1:
+            clean_header = f"{clean_header}_{occurrences[clean_header]}"
+
+        unique_headers.append(clean_header)
+
+    return unique_headers
+
+
 @st.cache_data(ttl=60)
 def load_data():
     worksheet = connect_sheet()
-    data = worksheet.get_all_records()
-    return pd.DataFrame(data)
+
+    try:
+        rows = worksheet.get_all_values()
+    except Exception as e:
+        st.error("❌ Não foi possível carregar os dados da planilha de Mídias.")
+        st.write("Verifique se a planilha continua compartilhada com a conta de serviço.")
+        st.write(f"Erro técnico: {e}")
+        st.stop()
+
+    if not rows:
+        return pd.DataFrame()
+
+    headers = make_unique_headers(rows[0])
+    total_columns = len(headers)
+
+    normalized_rows = []
+
+    for row in rows[1:]:
+        normalized_row = list(row[:total_columns])
+
+        if len(normalized_row) < total_columns:
+            normalized_row.extend([""] * (total_columns - len(normalized_row)))
+
+        normalized_rows.append(normalized_row)
+
+    return pd.DataFrame(normalized_rows, columns=headers)
 
 df = load_data()
 
