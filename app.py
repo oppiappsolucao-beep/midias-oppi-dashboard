@@ -1695,6 +1695,58 @@ def normalize_header_name(value):
     return str(value).replace("\u00a0", " ").strip()
 
 
+def normalize_header_key(value):
+    text_value = normalize_header_name(value).lower()
+
+    replacements = {
+        "á": "a", "à": "a", "ã": "a", "â": "a",
+        "é": "e", "ê": "e",
+        "í": "i",
+        "ó": "o", "ô": "o", "õ": "o",
+        "ú": "u",
+        "ç": "c",
+    }
+
+    for old, new in replacements.items():
+        text_value = text_value.replace(old, new)
+
+    text_value = re.sub(r"\s+", " ", text_value)
+    return text_value.strip()
+
+
+HEADER_ALIASES = {
+    "Mês": ["mes", "mês"],
+    "Semana": ["semana"],
+    "Empresa": ["empresa", "cliente"],
+    "Tema": ["tema", "atividade", "nome da atividade"],
+    "Valor": ["valor", "preco", "preço"],
+    "Status Pagamento": [
+        "status pagamento",
+        "status de pagamento",
+        "pagamento",
+    ],
+    "Tipo de arte": [
+        "tipo de arte",
+        "tipo arte",
+        "formato",
+    ],
+    "Status da arte": [
+        "status da arte",
+        "status arte",
+        "status",
+    ],
+    "Data Publicação": [
+        "data publicacao",
+        "data de publicacao",
+        "data publicação",
+        "data de publicação",
+        "publicacao",
+        "publicação",
+        "data",
+    ],
+}
+
+
 def count_non_empty_column(rows, column_index):
     total = 0
 
@@ -1705,14 +1757,86 @@ def count_non_empty_column(rows, column_index):
     return total
 
 
+def count_parseable_dates(rows, column_index):
+    total = 0
+
+    for row in rows:
+        if column_index >= len(row):
+            continue
+
+        value = str(row[column_index]).strip()
+
+        if not value:
+            continue
+
+        parsed = parse_data_publicacao(value)
+
+        if pd.notna(parsed):
+            total += 1
+
+    return total
+
+
+def find_header_candidates(raw_headers, expected_header):
+    accepted = {
+        normalize_header_key(alias)
+        for alias in HEADER_ALIASES.get(expected_header, [expected_header])
+    }
+
+    accepted.add(normalize_header_key(expected_header))
+
+    return [
+        index
+        for index, header in enumerate(raw_headers)
+        if normalize_header_key(header) in accepted
+    ]
+
+
+def detect_date_column(raw_headers, data_rows, already_selected):
+    candidates = find_header_candidates(raw_headers, "Data Publicação")
+
+    if candidates:
+        return max(
+            candidates,
+            key=lambda index: (
+                count_parseable_dates(data_rows, index),
+                count_non_empty_column(data_rows, index),
+            )
+        )
+
+    available_indexes = [
+        index
+        for index in range(len(raw_headers))
+        if index not in already_selected
+    ]
+
+    if not available_indexes:
+        return None
+
+    scored_columns = [
+        (
+            count_parseable_dates(data_rows, index),
+            count_non_empty_column(data_rows, index),
+            index,
+        )
+        for index in available_indexes
+    ]
+
+    best_dates, _, best_index = max(scored_columns)
+
+    if best_dates > 0:
+        return best_index
+
+    return None
+
+
 def build_media_dataframe(rows):
     """
-    Preserva os nomes utilizados pelo dashboard de Mídias.
-    Caso a planilha tenha títulos repetidos, escolhe para cada campo
-    conhecido a coluna com mais conteúdo preenchido.
+    Preserva os nomes usados pelo dashboard de Mídias e localiza
+    automaticamente a coluna correta de cada informação.
     """
     if not rows:
-        return pd.DataFrame()
+        return pd.DataFrame(columns=EXPECTED_MEDIA_HEADERS)
 
     raw_headers = [normalize_header_name(header) for header in rows[0]]
     data_rows = rows[1:]
@@ -1721,11 +1845,10 @@ def build_media_dataframe(rows):
     used_indexes = set()
 
     for expected_header in EXPECTED_MEDIA_HEADERS:
-        candidates = [
-            index
-            for index, header in enumerate(raw_headers)
-            if header == expected_header
-        ]
+        if expected_header == "Data Publicação":
+            continue
+
+        candidates = find_header_candidates(raw_headers, expected_header)
 
         if not candidates:
             continue
@@ -1737,6 +1860,11 @@ def build_media_dataframe(rows):
 
         selected_indexes[expected_header] = best_index
         used_indexes.add(best_index)
+
+    date_index = detect_date_column(raw_headers, data_rows, used_indexes)
+
+    if date_index is not None:
+        selected_indexes["Data Publicação"] = date_index
 
     records = []
 
