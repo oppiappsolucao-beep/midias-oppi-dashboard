@@ -42,10 +42,16 @@ if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 
 if "area_dashboard" not in st.session_state:
-    st.session_state.area_dashboard = "Gestão de Tráfego"
+    st.session_state.area_dashboard = "Mídias"
 
 if "traffic_form_reset_token" not in st.session_state:
     st.session_state.traffic_form_reset_token = 0
+
+# Garante a migração dos navegadores que ainda estavam presos
+# no padrão antigo da aba Gestão de Tráfego.
+if st.session_state.get("dashboard_nav_version") != "midias_primeiro_v1":
+    st.session_state.area_dashboard = "Mídias"
+    st.session_state.dashboard_nav_version = "midias_primeiro_v1"
 
 # ---------------------------------------------------
 # PLANILHA
@@ -941,6 +947,7 @@ def show_login():
     if entrar:
         if usuario == APP_USER and senha == APP_PASS:
             st.session_state.logged_in = True
+            st.session_state.area_dashboard = "Mídias"
             st.rerun()
         else:
             st.error("Usuário ou senha incorretos.")
@@ -1671,29 +1678,84 @@ def connect_sheet():
 # CARREGAR DADOS
 # ---------------------------------------------------
 
-def make_unique_headers(headers):
+EXPECTED_MEDIA_HEADERS = [
+    "Mês",
+    "Semana",
+    "Empresa",
+    "Tema",
+    "Valor",
+    "Status Pagamento",
+    "Tipo de arte",
+    "Status da arte",
+    "Data Publicação",
+]
+
+
+def normalize_header_name(value):
+    return str(value).replace("\u00a0", " ").strip()
+
+
+def count_non_empty_column(rows, column_index):
+    total = 0
+
+    for row in rows:
+        if column_index < len(row) and str(row[column_index]).strip():
+            total += 1
+
+    return total
+
+
+def build_media_dataframe(rows):
     """
-    Normaliza os títulos da primeira linha da planilha e garante que
-    todos sejam únicos. Isso evita falhas do gspread quando existem
-    colunas vazias ou títulos repetidos.
+    Preserva os nomes utilizados pelo dashboard de Mídias.
+    Caso a planilha tenha títulos repetidos, escolhe para cada campo
+    conhecido a coluna com mais conteúdo preenchido.
     """
-    unique_headers = []
-    occurrences = {}
+    if not rows:
+        return pd.DataFrame()
 
-    for position, header in enumerate(headers, start=1):
-        clean_header = str(header).replace("\u00a0", " ").strip()
+    raw_headers = [normalize_header_name(header) for header in rows[0]]
+    data_rows = rows[1:]
 
-        if not clean_header:
-            clean_header = f"__coluna_sem_titulo_{position}"
+    selected_indexes = {}
+    used_indexes = set()
 
-        occurrences[clean_header] = occurrences.get(clean_header, 0) + 1
+    for expected_header in EXPECTED_MEDIA_HEADERS:
+        candidates = [
+            index
+            for index, header in enumerate(raw_headers)
+            if header == expected_header
+        ]
 
-        if occurrences[clean_header] > 1:
-            clean_header = f"{clean_header}_{occurrences[clean_header]}"
+        if not candidates:
+            continue
 
-        unique_headers.append(clean_header)
+        best_index = max(
+            candidates,
+            key=lambda index: count_non_empty_column(data_rows, index)
+        )
 
-    return unique_headers
+        selected_indexes[expected_header] = best_index
+        used_indexes.add(best_index)
+
+    records = []
+
+    for row in data_rows:
+        record = {}
+
+        for expected_header in EXPECTED_MEDIA_HEADERS:
+            selected_index = selected_indexes.get(expected_header)
+
+            if selected_index is None:
+                record[expected_header] = ""
+            elif selected_index < len(row):
+                record[expected_header] = row[selected_index]
+            else:
+                record[expected_header] = ""
+
+        records.append(record)
+
+    return pd.DataFrame(records, columns=EXPECTED_MEDIA_HEADERS)
 
 
 @st.cache_data(ttl=60)
@@ -1708,23 +1770,7 @@ def load_data():
         st.write(f"Erro técnico: {e}")
         st.stop()
 
-    if not rows:
-        return pd.DataFrame()
-
-    headers = make_unique_headers(rows[0])
-    total_columns = len(headers)
-
-    normalized_rows = []
-
-    for row in rows[1:]:
-        normalized_row = list(row[:total_columns])
-
-        if len(normalized_row) < total_columns:
-            normalized_row.extend([""] * (total_columns - len(normalized_row)))
-
-        normalized_rows.append(normalized_row)
-
-    return pd.DataFrame(normalized_rows, columns=headers)
+    return build_media_dataframe(rows)
 
 df = load_data()
 
@@ -1801,7 +1847,8 @@ with f4:
         "Datas publicação",
         options=datas_disponiveis_str,
         default=[],
-        placeholder="Selecione uma ou mais datas"
+        placeholder="Selecione uma ou mais datas",
+        key="filtro_datas_publicacao_midias"
     )
 
 st.markdown('</div>', unsafe_allow_html=True)
