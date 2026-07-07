@@ -897,63 +897,86 @@ st.markdown("""
         color: #ffffff !important;
     }
 
-    /* Seta DENTRO do menu (sidebar aberta) — branca */
-    section[data-testid="stSidebar"] button[data-testid="stSidebarCollapseButton"],
-    button[data-testid="stSidebarCollapseButton"] {
+    /* Seta FORA do menu (sidebar fechada) — totalmente preta, sem caixa branca */
+    [data-testid="stSidebarCollapsedControl"] {
+        display: flex !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        z-index: 999999 !important;
+        position: fixed !important;
+        top: 14px !important;
+        left: 14px !important;
+        min-width: 46px !important;
+        min-height: 46px !important;
+        background: transparent !important;
+    }
+
+    [data-testid="stSidebarCollapsedControl"] button,
+    button[data-testid="collapsedControl"] {
         background: transparent !important;
         background-color: transparent !important;
-        color: #ffffff !important;
+        color: #0f172a !important;
         border-radius: 8px !important;
         border: none !important;
         box-shadow: none !important;
-    }
-
-    section[data-testid="stSidebar"] button[data-testid="stSidebarCollapseButton"]:hover,
-    button[data-testid="stSidebarCollapseButton"]:hover {
-        background: rgba(255, 255, 255, 0.10) !important;
-        color: #ffffff !important;
-    }
-
-    button[data-testid="stSidebarCollapseButton"] svg,
-    button[data-testid="stSidebarCollapseButton"] svg path,
-    button[data-testid="stSidebarCollapseButton"] svg * {
-        fill: #ffffff !important;
-        stroke: #ffffff !important;
-        color: #ffffff !important;
-    }
-
-    /* Seta FORA do menu (sidebar fechada) — preta */
-    [data-testid="stSidebarCollapsedControl"] button,
-    button[data-testid="collapsedControl"] {
-        background: #ffffff !important;
-        background-color: #ffffff !important;
-        color: #0f172a !important;
-        border-radius: 9px !important;
-        border: 1px solid #e2e8f0 !important;
-        box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12) !important;
+        min-width: 46px !important;
+        min-height: 46px !important;
+        width: 46px !important;
+        height: 46px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        opacity: 1 !important;
+        visibility: visible !important;
     }
 
     [data-testid="stSidebarCollapsedControl"] button:hover,
     button[data-testid="collapsedControl"]:hover {
-        background: #f8fafc !important;
-        border-color: #cbd5e1 !important;
+        background: rgba(15, 23, 42, 0.08) !important;
         color: #0f172a !important;
     }
 
     [data-testid="stSidebarCollapsedControl"] button svg,
     [data-testid="stSidebarCollapsedControl"] button svg path,
     [data-testid="stSidebarCollapsedControl"] button svg *,
+    [data-testid="stSidebarCollapsedControl"] button span,
+    [data-testid="stSidebarCollapsedControl"] button p,
     button[data-testid="collapsedControl"] svg,
     button[data-testid="collapsedControl"] svg path,
-    button[data-testid="collapsedControl"] svg * {
+    button[data-testid="collapsedControl"] svg *,
+    button[data-testid="collapsedControl"] span,
+    button[data-testid="collapsedControl"] p {
         fill: #0f172a !important;
         stroke: #0f172a !important;
         color: #0f172a !important;
+        -webkit-text-fill-color: #0f172a !important;
+        opacity: 1 !important;
     }
 
-    /* Evita seta duplicada quando sidebar está fechada */
-    [data-testid="stSidebarCollapsedControl"]:not(:first-of-type) {
-        display: none !important;
+    /* Seta branca só dentro da sidebar aberta — não afeta a de fora */
+    section[data-testid="stSidebar"] button[data-testid="stSidebarCollapseButton"] {
+        background: transparent !important;
+        background-color: transparent !important;
+        color: #ffffff !important;
+        border: none !important;
+        box-shadow: none !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+    }
+
+    section[data-testid="stSidebar"] button[data-testid="stSidebarCollapseButton"]:hover {
+        background: rgba(255, 255, 255, 0.10) !important;
+        color: #ffffff !important;
+    }
+
+    section[data-testid="stSidebar"] button[data-testid="stSidebarCollapseButton"] svg,
+    section[data-testid="stSidebar"] button[data-testid="stSidebarCollapseButton"] svg path,
+    section[data-testid="stSidebar"] button[data-testid="stSidebarCollapseButton"] svg *,
+    section[data-testid="stSidebar"] button[data-testid="stSidebarCollapseButton"] span {
+        fill: #ffffff !important;
+        stroke: #ffffff !important;
+        color: #ffffff !important;
+        opacity: 1 !important;
     }
 
     section[data-testid="stSidebar"] div[data-testid="stRadio"] label:has(input:checked) > div:first-child > div {
