@@ -50,6 +50,10 @@ if "traffic_form_reset_token" not in st.session_state:
 if "sidebar_hidden" not in st.session_state:
     st.session_state.sidebar_hidden = False
 
+if st.session_state.get("sidebar_menu_version") != "v2_black_btn":
+    st.session_state.sidebar_hidden = False
+    st.session_state.sidebar_menu_version = "v2_black_btn"
+
 # Garante a migração dos navegadores que ainda estavam presos
 # no padrão antigo da aba Gestão de Tráfego.
 if st.session_state.get("dashboard_nav_version") != "midias_primeiro_v1":
@@ -859,31 +863,68 @@ st.markdown("""
         border-color: rgba(192, 38, 211, 0.45) !important;
     }
 
-    .sidebar-open-wrap {
-        margin-bottom: 16px;
-    }
-
-    .stApp:has(#sidebar-hidden) .sidebar-open-wrap {
+    .stApp:has(#sidebar-hidden) .st-key-btn_show_sidebar {
         position: fixed !important;
         top: 16px !important;
         left: 16px !important;
         z-index: 999999 !important;
-        width: 190px !important;
+        width: 220px !important;
         margin: 0 !important;
     }
 
-    .sidebar-open-wrap .stButton > button {
-        background: linear-gradient(90deg, #7C3AED 0%, #C026D3 100%) !important;
+    .stApp:has(#sidebar-hidden) .st-key-btn_show_sidebar button,
+    .stApp:has(#sidebar-hidden) .st-key-btn_show_sidebar .stButton > button {
+        background: #0f172a !important;
+        background-color: #0f172a !important;
         color: #ffffff !important;
-        border: none !important;
+        border: 2px solid #0f172a !important;
         border-radius: 12px !important;
         font-size: 15px !important;
         font-weight: 800 !important;
-        min-height: 48px !important;
-        height: 48px !important;
+        min-height: 50px !important;
+        height: 50px !important;
         width: 100% !important;
         max-width: none !important;
-        box-shadow: 0 8px 20px rgba(124, 58, 237, 0.35) !important;
+        box-shadow: 0 8px 22px rgba(15, 23, 42, 0.35) !important;
+    }
+
+    .stApp:has(#sidebar-hidden) .st-key-btn_show_sidebar button:hover,
+    .stApp:has(#sidebar-hidden) .st-key-btn_show_sidebar .stButton > button:hover {
+        background: #16233b !important;
+        background-color: #16233b !important;
+        border-color: #16233b !important;
+        color: #ffffff !important;
+    }
+
+    .stApp:has(#sidebar-hidden) section.main [data-testid="stBaseButton-primary"] {
+        position: fixed !important;
+        top: 16px !important;
+        left: 16px !important;
+        z-index: 999999 !important;
+        width: 220px !important;
+        background: #0f172a !important;
+        background-color: #0f172a !important;
+        color: #ffffff !important;
+        border: 2px solid #0f172a !important;
+        border-radius: 12px !important;
+        font-size: 15px !important;
+        font-weight: 800 !important;
+        min-height: 50px !important;
+        height: 50px !important;
+        box-shadow: 0 8px 22px rgba(15, 23, 42, 0.35) !important;
+    }
+
+    .stApp:has(#sidebar-hidden) section.main [data-testid="stBaseButton-primary"]:hover {
+        background: #16233b !important;
+        background-color: #16233b !important;
+        border-color: #16233b !important;
+        color: #ffffff !important;
+    }
+
+    .stApp:has(#sidebar-hidden) section.main [data-testid="stBaseButton-primary"] p,
+    .stApp:has(#sidebar-hidden) section.main [data-testid="stBaseButton-primary"] span,
+    .stApp:has(#sidebar-hidden) section.main [data-testid="stBaseButton-primary"] div {
+        color: #ffffff !important;
     }
 
     .stApp:has(#sidebar-hidden) section[data-testid="stSidebar"] {
@@ -1203,13 +1244,11 @@ def render_sidebar_open_button():
     if not st.session_state.get("sidebar_hidden"):
         return
 
-    st.markdown('<div class="sidebar-open-wrap">', unsafe_allow_html=True)
-    col_btn, _ = st.columns([1.1, 3])
-    with col_btn:
-        if st.button("☰ Abrir menu lateral", key="btn_show_sidebar", width="stretch"):
+    btn_col, _ = st.columns([1.35, 3.65])
+    with btn_col:
+        if st.button("☰ ABRIR MENU LATERAL", key="btn_show_sidebar", type="primary", width="stretch"):
             st.session_state.sidebar_hidden = False
             st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
 
 
 def render_sidebar_navigation():
@@ -1252,7 +1291,7 @@ def render_sidebar_navigation():
         st.markdown('</div>', unsafe_allow_html=True)
 
         st.markdown(
-            '<div class="sidebar-help">Clique em "Esconder menu lateral" para ocultar. Para abrir de novo, use o botão roxo no topo da tela.</div>',
+            '<div class="sidebar-help">Para ocultar, use "Esconder menu lateral". Para abrir de novo, clique no botão preto "ABRIR MENU LATERAL" no topo.</div>',
             unsafe_allow_html=True
         )
 
