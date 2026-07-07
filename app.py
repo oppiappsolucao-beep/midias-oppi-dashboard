@@ -965,8 +965,8 @@ st.markdown("""
 
     section[data-testid="stSidebar"] {
         position: relative !important;
-        background: linear-gradient(180deg, #0F172A 0%, #050816 100%) !important;
-        border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+        background: #111827 !important;
+        border-right: 1px solid rgba(255, 255, 255, 0.06) !important;
     }
 
     section[data-testid="stSidebar"] > div {
@@ -992,7 +992,7 @@ st.markdown("""
         gap: 12px;
         padding: 10px 4px 16px 4px;
         margin-bottom: 14px;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
     }
 
     .sidebar-brand-logo {
@@ -1007,28 +1007,28 @@ st.markdown("""
     }
 
     .sidebar-brand-title {
-        color: #F8FAFC;
+        color: #F1F5F9;
         font-size: 15px;
-        font-weight: 900;
+        font-weight: 700;
         line-height: 1.05;
-        letter-spacing: 0.3px;
+        letter-spacing: 0.2px;
     }
 
     .sidebar-brand-subtitle {
-        color: #C026D3;
+        color: #94A3B8;
         font-size: 10px;
-        font-weight: 800;
+        font-weight: 600;
         line-height: 1.2;
         margin-top: 3px;
-        letter-spacing: 0.6px;
+        letter-spacing: 0.5px;
         text-transform: uppercase;
     }
 
     .sidebar-nav-label {
-        color: #A1A1AA;
+        color: #64748B;
         font-size: 10px;
-        font-weight: 900;
-        letter-spacing: 1.6px;
+        font-weight: 700;
+        letter-spacing: 1.2px;
         margin: 2px 0 10px 2px;
         text-transform: uppercase;
     }
@@ -1045,36 +1045,37 @@ st.markdown("""
     }
 
     section[data-testid="stSidebar"] div[data-testid="stRadio"] label {
-        background: rgba(255, 255, 255, 0.055) !important;
-        border: 1px solid rgba(255, 255, 255, 0.11) !important;
-        border-radius: 12px !important;
-        padding: 11px 10px !important;
+        background: rgba(255, 255, 255, 0.03) !important;
+        border: 1px solid rgba(255, 255, 255, 0.07) !important;
+        border-radius: 10px !important;
+        padding: 10px 12px !important;
         margin: 0 !important;
-        min-height: 42px !important;
+        min-height: 40px !important;
         width: 100% !important;
         box-sizing: border-box !important;
-        transition: all 0.16s ease !important;
+        transition: background 0.15s ease, border-color 0.15s ease !important;
+        box-shadow: none !important;
     }
 
     section[data-testid="stSidebar"] div[data-testid="stRadio"] label:hover {
-        background: rgba(255, 255, 255, 0.10) !important;
-        border-color: rgba(192, 38, 211, 0.60) !important;
+        background: rgba(255, 255, 255, 0.06) !important;
+        border-color: rgba(255, 255, 255, 0.12) !important;
     }
 
     section[data-testid="stSidebar"] div[data-testid="stRadio"] label:has(input:checked) {
-        background: linear-gradient(90deg, rgba(124, 58, 237, 0.24) 0%, rgba(192, 38, 211, 0.16) 100%) !important;
-        border-color: #C026D3 !important;
-        box-shadow: 0 0 0 1px rgba(192, 38, 211, 0.14) inset !important;
+        background: rgba(255, 255, 255, 0.08) !important;
+        border-color: rgba(255, 255, 255, 0.16) !important;
+        box-shadow: inset 3px 0 0 #94A3B8 !important;
     }
 
     section[data-testid="stSidebar"] div[data-testid="stRadio"] label p {
-        color: #f8fafc !important;
+        color: #CBD5E1 !important;
         font-size: 14px !important;
-        font-weight: 800 !important;
+        font-weight: 600 !important;
     }
 
     section[data-testid="stSidebar"] div[data-testid="stRadio"] label:has(input:checked) p {
-        color: #ffffff !important;
+        color: #F8FAFC !important;
     }
 
     section[data-testid="stSidebar"] div[data-testid="stRadio"] label > div:first-child {
@@ -1112,21 +1113,22 @@ st.markdown("""
     }
 
     section[data-testid="stSidebar"] .stButton > button {
-        background: linear-gradient(90deg, #7C3AED 0%, #C026D3 100%) !important;
-        color: #ffffff !important;
-        border: none !important;
+        background: rgba(255, 255, 255, 0.05) !important;
+        color: #E2E8F0 !important;
+        border: 1px solid rgba(255, 255, 255, 0.12) !important;
         border-radius: 10px !important;
         font-size: 12px !important;
-        font-weight: 900 !important;
+        font-weight: 700 !important;
         min-height: 42px !important;
         height: 42px !important;
         margin-top: 16px !important;
-        box-shadow: 0 8px 18px rgba(124, 58, 237, 0.28) !important;
+        box-shadow: none !important;
     }
 
     section[data-testid="stSidebar"] .stButton > button:hover {
-        background: linear-gradient(90deg, #6D28D9 0%, #A21CAF 100%) !important;
-        color: #ffffff !important;
+        background: rgba(255, 255, 255, 0.09) !important;
+        border-color: rgba(255, 255, 255, 0.18) !important;
+        color: #F8FAFC !important;
     }
 
     /* Desliga header nativo da sidebar (seta + texto "Esconder menu lateral") */
@@ -1221,12 +1223,12 @@ st.markdown("""
     }
 
     section[data-testid="stSidebar"] div[data-testid="stRadio"] label:has(input:checked) > div:first-child > div {
-        background-color: #C026D3 !important;
-        border-color: #C026D3 !important;
+        background-color: #CBD5E1 !important;
+        border-color: #CBD5E1 !important;
     }
 
     section[data-testid="stSidebar"] div[data-testid="stRadio"] label:hover > div:first-child > div {
-        border-color: #C026D3 !important;
+        border-color: rgba(255, 255, 255, 0.35) !important;
     }
 
     @media (max-width: 768px) {
