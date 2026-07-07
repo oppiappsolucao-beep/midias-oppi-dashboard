@@ -47,6 +47,13 @@ if "area_dashboard" not in st.session_state:
 NAV_OPTIONS = ["Empresas", "Publicações", "Nova Arte", "Gestão de Tráfego"]
 TIPO_ARTE_OPTIONS = ["Vídeo", "Arte", "Carrossel"]
 STATUS_ARTE_FORM_OPTIONS = ["Andamento", "Finalizado", "Pausado", "Pendente"]
+SEMANA_OPTIONS = [
+    "Primeira Semana",
+    "Segunda Semana",
+    "Terceira Semana",
+    "Quarta Semana",
+    "Quinta Semana",
+]
 STATUS_ARTE_SHEET_MAP = {
     "Andamento": "Em andamento",
     "Finalizado": "Pronto",
@@ -330,12 +337,11 @@ st.markdown("""
 
     .stApp:has(#nova-arte-page) section.main .st-key-nova_arte_empresa_opcao [data-baseweb="select"] > div,
     .stApp:has(#nova-arte-page) section.main .st-key-nova_arte_mes [data-baseweb="select"] > div,
+    .stApp:has(#nova-arte-page) section.main .st-key-nova_arte_semana [data-baseweb="select"] > div,
     .stApp:has(#nova-arte-page) section.main .st-key-nova_arte_tipo [data-baseweb="select"] > div,
     .stApp:has(#nova-arte-page) section.main .st-key-nova_arte_status [data-baseweb="select"] > div,
     .stApp:has(#nova-arte-page) section.main .st-key-nova_arte_empresa_outra [data-baseweb="input"],
     .stApp:has(#nova-arte-page) section.main .st-key-nova_arte_empresa_outra [data-baseweb="input"] > div,
-    .stApp:has(#nova-arte-page) section.main .st-key-nova_arte_semana [data-baseweb="input"],
-    .stApp:has(#nova-arte-page) section.main .st-key-nova_arte_semana [data-baseweb="input"] > div,
     .stApp:has(#nova-arte-page) section.main .st-key-nova_arte_dia [data-baseweb="input"],
     .stApp:has(#nova-arte-page) section.main .st-key-nova_arte_dia [data-baseweb="input"] > div,
     .stApp:has(#nova-arte-page) section.main .st-key-nova_arte_tema [data-baseweb="input"],
@@ -2103,9 +2109,11 @@ def render_midias_nova_arte(df):
                     label_visibility="collapsed",
                 )
                 form_field_label("Semana")
-                semana = st.text_input(
+                semana = st.selectbox(
                     "Semana",
-                    placeholder="Ex.: 1",
+                    SEMANA_OPTIONS,
+                    index=None,
+                    placeholder="Selecione a semana",
                     key="nova_arte_semana",
                     label_visibility="collapsed",
                 )
@@ -2164,6 +2172,10 @@ def render_midias_nova_arte(df):
             st.warning("Selecione o mês.")
             return
 
+        if not semana:
+            st.warning("Selecione a semana.")
+            return
+
         if not tema.strip():
             st.warning("Preencha o campo Tema.")
             return
@@ -2182,7 +2194,7 @@ def render_midias_nova_arte(df):
         worksheet = connect_sheet()
         worksheet.append_row([
             mes,
-            semana.strip(),
+            semana,
             empresa_final,
             tema.strip(),
             "",
