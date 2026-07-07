@@ -901,7 +901,9 @@ st.markdown("""
         color: #ffffff !important;
     }
 
-    /* Desliga setas nativas (não funcionam no EasyPanel) */
+    /* Desliga header nativo da sidebar (seta + texto "Esconder menu lateral") */
+    section[data-testid="stSidebar"] [data-testid="stSidebarHeader"],
+    section[data-testid="stSidebar"] [data-testid="stSidebarHeader"] *,
     button[data-testid="stSidebarCollapseButton"],
     [data-testid="stSidebarCollapsedControl"],
     button[data-testid="collapsedControl"] {
@@ -910,7 +912,12 @@ st.markdown("""
         pointer-events: none !important;
         width: 0 !important;
         height: 0 !important;
+        min-height: 0 !important;
+        max-height: 0 !important;
+        padding: 0 !important;
+        margin: 0 !important;
         overflow: hidden !important;
+        opacity: 0 !important;
     }
 
     .stApp:has(#sidebar-hidden) section[data-testid="stSidebar"] {
@@ -1229,7 +1236,7 @@ def render_show_sidebar_button():
     if not st.session_state.get("sidebar_hidden"):
         return
 
-    if st.button("»", key="btn_show_sidebar", help="Abrir menu lateral"):
+    if st.button("»", key="btn_show_sidebar"):
         st.session_state.sidebar_hidden = False
         st.rerun()
 
@@ -1238,7 +1245,7 @@ def render_sidebar_navigation():
     logo_html = sidebar_logo_html(LOGO_PATH)
 
     with st.sidebar:
-        if st.button("«", key="btn_hide_sidebar", help="Esconder menu lateral"):
+        if st.button("«", key="btn_hide_sidebar"):
             st.session_state.sidebar_hidden = True
             st.rerun()
 
