@@ -47,9 +47,6 @@ if "area_dashboard" not in st.session_state:
 if "traffic_form_reset_token" not in st.session_state:
     st.session_state.traffic_form_reset_token = 0
 
-if "sidebar_hidden" not in st.session_state:
-    st.session_state.sidebar_hidden = False
-
 # Garante a migração dos navegadores que ainda estavam presos
 # no padrão antigo da aba Gestão de Tráfego.
 if st.session_state.get("dashboard_nav_version") != "midias_primeiro_v1":
@@ -920,29 +917,24 @@ st.markdown("""
         opacity: 0 !important;
     }
 
-    .stApp:has(#sidebar-hidden) section[data-testid="stSidebar"] {
+    .stApp.sidebar-collapsed section[data-testid="stSidebar"] {
         display: none !important;
     }
 
-    .stApp:has(#sidebar-hidden) [data-testid="stAppViewContainer"] > section.main {
+    .stApp.sidebar-collapsed [data-testid="stAppViewContainer"] > section.main {
         margin-left: 0 !important;
         max-width: 100% !important;
     }
 
-    /* Seta BRANCA — esconder menu (topo esquerdo da sidebar, fora do fluxo) */
-    section[data-testid="stSidebar"] .st-key-btn_hide_sidebar {
+    #oppi-sidebar-hide {
         position: absolute !important;
         top: 8px !important;
         left: 6px !important;
         z-index: 30 !important;
-        width: 52px !important;
-        margin: 0 !important;
-        padding: 0 !important;
-    }
-
-    section[data-testid="stSidebar"] .st-key-btn_hide_sidebar button {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
         background: transparent !important;
-        background-color: transparent !important;
         color: #ffffff !important;
         border: none !important;
         box-shadow: none !important;
@@ -954,37 +946,25 @@ st.markdown("""
         width: 48px !important;
         min-width: 48px !important;
         max-width: 48px !important;
-        margin-top: 0 !important;
-        padding: 0 !important;
-    }
-
-    section[data-testid="stSidebar"] .st-key-btn_hide_sidebar button:hover {
-        background: rgba(255, 255, 255, 0.12) !important;
-        background-color: rgba(255, 255, 255, 0.12) !important;
-        color: #ffffff !important;
-    }
-
-    section[data-testid="stSidebar"] .st-key-btn_hide_sidebar button p {
-        color: #ffffff !important;
-        font-size: 32px !important;
-        line-height: 1 !important;
         margin: 0 !important;
+        padding: 0 !important;
+        cursor: pointer !important;
     }
 
-    /* Seta PRETA — abrir menu (fixa no canto, menu fechado) */
-    .stApp:has(#sidebar-hidden) .st-key-btn_show_sidebar {
+    #oppi-sidebar-hide:hover {
+        background: rgba(255, 255, 255, 0.12) !important;
+        border-radius: 8px !important;
+    }
+
+    #oppi-sidebar-show {
         position: fixed !important;
         top: 10px !important;
         left: 10px !important;
         z-index: 999999 !important;
-        width: 56px !important;
-        margin: 0 !important;
-        padding: 0 !important;
-    }
-
-    .stApp:has(#sidebar-hidden) .st-key-btn_show_sidebar button {
+        display: none !important;
+        align-items: center !important;
+        justify-content: center !important;
         background: transparent !important;
-        background-color: transparent !important;
         color: #000000 !important;
         border: none !important;
         box-shadow: none !important;
@@ -996,21 +976,18 @@ st.markdown("""
         width: 52px !important;
         min-width: 52px !important;
         max-width: 52px !important;
-        padding: 0 !important;
-    }
-
-    .stApp:has(#sidebar-hidden) .st-key-btn_show_sidebar button:hover {
-        background: rgba(0, 0, 0, 0.06) !important;
-        background-color: rgba(0, 0, 0, 0.06) !important;
-        color: #000000 !important;
-    }
-
-    .stApp:has(#sidebar-hidden) .st-key-btn_show_sidebar button p {
-        color: #000000 !important;
-        font-size: 36px !important;
-        font-weight: 900 !important;
-        line-height: 1 !important;
         margin: 0 !important;
+        padding: 0 !important;
+        cursor: pointer !important;
+    }
+
+    #oppi-sidebar-show:hover {
+        background: rgba(0, 0, 0, 0.06) !important;
+        border-radius: 8px !important;
+    }
+
+    .stApp.sidebar-collapsed #oppi-sidebar-show {
+        display: flex !important;
     }
 
     section[data-testid="stSidebar"] div[data-testid="stRadio"] label:has(input:checked) > div:first-child > div {
@@ -1162,7 +1139,7 @@ def show_login():
         if usuario == APP_USER and senha == APP_PASS:
             st.session_state.logged_in = True
             st.session_state.area_dashboard = "Mídias"
-            st.session_state.sidebar_hidden = False
+            st.session_state.reset_sidebar_toggle = True
             st.rerun()
         else:
             st.error("Usuário ou senha incorretos.")
@@ -1227,28 +1204,104 @@ def sidebar_logo_html(path: Path):
     return f'<img class="sidebar-brand-logo" src="data:{mime};base64,{img_base64}">'
 
 
-def inject_sidebar_visibility():
-    if st.session_state.get("sidebar_hidden"):
-        st.markdown('<div id="sidebar-hidden"></div>', unsafe_allow_html=True)
+def inject_sidebar_toggle(reset=False):
+    if reset:
+        st.markdown('<div id="oppi-reset-sidebar"></div>', unsafe_allow_html=True)
 
+    components.html(
+        """
+        <script>
+        (function () {
+            const doc = window.parent.document;
+            const storage = window.parent.localStorage;
+            const KEY = "oppi_sidebar_collapsed";
 
-def render_show_sidebar_button():
-    if not st.session_state.get("sidebar_hidden"):
-        return
+            if (doc.getElementById("oppi-reset-sidebar")) {
+                storage.setItem(KEY, "0");
+            }
 
-    if st.button("»", key="btn_show_sidebar"):
-        st.session_state.sidebar_hidden = False
-        st.rerun()
+            function isCollapsed() {
+                return storage.getItem(KEY) === "1";
+            }
+
+            function applyState(collapsed) {
+                const app = doc.querySelector(".stApp");
+                if (app) {
+                    app.classList.toggle("sidebar-collapsed", collapsed);
+                }
+            }
+
+            function setCollapsed(collapsed) {
+                storage.setItem(KEY, collapsed ? "1" : "0");
+                applyState(collapsed);
+            }
+
+            function bindButton(btn, collapsed) {
+                if (!btn || btn.dataset.oppiBound === "1") {
+                    return;
+                }
+                btn.dataset.oppiBound = "1";
+                btn.addEventListener("click", function (event) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    setCollapsed(collapsed);
+                });
+            }
+
+            function ensureButtons() {
+                let hideBtn = doc.getElementById("oppi-sidebar-hide");
+                let showBtn = doc.getElementById("oppi-sidebar-show");
+                const sidebar = doc.querySelector('section[data-testid="stSidebar"]');
+
+                if (!hideBtn && sidebar) {
+                    hideBtn = doc.createElement("button");
+                    hideBtn.id = "oppi-sidebar-hide";
+                    hideBtn.type = "button";
+                    hideBtn.textContent = "«";
+                    hideBtn.setAttribute("aria-label", "Esconder menu lateral");
+                    sidebar.appendChild(hideBtn);
+                }
+
+                if (!showBtn) {
+                    showBtn = doc.createElement("button");
+                    showBtn.id = "oppi-sidebar-show";
+                    showBtn.type = "button";
+                    showBtn.textContent = "»";
+                    showBtn.setAttribute("aria-label", "Abrir menu lateral");
+                    doc.body.appendChild(showBtn);
+                }
+
+                bindButton(hideBtn, true);
+                bindButton(showBtn, false);
+                applyState(isCollapsed());
+            }
+
+            ensureButtons();
+
+            let scheduled = false;
+            const observer = new MutationObserver(function () {
+                if (scheduled) {
+                    return;
+                }
+                scheduled = true;
+                window.requestAnimationFrame(function () {
+                    scheduled = false;
+                    ensureButtons();
+                });
+            });
+
+            observer.observe(doc.body, { childList: true, subtree: true });
+        })();
+        </script>
+        """,
+        height=0,
+    )
 
 
 def render_sidebar_navigation():
     logo_html = sidebar_logo_html(LOGO_PATH)
 
     with st.sidebar:
-        if st.button("«", key="btn_hide_sidebar"):
-            st.session_state.sidebar_hidden = True
-            st.rerun()
-
         st.markdown(
             f"""
             <div class="sidebar-brand">
@@ -1276,6 +1329,7 @@ def render_sidebar_navigation():
         sair = st.button("SAIR DA CONTA", key="btn_logout_sidebar")
         if sair:
             st.session_state.logged_in = False
+            st.session_state.reset_sidebar_toggle = True
             st.rerun()
 
         st.markdown(
@@ -1876,8 +1930,8 @@ if not st.session_state.logged_in:
     st.stop()
 
 area_dashboard = render_sidebar_navigation()
-inject_sidebar_visibility()
-render_show_sidebar_button()
+reset_sidebar = st.session_state.pop("reset_sidebar_toggle", False)
+inject_sidebar_toggle(reset=reset_sidebar)
 render_dashboard_top(area_dashboard)
 
 if area_dashboard == "Gestão de Tráfego":
