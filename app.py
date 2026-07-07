@@ -965,8 +965,8 @@ st.markdown("""
 
     section[data-testid="stSidebar"] {
         position: relative !important;
-        background: #111827 !important;
-        border-right: 1px solid rgba(255, 255, 255, 0.06) !important;
+        background: linear-gradient(180deg, #2A2342 0%, #1A1630 100%) !important;
+        border-right: 1px solid rgba(167, 139, 250, 0.12) !important;
     }
 
     section[data-testid="stSidebar"] > div {
@@ -992,7 +992,7 @@ st.markdown("""
         gap: 12px;
         padding: 10px 4px 16px 4px;
         margin-bottom: 14px;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        border-bottom: 1px solid rgba(167, 139, 250, 0.14);
     }
 
     .sidebar-brand-logo {
@@ -1002,12 +1002,12 @@ st.markdown("""
         object-fit: cover;
         object-position: 58% center;
         display: block;
-        border: 1px solid rgba(255, 255, 255, 0.16);
+        border: 1px solid rgba(196, 181, 253, 0.35);
         background: #ffffff;
     }
 
     .sidebar-brand-title {
-        color: #F1F5F9;
+        color: #F5F3FF;
         font-size: 15px;
         font-weight: 700;
         line-height: 1.05;
@@ -1015,17 +1015,18 @@ st.markdown("""
     }
 
     .sidebar-brand-subtitle {
-        color: #94A3B8;
+        color: #A78BFA;
         font-size: 10px;
         font-weight: 600;
         line-height: 1.2;
         margin-top: 3px;
         letter-spacing: 0.5px;
         text-transform: uppercase;
+        opacity: 0.85;
     }
 
     .sidebar-nav-label {
-        color: #64748B;
+        color: #8B7FA8;
         font-size: 10px;
         font-weight: 700;
         letter-spacing: 1.2px;
@@ -1034,7 +1035,7 @@ st.markdown("""
     }
 
     .sidebar-help {
-        color: #A1A1AA;
+        color: #9F94C9;
         font-size: 11px;
         line-height: 1.45;
         padding: 10px 4px 0 4px;
@@ -1045,8 +1046,8 @@ st.markdown("""
     }
 
     section[data-testid="stSidebar"] div[data-testid="stRadio"] label {
-        background: rgba(255, 255, 255, 0.03) !important;
-        border: 1px solid rgba(255, 255, 255, 0.07) !important;
+        background: rgba(167, 139, 250, 0.06) !important;
+        border: 1px solid rgba(167, 139, 250, 0.10) !important;
         border-radius: 10px !important;
         padding: 10px 12px !important;
         margin: 0 !important;
@@ -1058,24 +1059,24 @@ st.markdown("""
     }
 
     section[data-testid="stSidebar"] div[data-testid="stRadio"] label:hover {
-        background: rgba(255, 255, 255, 0.06) !important;
-        border-color: rgba(255, 255, 255, 0.12) !important;
+        background: rgba(167, 139, 250, 0.10) !important;
+        border-color: rgba(167, 139, 250, 0.18) !important;
     }
 
     section[data-testid="stSidebar"] div[data-testid="stRadio"] label:has(input:checked) {
-        background: rgba(255, 255, 255, 0.08) !important;
-        border-color: rgba(255, 255, 255, 0.16) !important;
-        box-shadow: inset 3px 0 0 #94A3B8 !important;
+        background: rgba(167, 139, 250, 0.14) !important;
+        border-color: rgba(167, 139, 250, 0.28) !important;
+        box-shadow: inset 3px 0 0 #A78BFA !important;
     }
 
     section[data-testid="stSidebar"] div[data-testid="stRadio"] label p {
-        color: #CBD5E1 !important;
+        color: #C4B5FD !important;
         font-size: 14px !important;
         font-weight: 600 !important;
     }
 
     section[data-testid="stSidebar"] div[data-testid="stRadio"] label:has(input:checked) p {
-        color: #F8FAFC !important;
+        color: #F5F3FF !important;
     }
 
     section[data-testid="stSidebar"] div[data-testid="stRadio"] label > div:first-child {
@@ -1083,7 +1084,7 @@ st.markdown("""
     }
 
     .sidebar-submenu-label {
-        color: #C026D3;
+        color: #A78BFA;
         font-size: 10px;
         font-weight: 800;
         letter-spacing: 1.2px;
@@ -1094,7 +1095,7 @@ st.markdown("""
     section[data-testid="stSidebar"] .st-key-midias_submenu {
         margin: 0 0 12px 0;
         padding: 2px 0 2px 10px;
-        border-left: 2px solid rgba(192, 38, 211, 0.45);
+        border-left: 2px solid rgba(167, 139, 250, 0.35);
     }
 
     section[data-testid="stSidebar"] .st-key-midias_submenu div[data-testid="stRadio"] > div {
@@ -1113,9 +1114,9 @@ st.markdown("""
     }
 
     section[data-testid="stSidebar"] .stButton > button {
-        background: rgba(255, 255, 255, 0.05) !important;
-        color: #E2E8F0 !important;
-        border: 1px solid rgba(255, 255, 255, 0.12) !important;
+        background: rgba(167, 139, 250, 0.08) !important;
+        color: #EDE9FE !important;
+        border: 1px solid rgba(167, 139, 250, 0.22) !important;
         border-radius: 10px !important;
         font-size: 12px !important;
         font-weight: 700 !important;
@@ -1126,9 +1127,9 @@ st.markdown("""
     }
 
     section[data-testid="stSidebar"] .stButton > button:hover {
-        background: rgba(255, 255, 255, 0.09) !important;
-        border-color: rgba(255, 255, 255, 0.18) !important;
-        color: #F8FAFC !important;
+        background: rgba(167, 139, 250, 0.16) !important;
+        border-color: rgba(167, 139, 250, 0.35) !important;
+        color: #F5F3FF !important;
     }
 
     /* Desliga header nativo da sidebar (seta + texto "Esconder menu lateral") */
@@ -1183,7 +1184,7 @@ st.markdown("""
     }
 
     section[data-testid="stSidebar"] .oppi-sidebar-hide:hover {
-        background: rgba(255, 255, 255, 0.12) !important;
+        background: rgba(167, 139, 250, 0.18) !important;
         border-radius: 8px !important;
     }
 
@@ -1223,12 +1224,12 @@ st.markdown("""
     }
 
     section[data-testid="stSidebar"] div[data-testid="stRadio"] label:has(input:checked) > div:first-child > div {
-        background-color: #CBD5E1 !important;
-        border-color: #CBD5E1 !important;
+        background-color: #A78BFA !important;
+        border-color: #A78BFA !important;
     }
 
     section[data-testid="stSidebar"] div[data-testid="stRadio"] label:hover > div:first-child > div {
-        border-color: rgba(255, 255, 255, 0.35) !important;
+        border-color: rgba(196, 181, 253, 0.55) !important;
     }
 
     @media (max-width: 768px) {
