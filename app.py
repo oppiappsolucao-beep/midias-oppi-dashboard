@@ -42,12 +42,9 @@ if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 
 if "area_dashboard" not in st.session_state:
-    st.session_state.area_dashboard = "Mídias"
+    st.session_state.area_dashboard = "Publicações"
 
-if "midias_submenu" not in st.session_state:
-    st.session_state.midias_submenu = "Publicações"
-
-MIDIAS_SUBMENU_OPTIONS = ["Empresas", "Publicações", "Nova Arte"]
+NAV_OPTIONS = ["Empresas", "Publicações", "Nova Arte", "Gestão de Tráfego"]
 TIPO_ARTE_OPTIONS = ["Vídeo", "Arte", "Carrossel"]
 STATUS_ARTE_FORM_OPTIONS = ["Andamento", "Finalizado", "Pausado", "Pendente"]
 STATUS_ARTE_SHEET_MAP = {
@@ -116,11 +113,28 @@ SIDEBAR_TOGGLE_SCRIPT = """
 </script>
 """
 
-# Garante a migração dos navegadores que ainda estavam presos
-# no padrão antigo da aba Gestão de Tráfego.
-if st.session_state.get("dashboard_nav_version") != "midias_primeiro_v1":
-    st.session_state.area_dashboard = "Mídias"
-    st.session_state.dashboard_nav_version = "midias_primeiro_v1"
+# Garante migração para o menu lateral simplificado.
+if st.session_state.get("nav_layout_version") != "flat_v3":
+    area_atual = st.session_state.get("area_dashboard", "Publicações")
+    submenu_antigo = st.session_state.get("midias_submenu", "Publicações")
+
+    if area_atual == "Gestão de Tráfego":
+        st.session_state.area_dashboard = "Gestão de Tráfego"
+    elif area_atual in NAV_OPTIONS:
+        st.session_state.area_dashboard = area_atual
+    elif submenu_antigo in NAV_OPTIONS:
+        st.session_state.area_dashboard = submenu_antigo
+    elif area_atual == "Mídias":
+        if submenu_antigo == "Nova Arte":
+            st.session_state.area_dashboard = "Nova Arte"
+        elif submenu_antigo == "Empresas":
+            st.session_state.area_dashboard = "Empresas"
+        else:
+            st.session_state.area_dashboard = "Publicações"
+    else:
+        st.session_state.area_dashboard = "Publicações"
+
+    st.session_state.nav_layout_version = "flat_v3"
 
 # ---------------------------------------------------
 # PLANILHA
@@ -1354,8 +1368,7 @@ def show_login():
     if entrar:
         if usuario == APP_USER and senha == APP_PASS:
             st.session_state.logged_in = True
-            st.session_state.area_dashboard = "Mídias"
-            st.session_state.midias_submenu = "Publicações"
+            st.session_state.area_dashboard = "Publicações"
             st.rerun()
         else:
             st.error("Usuário ou senha incorretos.")
@@ -1466,27 +1479,16 @@ def render_sidebar_navigation():
 
         area = st.radio(
             "Navegação",
-            options=["Mídias", "Gestão de Tráfego"],
-            format_func=lambda opcao: (
-                "📱  Mídias" if opcao == "Mídias" else "📊  Gestão de Tráfego"
-            ),
+            options=NAV_OPTIONS,
+            format_func=lambda opcao: {
+                "Empresas": "🏢  Empresas",
+                "Publicações": "📄  Publicações",
+                "Nova Arte": "🎨  Nova Arte",
+                "Gestão de Tráfego": "📊  Gestão de Tráfego",
+            }[opcao],
             key="area_dashboard",
-            label_visibility="collapsed"
+            label_visibility="collapsed",
         )
-
-        if area == "Mídias":
-            st.markdown('<div class="sidebar-submenu-label">Mídias</div>', unsafe_allow_html=True)
-            st.radio(
-                "Submenu Mídias",
-                options=MIDIAS_SUBMENU_OPTIONS,
-                format_func=lambda opcao: {
-                    "Empresas": "🏢  Empresas",
-                    "Publicações": "📄  Publicações",
-                    "Nova Arte": "🎨  Nova Arte",
-                }[opcao],
-                key="midias_submenu",
-                label_visibility="collapsed",
-            )
 
         sair = st.button("SAIR DA CONTA", key="btn_logout_sidebar")
         if sair:
@@ -1502,17 +1504,16 @@ def render_sidebar_navigation():
     return area
 
 
-def render_dashboard_top(area, midias_submenu=None):
+def render_dashboard_top(area):
     render_logo(LOGO_PATH)
 
-    if area == "Gestão de Tráfego":
-        subtitulo = "Resultados dos anúncios"
-    elif midias_submenu == "Empresas":
-        subtitulo = "Visão por empresa"
-    elif midias_submenu == "Nova Arte":
-        subtitulo = "Cadastro de nova arte"
-    else:
-        subtitulo = "Gestão de publicações e pagamentos"
+    subtitulos = {
+        "Gestão de Tráfego": "Resultados dos anúncios",
+        "Empresas": "Visão por empresa",
+        "Publicações": "Gestão de publicações e pagamentos",
+        "Nova Arte": "Cadastro de nova arte",
+    }
+    subtitulo = subtitulos.get(area, "Gestão de publicações e pagamentos")
 
     st.markdown(
         f"""
@@ -2353,11 +2354,7 @@ if not st.session_state.logged_in:
 area_dashboard = render_sidebar_navigation()
 render_sidebar_show_button()
 sync_sidebar_toggle_state()
-midias_submenu = st.session_state.get("midias_submenu", "Publicações")
-render_dashboard_top(
-    area_dashboard,
-    midias_submenu if area_dashboard == "Mídias" else None,
-)
+render_dashboard_top(area_dashboard)
 
 if area_dashboard == "Gestão de Tráfego":
     render_gestao_trafego()
@@ -2646,11 +2643,11 @@ if "Mês" in df.columns:
 # MÍDIAS
 # ---------------------------------------------------
 
-if midias_submenu == "Empresas":
+if area_dashboard == "Empresas":
     render_midias_empresas(df)
     st.stop()
 
-if midias_submenu == "Nova Arte":
+if area_dashboard == "Nova Arte":
     render_midias_nova_arte(df)
     st.stop()
 
