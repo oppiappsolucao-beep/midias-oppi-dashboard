@@ -60,6 +60,11 @@ STATUS_ARTE_SHEET_MAP = {
     "Pausado": "Pausado",
     "Pendente": "Pendente",
 }
+STATUS_PAGAMENTO_FORM_OPTIONS = ["Pago", "A Pagar"]
+STATUS_PAGAMENTO_SHEET_MAP = {
+    "Pago": "Pago",
+    "A Pagar": "A pagar",
+}
 
 if "traffic_form_reset_token" not in st.session_state:
     st.session_state.traffic_form_reset_token = 0
@@ -340,8 +345,11 @@ st.markdown("""
     .stApp:has(#nova-arte-page) section.main .st-key-nova_arte_semana [data-baseweb="select"] > div,
     .stApp:has(#nova-arte-page) section.main .st-key-nova_arte_tipo [data-baseweb="select"] > div,
     .stApp:has(#nova-arte-page) section.main .st-key-nova_arte_status [data-baseweb="select"] > div,
+    .stApp:has(#nova-arte-page) section.main .st-key-nova_arte_status_pagamento [data-baseweb="select"] > div,
     .stApp:has(#nova-arte-page) section.main .st-key-nova_arte_empresa_outra [data-baseweb="input"],
     .stApp:has(#nova-arte-page) section.main .st-key-nova_arte_empresa_outra [data-baseweb="input"] > div,
+    .stApp:has(#nova-arte-page) section.main .st-key-nova_arte_valor [data-baseweb="input"],
+    .stApp:has(#nova-arte-page) section.main .st-key-nova_arte_valor [data-baseweb="input"] > div,
     .stApp:has(#nova-arte-page) section.main .st-key-nova_arte_dia [data-baseweb="input"],
     .stApp:has(#nova-arte-page) section.main .st-key-nova_arte_dia [data-baseweb="input"] > div,
     .stApp:has(#nova-arte-page) section.main .st-key-nova_arte_tema [data-baseweb="input"],
@@ -2186,6 +2194,13 @@ def render_midias_nova_arte(df):
                     key="nova_arte_dia",
                     label_visibility="collapsed",
                 )
+                form_field_label("Valor da arte")
+                valor_arte = st.text_input(
+                    "Valor da arte",
+                    placeholder="Ex.: 38,00",
+                    key="nova_arte_valor",
+                    label_visibility="collapsed",
+                )
 
             with c2:
                 form_field_label("Tema")
@@ -2211,6 +2226,15 @@ def render_midias_nova_arte(df):
                     index=None,
                     placeholder="Selecione o status",
                     key="nova_arte_status",
+                    label_visibility="collapsed",
+                )
+                form_field_label("Status pagamento")
+                status_pagamento = st.selectbox(
+                    "Status pagamento",
+                    STATUS_PAGAMENTO_FORM_OPTIONS,
+                    index=None,
+                    placeholder="Selecione o pagamento",
+                    key="nova_arte_status_pagamento",
                     label_visibility="collapsed",
                 )
 
@@ -2250,8 +2274,26 @@ def render_midias_nova_arte(df):
             st.warning("Selecione o status.")
             return
 
+        if not status_pagamento:
+            st.warning("Selecione o status de pagamento.")
+            return
+
+        valor_txt = str(valor_arte).strip()
+        if not valor_txt:
+            st.warning("Informe o valor da arte.")
+            return
+
+        valor_num = pd.to_numeric(normalizar_valor(pd.Series([valor_txt])), errors="coerce")
+        if pd.isna(valor_num.iloc[0]) or float(valor_num.iloc[0]) < 0:
+            st.warning("Informe um valor válido para a arte.")
+            return
+
         data_publicacao = montar_data_publicacao(mes, dia)
         status_arte_planilha = STATUS_ARTE_SHEET_MAP.get(status_arte, status_arte)
+        status_pagamento_planilha = STATUS_PAGAMENTO_SHEET_MAP.get(
+            status_pagamento,
+            status_pagamento,
+        )
 
         worksheet = connect_sheet()
         worksheet.append_row([
@@ -2259,8 +2301,8 @@ def render_midias_nova_arte(df):
             semana,
             empresa_final,
             tema.strip(),
-            "",
-            "A pagar",
+            float(valor_num.iloc[0]),
+            status_pagamento_planilha,
             tipo_arte,
             status_arte_planilha,
             data_publicacao,
