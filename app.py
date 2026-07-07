@@ -929,7 +929,7 @@ st.markdown("""
         opacity: 1 !important;
     }
 
-    /* Seta preta nativa — abrir menu (fora, sidebar fechada) */
+    /* Seta PRETA nativa — abrir menu (fora, sidebar fechada) */
     [data-testid="stSidebarCollapsedControl"] {
         display: flex !important;
         visibility: visible !important;
@@ -938,12 +938,14 @@ st.markdown("""
         position: fixed !important;
         top: 12px !important;
         left: 12px !important;
+        background: transparent !important;
     }
 
     [data-testid="stSidebarCollapsedControl"] button,
     button[data-testid="collapsedControl"] {
         background: transparent !important;
-        color: #0f172a !important;
+        background-color: transparent !important;
+        color: #000000 !important;
         border: none !important;
         box-shadow: none !important;
         min-width: 52px !important;
@@ -957,22 +959,29 @@ st.markdown("""
 
     [data-testid="stSidebarCollapsedControl"] button:hover,
     button[data-testid="collapsedControl"]:hover {
-        background: rgba(15, 23, 42, 0.08) !important;
-        color: #0f172a !important;
+        background: rgba(0, 0, 0, 0.06) !important;
+        background-color: rgba(0, 0, 0, 0.06) !important;
+        color: #000000 !important;
     }
 
     [data-testid="stSidebarCollapsedControl"] button svg,
     [data-testid="stSidebarCollapsedControl"] button svg path,
     [data-testid="stSidebarCollapsedControl"] button svg *,
+    [data-testid="stSidebarCollapsedControl"] button span,
+    [data-testid="stSidebarCollapsedControl"] button p,
     button[data-testid="collapsedControl"] svg,
     button[data-testid="collapsedControl"] svg path,
-    button[data-testid="collapsedControl"] svg * {
+    button[data-testid="collapsedControl"] svg *,
+    button[data-testid="collapsedControl"] span,
+    button[data-testid="collapsedControl"] p {
         width: 30px !important;
         height: 30px !important;
-        fill: #0f172a !important;
-        stroke: #0f172a !important;
-        color: #0f172a !important;
+        fill: #000000 !important;
+        stroke: #000000 !important;
+        color: #000000 !important;
+        -webkit-text-fill-color: #000000 !important;
         opacity: 1 !important;
+        filter: brightness(0) !important;
     }
 
     section[data-testid="stSidebar"] div[data-testid="stRadio"] label:has(input:checked) > div:first-child > div {
