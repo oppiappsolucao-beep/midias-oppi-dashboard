@@ -47,6 +47,9 @@ if "area_dashboard" not in st.session_state:
 if "traffic_form_reset_token" not in st.session_state:
     st.session_state.traffic_form_reset_token = 0
 
+if "sidebar_hidden" not in st.session_state:
+    st.session_state.sidebar_hidden = False
+
 # Garante a migração dos navegadores que ainda estavam presos
 # no padrão antigo da aba Gestão de Tráfego.
 if st.session_state.get("dashboard_nav_version") != "midias_primeiro_v1":
@@ -156,13 +159,14 @@ st.markdown("""
     .metric-card {
         background: linear-gradient(180deg, #ffffff 0%, #fbfcff 100%);
         border: 1px solid #e7ebf3;
-        border-left: 7px solid #e11d48;
-        border-radius: 24px;
-        padding: 18px 20px 18px 22px;
-        height: 172px;
+        border-left: 6px solid #e11d48;
+        border-radius: 18px;
+        padding: 14px 16px 12px 16px;
+        min-height: 118px;
+        height: auto;
         width: 100%;
         box-sizing: border-box;
-        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
+        box-shadow: 0 8px 20px rgba(15, 23, 42, 0.05);
         display: flex;
         flex-direction: column;
         justify-content: space-between;
@@ -182,27 +186,30 @@ st.markdown("""
     }
 
     .metric-title {
-        font-size: 15px;
+        font-size: 13px;
         color: #334155;
         font-weight: 800;
-        margin-bottom: 8px;
+        margin-bottom: 4px;
         letter-spacing: 0.1px;
+        line-height: 1.2;
     }
 
     .metric-value {
-        font-size: 34px;
+        font-size: 26px;
         color: #0f172a;
         font-weight: 900;
-        line-height: 1.05;
-        margin: 6px 0 10px 0;
-        letter-spacing: -0.8px;
-        word-break: break-word;
+        line-height: 1.1;
+        margin: 4px 0 6px 0;
+        letter-spacing: -0.4px;
+        word-break: keep-all;
+        overflow-wrap: normal;
+        white-space: nowrap;
     }
 
     .metric-sub {
-        font-size: 13px;
+        font-size: 11px;
         color: #64748b;
-        line-height: 1.45;
+        line-height: 1.35;
     }
 
     .section-title {
@@ -834,6 +841,56 @@ st.markdown("""
         padding: 10px 4px 0 4px;
     }
 
+    section[data-testid="stSidebar"] .sidebar-hide-wrap .stButton > button {
+        background: rgba(255, 255, 255, 0.08) !important;
+        color: #e2e8f0 !important;
+        border: 1px solid rgba(255, 255, 255, 0.16) !important;
+        border-radius: 10px !important;
+        font-size: 12px !important;
+        font-weight: 800 !important;
+        min-height: 40px !important;
+        height: 40px !important;
+        margin-top: 8px !important;
+        box-shadow: none !important;
+    }
+
+    section[data-testid="stSidebar"] .sidebar-hide-wrap .stButton > button:hover {
+        background: rgba(255, 255, 255, 0.14) !important;
+        border-color: rgba(192, 38, 211, 0.45) !important;
+    }
+
+    .sidebar-open-wrap {
+        margin-bottom: 12px;
+    }
+
+    .sidebar-open-wrap .stButton > button {
+        background: #16233b !important;
+        color: #ffffff !important;
+        border: none !important;
+        border-radius: 12px !important;
+        font-size: 13px !important;
+        font-weight: 800 !important;
+        min-height: 40px !important;
+        height: 40px !important;
+        max-width: 140px !important;
+        box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12) !important;
+    }
+
+    .stApp:has(#sidebar-hidden) section[data-testid="stSidebar"] {
+        display: none !important;
+        min-width: 0 !important;
+        width: 0 !important;
+    }
+
+    .stApp:has(#sidebar-hidden) [data-testid="stSidebarCollapsedControl"],
+    .stApp:has(#sidebar-hidden) [data-testid="collapsedControl"] {
+        display: none !important;
+    }
+
+    .stApp:has(#sidebar-hidden) .block-container {
+        max-width: 1450px;
+    }
+
     section[data-testid="stSidebar"] div[data-testid="stRadio"] > div {
         gap: 8px !important;
     }
@@ -1121,6 +1178,22 @@ def sidebar_logo_html(path: Path):
     return f'<img class="sidebar-brand-logo" src="data:{mime};base64,{img_base64}">'
 
 
+def inject_sidebar_visibility():
+    if st.session_state.get("sidebar_hidden"):
+        st.markdown('<div id="sidebar-hidden"></div>', unsafe_allow_html=True)
+
+
+def render_sidebar_open_button():
+    if not st.session_state.get("sidebar_hidden"):
+        return
+
+    st.markdown('<div class="sidebar-open-wrap">', unsafe_allow_html=True)
+    if st.button("☰ Abrir menu", key="btn_show_sidebar", width="stretch"):
+        st.session_state.sidebar_hidden = False
+        st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
+
+
 def render_sidebar_navigation():
     logo_html = sidebar_logo_html(LOGO_PATH)
 
@@ -1154,8 +1227,14 @@ def render_sidebar_navigation():
             st.session_state.logged_in = False
             st.rerun()
 
+        st.markdown('<div class="sidebar-hide-wrap">', unsafe_allow_html=True)
+        if st.button("◀ Esconder menu", key="btn_hide_sidebar", width="stretch"):
+            st.session_state.sidebar_hidden = True
+            st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
+
         st.markdown(
-            '<div class="sidebar-help">Use a seta na lateral para recolher ou abrir o menu.</div>',
+            '<div class="sidebar-help">Use o botão acima ou a seta na lateral para recolher o menu.</div>',
             unsafe_allow_html=True
         )
 
@@ -1163,6 +1242,7 @@ def render_sidebar_navigation():
 
 
 def render_dashboard_top(area):
+    render_sidebar_open_button()
     render_logo(LOGO_PATH)
 
     subtitulo = "Resultados dos anúncios" if area == "Gestão de Tráfego" else "Gestão de publicações e pagamentos"
@@ -1752,6 +1832,7 @@ if not st.session_state.logged_in:
     st.stop()
 
 area_dashboard = render_sidebar_navigation()
+inject_sidebar_visibility()
 render_dashboard_top(area_dashboard)
 
 if area_dashboard == "Gestão de Tráfego":
@@ -2132,7 +2213,8 @@ total_valor = float(df_filtrado["Valor"].sum())
 valor_pago = float(pagos["Valor"].sum())
 valor_pendente = float(a_pagar["Valor"].sum())
 
-m1, m2, m3, m4, m5, m6 = st.columns(6)
+m1, m2, m3 = st.columns(3)
+m4, m5, m6 = st.columns(3)
 
 with m1:
     metric_card("Posts", f"{total_posts}", "total de registros filtrados")
@@ -2149,7 +2231,8 @@ with m6:
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-pf1, pf2, pf3, pf4 = st.columns(4)
+pf1, pf2 = st.columns(2)
+pf3, pf4 = st.columns(2)
 
 with pf1:
     metric_card("Postagens feitas", f"{postagens_feitas}", "status da arte = Pronto", "metric-card-green")
