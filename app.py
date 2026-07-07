@@ -1824,6 +1824,29 @@ def show_traffic_presentation(values):
             st.rerun()
 
 
+def calcular_metricas_empresa(df_empresa):
+    status_pagamento_normalizado = df_empresa["Status Pagamento"].astype(str).str.strip().str.lower()
+    status_arte_normalizado = df_empresa["Status da arte"].astype(str).str.strip().str.lower()
+
+    pagos = df_empresa[status_pagamento_normalizado == "pago"]
+    a_pagar = df_empresa[status_pagamento_normalizado == "a pagar"]
+
+    linhas_com_conteudo = (
+        df_empresa["Empresa"].astype(str).str.strip().ne("")
+        | df_empresa["Tema"].astype(str).str.strip().ne("")
+        | df_empresa["Tipo de arte"].astype(str).str.strip().ne("")
+        | df_empresa["Valor"].fillna(0).gt(0)
+        | df_empresa["Data Publicação"].notna()
+    )
+
+    postagens_feitas = int(((status_arte_normalizado == "pronto") & linhas_com_conteudo).sum())
+    postagens_a_fazer = int(((status_arte_normalizado != "pronto") & linhas_com_conteudo).sum())
+    valor_pago = float(pagos["Valor"].sum())
+    valor_a_pagar = float(a_pagar["Valor"].sum())
+
+    return postagens_feitas, postagens_a_fazer, valor_pago, valor_a_pagar
+
+
 def render_midias_empresas(df):
     st.markdown(
         '<div class="section-title">🏢 Empresas</div>',
@@ -1836,28 +1859,55 @@ def render_midias_empresas(df):
         st.info("Nenhuma empresa encontrada na planilha.")
         return
 
-    resumo = (
-        df_empresas.groupby("Empresa", dropna=False)
-        .agg(
-            publicacoes=("Tema", "count"),
-            valor_total=("Valor", "sum"),
-            pagos=("Status Pagamento", lambda s: int((s.astype(str).str.strip().str.lower() == "pago").sum())),
-        )
-        .reset_index()
-        .sort_values("Empresa")
-    )
-    resumo["Valor total"] = resumo["valor_total"].apply(format_brl)
+    empresas_disponiveis = sorted(df_empresas["Empresa"].astype(str).str.strip().unique())
 
-    st.markdown('<div class="section-card">', unsafe_allow_html=True)
-    st.dataframe(
-        resumo[["Empresa", "publicacoes", "Valor total", "pagos"]].rename(columns={
-            "publicacoes": "Publicações",
-            "pagos": "Pagas",
-        }),
-        width="stretch",
-        hide_index=True,
+    st.markdown('<div class="filter-card">', unsafe_allow_html=True)
+    empresa_selecionada = st.selectbox(
+        "Empresa",
+        options=empresas_disponiveis,
+        key="empresa_selecionada_midias",
     )
     st.markdown('</div>', unsafe_allow_html=True)
+
+    df_selecionado = df_empresas[
+        df_empresas["Empresa"].astype(str).str.strip() == empresa_selecionada
+    ]
+
+    postagens_feitas, postagens_a_fazer, valor_pago, valor_a_pagar = calcular_metricas_empresa(
+        df_selecionado
+    )
+
+    c1, c2 = st.columns(2)
+    c3, c4 = st.columns(2)
+
+    with c1:
+        metric_card(
+            "Publicações feitas",
+            f"{postagens_feitas}",
+            "status da arte = Pronto",
+            "metric-card-green",
+        )
+    with c2:
+        metric_card(
+            "Publicações a fazer",
+            f"{postagens_a_fazer}",
+            "status diferente de Pronto",
+            "metric-card-orange",
+        )
+    with c3:
+        metric_card(
+            "Valor pago",
+            format_brl(valor_pago),
+            "status pagamento = Pago",
+            "metric-card-green",
+        )
+    with c4:
+        metric_card(
+            "Valor a pagar",
+            format_brl(valor_a_pagar),
+            "status pagamento = A pagar",
+            "metric-card-orange",
+        )
 
 
 def render_midias_nova_arte():
