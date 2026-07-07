@@ -48,6 +48,14 @@ if "midias_submenu" not in st.session_state:
     st.session_state.midias_submenu = "Publicações"
 
 MIDIAS_SUBMENU_OPTIONS = ["Empresas", "Publicações", "Nova Arte"]
+TIPO_ARTE_OPTIONS = ["Vídeo", "Arte", "Carrossel"]
+STATUS_ARTE_FORM_OPTIONS = ["Andamento", "Finalizado", "Pausado", "Pendente"]
+STATUS_ARTE_SHEET_MAP = {
+    "Andamento": "Em andamento",
+    "Finalizado": "Pronto",
+    "Pausado": "Pausado",
+    "Pendente": "Pendente",
+}
 
 if "traffic_form_reset_token" not in st.session_state:
     st.session_state.traffic_form_reset_token = 0
@@ -1910,53 +1918,96 @@ def render_midias_empresas(df):
         )
 
 
-def render_midias_nova_arte():
+def montar_data_publicacao(mes_nome, dia_txt):
+    dia = str(dia_txt).strip()
+    if not dia or not mes_nome:
+        return ""
+
+    try:
+        dia_int = int(dia)
+        mes_int = MESES_ORDEM.index(mes_nome) + 1
+        ano = date.today().year
+        return f"{dia_int:02d}/{mes_int:02d}/{ano}"
+    except (ValueError, IndexError):
+        return dia
+
+
+def render_midias_nova_arte(df):
     st.markdown(
         '<div class="section-title">🎨 Nova Arte</div>',
         unsafe_allow_html=True
     )
 
+    empresas_planilha = sorted(
+        {
+            str(item).strip()
+            for item in df["Empresa"].dropna().astype(str).tolist()
+            if str(item).strip()
+        }
+    )
+    opcoes_empresa = empresas_planilha + ["Outra"]
+
     st.markdown('<div class="filter-card">', unsafe_allow_html=True)
+
+    empresa_opcao = st.selectbox(
+        "Empresas",
+        options=opcoes_empresa,
+        key="nova_arte_empresa_opcao",
+    )
+
+    empresa_outra = ""
+    if empresa_opcao == "Outra":
+        empresa_outra = st.text_input(
+            "Nome da nova empresa",
+            placeholder="Digite o nome da empresa",
+            key="nova_arte_empresa_outra",
+        )
 
     with st.form("nova_arte_form", clear_on_submit=True):
         c1, c2 = st.columns(2)
 
         with c1:
-            empresa = st.text_input("Empresa", placeholder="Nome da empresa")
-            tema = st.text_input("Tema / Atividade", placeholder="Descrição da publicação")
             mes = st.selectbox("Mês", MESES_ORDEM)
             semana = st.text_input("Semana", placeholder="Ex.: 1")
+            dia = st.text_input("Dia", placeholder="Ex.: 15")
 
         with c2:
-            valor = st.text_input("Valor", placeholder="Ex.: 150,00")
-            tipo_arte = st.text_input("Tipo de arte", placeholder="Ex.: Feed, Story...")
-            data_publicacao = st.text_input("Data publicação", placeholder="DD/MM/AAAA")
-            status_pagamento = st.selectbox("Status pagamento", ["A pagar", "Pago"])
-            status_arte = st.selectbox(
-                "Status da arte",
-                ["Pendente", "Em andamento", "Pronto", "Pausado", "Concluído"]
-            )
+            tema = st.text_input("Tema", placeholder="Descrição da publicação")
+            tipo_arte = st.selectbox("Tipo", TIPO_ARTE_OPTIONS)
+            status_arte = st.selectbox("Status", STATUS_ARTE_FORM_OPTIONS)
 
         cadastrar = st.form_submit_button("Cadastrar nova arte", width="stretch")
 
     st.markdown('</div>', unsafe_allow_html=True)
 
     if cadastrar:
-        if not empresa.strip() or not tema.strip():
-            st.warning("Preencha ao menos Empresa e Tema / Atividade.")
+        if empresa_opcao == "Outra":
+            empresa_final = empresa_outra.strip()
+        else:
+            empresa_final = empresa_opcao
+
+        if not empresa_final:
+            st.warning('Selecione uma empresa ou escolha "Outra" e informe o nome.')
             return
+
+        if not tema.strip():
+            st.warning("Preencha o campo Tema.")
+            return
+
+        data_publicacao = montar_data_publicacao(mes, dia)
+        status_arte_planilha = STATUS_ARTE_SHEET_MAP.get(status_arte, status_arte)
 
         worksheet = connect_sheet()
         worksheet.append_row([
             mes,
             semana.strip(),
-            empresa.strip(),
+            empresa_final,
             tema.strip(),
-            valor.strip(),
-            status_pagamento,
-            tipo_arte.strip(),
-            status_arte,
-            data_publicacao.strip(),
+            "",
+            "A pagar",
+            tipo_arte,
+            status_arte_planilha,
+            data_publicacao,
         ])
         st.cache_data.clear()
         st.success("Nova arte cadastrada com sucesso!")
@@ -2421,7 +2472,7 @@ if midias_submenu == "Empresas":
     st.stop()
 
 if midias_submenu == "Nova Arte":
-    render_midias_nova_arte()
+    render_midias_nova_arte(df)
     st.stop()
 
 st.markdown(
