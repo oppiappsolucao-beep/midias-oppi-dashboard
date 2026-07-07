@@ -47,8 +47,61 @@ if "area_dashboard" not in st.session_state:
 if "traffic_form_reset_token" not in st.session_state:
     st.session_state.traffic_form_reset_token = 0
 
-if "sidebar_hidden" not in st.session_state:
-    st.session_state.sidebar_hidden = False
+SIDEBAR_TOGGLE_SCRIPT = """
+<script>
+(function () {
+    const win = window.parent;
+    const doc = win.document;
+    const storage = win.localStorage;
+    const KEY = "oppi_sidebar_collapsed";
+
+    function setCollapsed(collapsed) {
+        storage.setItem(KEY, collapsed ? "1" : "0");
+        doc.querySelector(".stApp")?.classList.toggle("sidebar-collapsed", collapsed);
+    }
+
+    function bindSidebarButtons() {
+        doc.querySelectorAll(".oppi-sidebar-hide").forEach(function (btn) {
+            if (btn.dataset.oppiBound === "1") {
+                return;
+            }
+            btn.dataset.oppiBound = "1";
+            btn.addEventListener("click", function (event) {
+                event.preventDefault();
+                setCollapsed(true);
+            });
+        });
+
+        doc.querySelectorAll(".oppi-sidebar-show").forEach(function (btn) {
+            if (btn.dataset.oppiBound === "1") {
+                return;
+            }
+            btn.dataset.oppiBound = "1";
+            btn.addEventListener("click", function (event) {
+                event.preventDefault();
+                setCollapsed(false);
+            });
+        });
+
+        setCollapsed(storage.getItem(KEY) === "1");
+    }
+
+    bindSidebarButtons();
+
+    let scheduled = false;
+    new MutationObserver(function () {
+        if (scheduled) {
+            return;
+        }
+        scheduled = true;
+        win.requestAnimationFrame(function () {
+            scheduled = false;
+            bindSidebarButtons();
+        });
+    }).observe(doc.body, { childList: true, subtree: true });
+})();
+</script>
+"""
 
 # Garante a migração dos navegadores que ainda estavam presos
 # no padrão antigo da aba Gestão de Tráfego.
@@ -920,29 +973,25 @@ st.markdown("""
         opacity: 0 !important;
     }
 
-    .stApp:has(#sidebar-hidden) section[data-testid="stSidebar"] {
+    .stApp.sidebar-collapsed section[data-testid="stSidebar"] {
         display: none !important;
     }
 
-    .stApp:has(#sidebar-hidden) [data-testid="stAppViewContainer"] > section.main {
+    .stApp.sidebar-collapsed [data-testid="stAppViewContainer"] > section.main {
         margin-left: 0 !important;
         max-width: 100% !important;
     }
 
     /* Seta BRANCA — esconder menu (topo esquerdo da sidebar) */
-    section[data-testid="stSidebar"] .st-key-btn_hide_sidebar {
+    section[data-testid="stSidebar"] .oppi-sidebar-hide {
         position: absolute !important;
         top: 8px !important;
         left: 6px !important;
         z-index: 30 !important;
-        width: 52px !important;
-        margin: 0 !important;
-        padding: 0 !important;
-    }
-
-    section[data-testid="stSidebar"] .st-key-btn_hide_sidebar button {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
         background: transparent !important;
-        background-color: transparent !important;
         color: #ffffff !important;
         border: none !important;
         box-shadow: none !important;
@@ -954,37 +1003,26 @@ st.markdown("""
         width: 48px !important;
         min-width: 48px !important;
         max-width: 48px !important;
-        margin-top: 0 !important;
-        padding: 0 !important;
-    }
-
-    section[data-testid="stSidebar"] .st-key-btn_hide_sidebar button:hover {
-        background: rgba(255, 255, 255, 0.12) !important;
-        background-color: rgba(255, 255, 255, 0.12) !important;
-        color: #ffffff !important;
-    }
-
-    section[data-testid="stSidebar"] .st-key-btn_hide_sidebar button p {
-        color: #ffffff !important;
-        font-size: 32px !important;
-        line-height: 1 !important;
         margin: 0 !important;
+        padding: 0 !important;
+        cursor: pointer !important;
+    }
+
+    section[data-testid="stSidebar"] .oppi-sidebar-hide:hover {
+        background: rgba(255, 255, 255, 0.12) !important;
+        border-radius: 8px !important;
     }
 
     /* Seta PRETA — abrir menu (fora, menu fechado) */
-    .stApp:has(#sidebar-hidden) .st-key-btn_show_sidebar {
+    .oppi-sidebar-show {
         position: fixed !important;
         top: 10px !important;
         left: 10px !important;
         z-index: 999999 !important;
-        width: 56px !important;
-        margin: 0 !important;
-        padding: 0 !important;
-    }
-
-    .stApp:has(#sidebar-hidden) .st-key-btn_show_sidebar button {
+        display: none !important;
+        align-items: center !important;
+        justify-content: center !important;
         background: transparent !important;
-        background-color: transparent !important;
         color: #000000 !important;
         border: none !important;
         box-shadow: none !important;
@@ -996,21 +1034,18 @@ st.markdown("""
         width: 52px !important;
         min-width: 52px !important;
         max-width: 52px !important;
-        padding: 0 !important;
-    }
-
-    .stApp:has(#sidebar-hidden) .st-key-btn_show_sidebar button:hover {
-        background: rgba(0, 0, 0, 0.06) !important;
-        background-color: rgba(0, 0, 0, 0.06) !important;
-        color: #000000 !important;
-    }
-
-    .stApp:has(#sidebar-hidden) .st-key-btn_show_sidebar button p {
-        color: #000000 !important;
-        font-size: 36px !important;
-        font-weight: 900 !important;
-        line-height: 1 !important;
         margin: 0 !important;
+        padding: 0 !important;
+        cursor: pointer !important;
+    }
+
+    .oppi-sidebar-show:hover {
+        background: rgba(0, 0, 0, 0.06) !important;
+        border-radius: 8px !important;
+    }
+
+    .stApp.sidebar-collapsed .oppi-sidebar-show {
+        display: flex !important;
     }
 
     section[data-testid="stSidebar"] div[data-testid="stRadio"] label:has(input:checked) > div:first-child > div {
@@ -1162,7 +1197,6 @@ def show_login():
         if usuario == APP_USER and senha == APP_PASS:
             st.session_state.logged_in = True
             st.session_state.area_dashboard = "Mídias"
-            st.session_state.sidebar_hidden = False
             st.rerun()
         else:
             st.error("Usuário ou senha incorretos.")
@@ -1227,27 +1261,34 @@ def sidebar_logo_html(path: Path):
     return f'<img class="sidebar-brand-logo" src="data:{mime};base64,{img_base64}">'
 
 
-@st.fragment
 def render_sidebar_hide_button():
-    if st.session_state.get("sidebar_hidden"):
-        return
-
-    with st.sidebar:
-        if st.button("«", key="btn_hide_sidebar"):
-            st.session_state.sidebar_hidden = True
-            st.rerun()
+    st.sidebar.markdown(
+        '<button type="button" class="oppi-sidebar-hide" aria-label="Esconder menu lateral">«</button>',
+        unsafe_allow_html=True,
+    )
 
 
-@st.fragment
 def render_sidebar_show_button():
-    if not st.session_state.get("sidebar_hidden"):
-        return
+    st.markdown(
+        '<button type="button" class="oppi-sidebar-show" aria-label="Abrir menu lateral">»</button>',
+        unsafe_allow_html=True,
+    )
 
-    st.markdown('<div id="sidebar-hidden"></div>', unsafe_allow_html=True)
 
-    if st.button("»", key="btn_show_sidebar"):
-        st.session_state.sidebar_hidden = False
-        st.rerun()
+def sync_sidebar_toggle_state():
+    components.html(SIDEBAR_TOGGLE_SCRIPT, height=0)
+
+
+def reset_sidebar_toggle_state():
+    components.html(
+        """
+        <script>
+        window.parent.localStorage.setItem("oppi_sidebar_collapsed", "0");
+        window.parent.document.querySelector(".stApp")?.classList.remove("sidebar-collapsed");
+        </script>
+        """,
+        height=0,
+    )
 
 
 def render_sidebar_navigation():
@@ -1281,7 +1322,7 @@ def render_sidebar_navigation():
         sair = st.button("SAIR DA CONTA", key="btn_logout_sidebar")
         if sair:
             st.session_state.logged_in = False
-            st.session_state.sidebar_hidden = False
+            reset_sidebar_toggle_state()
             st.rerun()
 
         st.markdown(
@@ -1884,6 +1925,7 @@ if not st.session_state.logged_in:
 render_sidebar_hide_button()
 area_dashboard = render_sidebar_navigation()
 render_sidebar_show_button()
+sync_sidebar_toggle_state()
 render_dashboard_top(area_dashboard)
 
 if area_dashboard == "Gestão de Tráfego":
