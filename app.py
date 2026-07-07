@@ -345,8 +345,16 @@ st.markdown("""
     }
 
     .stApp:has(#login-page) .block-container {
-        max-width: 460px;
+        max-width: 420px;
+        margin-left: auto !important;
+        margin-right: auto !important;
         padding-top: 3.5rem;
+    }
+
+    .stApp:has(#login-page) div[data-testid="column"] {
+        width: 100% !important;
+        flex: 1 1 100% !important;
+        min-width: 100% !important;
     }
 
     .stApp:has(#login-page) div[data-testid="stForm"] {
@@ -355,6 +363,16 @@ st.markdown("""
         border-radius: 24px;
         padding: 22px 20px 18px 20px;
         box-shadow: 0 6px 20px rgba(15, 23, 42, 0.04);
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .stApp:has(#login-page) div[data-testid="stTextInput"],
+    .stApp:has(#login-page) div[data-testid="stTextInput"] > div,
+    .stApp:has(#login-page) div[data-testid="stTextInput"] > div > div,
+    .stApp:has(#login-page) div[data-testid="stTextInput"] > div > div > div {
+        width: 100% !important;
+        max-width: 100% !important;
     }
 
     .stApp:has(#login-page) div[data-testid="stTextInput"] label p {
@@ -371,7 +389,10 @@ st.markdown("""
         font-size: 15px !important;
         font-weight: 500 !important;
         height: 46px !important;
+        min-height: 46px !important;
+        width: 100% !important;
         padding: 0 14px !important;
+        box-sizing: border-box !important;
     }
 
     .stApp:has(#login-page) div[data-testid="stTextInput"] input:focus {
@@ -383,6 +404,32 @@ st.markdown("""
         color: #94a3b8 !important;
     }
 
+    .stApp:has(#login-page) div[data-testid="stTextInput"] .stButton {
+        width: auto !important;
+        min-width: 42px !important;
+        max-width: 42px !important;
+        flex: 0 0 42px !important;
+    }
+
+    .stApp:has(#login-page) div[data-testid="stTextInput"] .stButton > button {
+        width: 42px !important;
+        min-width: 42px !important;
+        max-width: 42px !important;
+        height: 42px !important;
+        min-height: 42px !important;
+        max-height: 42px !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        background: transparent !important;
+        color: #64748b !important;
+        border: none !important;
+        box-shadow: none !important;
+    }
+
+    .stApp:has(#login-page) [data-testid="stFormSubmitButton"] {
+        width: 100% !important;
+    }
+
     .stApp:has(#login-page) [data-testid="stFormSubmitButton"] > button {
         background: linear-gradient(90deg, #7C3AED 0%, #C026D3 100%) !important;
         color: #ffffff !important;
@@ -392,6 +439,8 @@ st.markdown("""
         border-radius: 14px !important;
         box-shadow: none !important;
         margin-top: 8px !important;
+        width: 100% !important;
+        white-space: nowrap !important;
     }
 
     .stApp:has(#login-page) [data-testid="stFormSubmitButton"] > button:hover {
@@ -977,36 +1026,33 @@ def login_logo_html(path: Path):
 def show_login():
     st.markdown('<div id="login-page"></div>', unsafe_allow_html=True)
 
-    _, center, _ = st.columns([1, 1.15, 1])
+    logo_html = login_logo_html(LOGO_PATH)
+    st.markdown(
+        f'''
+        <div class="login-head">
+            {logo_html}
+            <div class="login-title">Oppi</div>
+        </div>
+        ''',
+        unsafe_allow_html=True
+    )
 
-    with center:
-        logo_html = login_logo_html(LOGO_PATH)
-        st.markdown(
-            f'''
-            <div class="login-head">
-                {logo_html}
-                <div class="login-title">Oppi</div>
-            </div>
-            ''',
-            unsafe_allow_html=True
-        )
+    st.markdown('<div class="login-subtitle">Acesse o dashboard</div>', unsafe_allow_html=True)
 
-        st.markdown('<div class="login-subtitle">Acesse o dashboard</div>', unsafe_allow_html=True)
+    with st.form("login_form", clear_on_submit=False):
+        usuario = st.text_input("Usuário", placeholder="Digite seu usuário")
+        senha = st.text_input("Senha", placeholder="Digite sua senha", type="password")
+        entrar = st.form_submit_button("Entrar", use_container_width=True)
 
-        with st.form("login_form", clear_on_submit=False):
-            usuario = st.text_input("Usuário", placeholder="Digite seu usuário")
-            senha = st.text_input("Senha", placeholder="Digite sua senha", type="password")
-            entrar = st.form_submit_button("Entrar", use_container_width=True)
+    if entrar:
+        if usuario == APP_USER and senha == APP_PASS:
+            st.session_state.logged_in = True
+            st.session_state.area_dashboard = "Mídias"
+            st.rerun()
+        else:
+            st.error("Usuário ou senha incorretos.")
 
-        if entrar:
-            if usuario == APP_USER and senha == APP_PASS:
-                st.session_state.logged_in = True
-                st.session_state.area_dashboard = "Mídias"
-                st.rerun()
-            else:
-                st.error("Usuário ou senha incorretos.")
-
-        st.markdown('<div class="login-footer">Acesso restrito</div>', unsafe_allow_html=True)
+    st.markdown('<div class="login-footer">Acesso restrito</div>', unsafe_allow_html=True)
 
 def get_google_creds_dict():
     try:
