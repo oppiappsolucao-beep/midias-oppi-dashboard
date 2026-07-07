@@ -47,6 +47,9 @@ if "area_dashboard" not in st.session_state:
 if "traffic_form_reset_token" not in st.session_state:
     st.session_state.traffic_form_reset_token = 0
 
+if "sidebar_hidden" not in st.session_state:
+    st.session_state.sidebar_hidden = False
+
 # Garante a migração dos navegadores que ainda estavam presos
 # no padrão antigo da aba Gestão de Tráfego.
 if st.session_state.get("dashboard_nav_version") != "midias_primeiro_v1":
@@ -782,7 +785,7 @@ st.markdown("""
     }
 
     section[data-testid="stSidebar"] [data-testid="stSidebarContent"] {
-        padding-top: 18px !important;
+        padding-top: 52px !important;
     }
 
     .sidebar-brand {
@@ -898,90 +901,109 @@ st.markdown("""
         color: #ffffff !important;
     }
 
-    /* Seta branca nativa — esconder menu (topo da sidebar, maior) */
-    section[data-testid="stSidebar"] button[data-testid="stSidebarCollapseButton"] {
+    /* Desliga setas nativas (não funcionam no EasyPanel) */
+    button[data-testid="stSidebarCollapseButton"],
+    [data-testid="stSidebarCollapsedControl"],
+    button[data-testid="collapsedControl"] {
+        display: none !important;
+        visibility: hidden !important;
+        pointer-events: none !important;
+        width: 0 !important;
+        height: 0 !important;
+        overflow: hidden !important;
+    }
+
+    .stApp:has(#sidebar-hidden) section[data-testid="stSidebar"] {
+        display: none !important;
+    }
+
+    .stApp:has(#sidebar-hidden) [data-testid="stAppViewContainer"] > section.main {
+        margin-left: 0 !important;
+        max-width: 100% !important;
+    }
+
+    /* Seta BRANCA — esconder menu (topo esquerdo da sidebar, fora do fluxo) */
+    section[data-testid="stSidebar"] .st-key-btn_hide_sidebar {
+        position: absolute !important;
+        top: 8px !important;
+        left: 6px !important;
+        z-index: 30 !important;
+        width: 52px !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    section[data-testid="stSidebar"] .st-key-btn_hide_sidebar button {
         background: transparent !important;
+        background-color: transparent !important;
         color: #ffffff !important;
         border: none !important;
         box-shadow: none !important;
-        min-width: 52px !important;
-        min-height: 52px !important;
-        width: 52px !important;
-        height: 52px !important;
+        font-size: 32px !important;
+        font-weight: 700 !important;
+        line-height: 1 !important;
+        min-height: 48px !important;
+        height: 48px !important;
+        width: 48px !important;
+        min-width: 48px !important;
+        max-width: 48px !important;
+        margin-top: 0 !important;
         padding: 0 !important;
-        opacity: 1 !important;
-        visibility: visible !important;
     }
 
-    section[data-testid="stSidebar"] button[data-testid="stSidebarCollapseButton"]:hover {
+    section[data-testid="stSidebar"] .st-key-btn_hide_sidebar button:hover {
         background: rgba(255, 255, 255, 0.12) !important;
+        background-color: rgba(255, 255, 255, 0.12) !important;
         color: #ffffff !important;
     }
 
-    section[data-testid="stSidebar"] button[data-testid="stSidebarCollapseButton"] svg,
-    section[data-testid="stSidebar"] button[data-testid="stSidebarCollapseButton"] svg path,
-    section[data-testid="stSidebar"] button[data-testid="stSidebarCollapseButton"] svg * {
-        width: 30px !important;
-        height: 30px !important;
-        fill: #ffffff !important;
-        stroke: #ffffff !important;
+    section[data-testid="stSidebar"] .st-key-btn_hide_sidebar button p {
         color: #ffffff !important;
-        opacity: 1 !important;
+        font-size: 32px !important;
+        line-height: 1 !important;
+        margin: 0 !important;
     }
 
-    /* Seta PRETA nativa — abrir menu (fora, sidebar fechada) */
-    [data-testid="stSidebarCollapsedControl"] {
-        display: flex !important;
-        visibility: visible !important;
-        opacity: 1 !important;
-        z-index: 999999 !important;
+    /* Seta PRETA — abrir menu (fixa no canto, menu fechado) */
+    .stApp:has(#sidebar-hidden) .st-key-btn_show_sidebar {
         position: fixed !important;
-        top: 12px !important;
-        left: 12px !important;
-        background: transparent !important;
+        top: 10px !important;
+        left: 10px !important;
+        z-index: 999999 !important;
+        width: 56px !important;
+        margin: 0 !important;
+        padding: 0 !important;
     }
 
-    [data-testid="stSidebarCollapsedControl"] button,
-    button[data-testid="collapsedControl"] {
+    .stApp:has(#sidebar-hidden) .st-key-btn_show_sidebar button {
         background: transparent !important;
         background-color: transparent !important;
         color: #000000 !important;
         border: none !important;
         box-shadow: none !important;
-        min-width: 52px !important;
+        font-size: 36px !important;
+        font-weight: 900 !important;
+        line-height: 1 !important;
         min-height: 52px !important;
-        width: 52px !important;
         height: 52px !important;
+        width: 52px !important;
+        min-width: 52px !important;
+        max-width: 52px !important;
         padding: 0 !important;
-        opacity: 1 !important;
-        visibility: visible !important;
     }
 
-    [data-testid="stSidebarCollapsedControl"] button:hover,
-    button[data-testid="collapsedControl"]:hover {
+    .stApp:has(#sidebar-hidden) .st-key-btn_show_sidebar button:hover {
         background: rgba(0, 0, 0, 0.06) !important;
         background-color: rgba(0, 0, 0, 0.06) !important;
         color: #000000 !important;
     }
 
-    [data-testid="stSidebarCollapsedControl"] button svg,
-    [data-testid="stSidebarCollapsedControl"] button svg path,
-    [data-testid="stSidebarCollapsedControl"] button svg *,
-    [data-testid="stSidebarCollapsedControl"] button span,
-    [data-testid="stSidebarCollapsedControl"] button p,
-    button[data-testid="collapsedControl"] svg,
-    button[data-testid="collapsedControl"] svg path,
-    button[data-testid="collapsedControl"] svg *,
-    button[data-testid="collapsedControl"] span,
-    button[data-testid="collapsedControl"] p {
-        width: 30px !important;
-        height: 30px !important;
-        fill: #000000 !important;
-        stroke: #000000 !important;
+    .stApp:has(#sidebar-hidden) .st-key-btn_show_sidebar button p {
         color: #000000 !important;
-        -webkit-text-fill-color: #000000 !important;
-        opacity: 1 !important;
-        filter: brightness(0) !important;
+        font-size: 36px !important;
+        font-weight: 900 !important;
+        line-height: 1 !important;
+        margin: 0 !important;
     }
 
     section[data-testid="stSidebar"] div[data-testid="stRadio"] label:has(input:checked) > div:first-child > div {
@@ -1133,6 +1155,7 @@ def show_login():
         if usuario == APP_USER and senha == APP_PASS:
             st.session_state.logged_in = True
             st.session_state.area_dashboard = "Mídias"
+            st.session_state.sidebar_hidden = False
             st.rerun()
         else:
             st.error("Usuário ou senha incorretos.")
@@ -1197,10 +1220,28 @@ def sidebar_logo_html(path: Path):
     return f'<img class="sidebar-brand-logo" src="data:{mime};base64,{img_base64}">'
 
 
+def inject_sidebar_visibility():
+    if st.session_state.get("sidebar_hidden"):
+        st.markdown('<div id="sidebar-hidden"></div>', unsafe_allow_html=True)
+
+
+def render_show_sidebar_button():
+    if not st.session_state.get("sidebar_hidden"):
+        return
+
+    if st.button("»", key="btn_show_sidebar", help="Abrir menu lateral"):
+        st.session_state.sidebar_hidden = False
+        st.rerun()
+
+
 def render_sidebar_navigation():
     logo_html = sidebar_logo_html(LOGO_PATH)
 
     with st.sidebar:
+        if st.button("«", key="btn_hide_sidebar", help="Esconder menu lateral"):
+            st.session_state.sidebar_hidden = True
+            st.rerun()
+
         st.markdown(
             f"""
             <div class="sidebar-brand">
@@ -1828,6 +1869,8 @@ if not st.session_state.logged_in:
     st.stop()
 
 area_dashboard = render_sidebar_navigation()
+inject_sidebar_visibility()
+render_show_sidebar_button()
 render_dashboard_top(area_dashboard)
 
 if area_dashboard == "Gestão de Tráfego":
