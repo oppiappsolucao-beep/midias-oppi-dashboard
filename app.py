@@ -2491,59 +2491,41 @@ if datas_selecionadas_str:
 # MÉTRICAS
 # ---------------------------------------------------
 
-status_pagamento_normalizado = df_filtrado["Status Pagamento"].astype(str).str.strip().str.lower()
-status_arte_normalizado = df_filtrado["Status da arte"].astype(str).str.strip().str.lower()
-
-pagos = df_filtrado[status_pagamento_normalizado == "pago"]
-a_pagar = df_filtrado[status_pagamento_normalizado == "a pagar"]
-
-linhas_com_conteudo = (
-    df_filtrado["Empresa"].astype(str).str.strip().ne("")
-    | df_filtrado["Tema"].astype(str).str.strip().ne("")
-    | df_filtrado["Tipo de arte"].astype(str).str.strip().ne("")
-    | df_filtrado["Valor"].fillna(0).gt(0)
-    | df_filtrado["Data Publicação"].notna()
+postagens_feitas, postagens_a_fazer, valor_pago, valor_a_pagar = calcular_metricas_empresa(
+    df_filtrado
 )
 
-postagens_feitas = int(((status_arte_normalizado == "pronto") & linhas_com_conteudo).sum())
-postagens_a_fazer = int(((status_arte_normalizado != "pronto") & linhas_com_conteudo).sum())
-em_andamento_qtd = int(((status_arte_normalizado == "em andamento") & linhas_com_conteudo).sum())
-concluido_qtd = int((((status_arte_normalizado == "concluído") | (status_arte_normalizado == "concluido")) & linhas_com_conteudo).sum())
+c1, c2 = st.columns(2)
+c3, c4 = st.columns(2)
 
-total_posts = len(df_filtrado)
-total_valor = float(df_filtrado["Valor"].sum())
-valor_pago = float(pagos["Valor"].sum())
-valor_pendente = float(a_pagar["Valor"].sum())
-
-m1, m2, m3 = st.columns(3)
-m4, m5, m6 = st.columns(3)
-
-with m1:
-    metric_card("Posts", f"{total_posts}", "total de registros filtrados")
-with m2:
-    metric_card("Valor total", format_brl(total_valor), "soma de todas as mídias")
-with m3:
-    metric_card("Pagos", f"{len(pagos)}", "status pagamento = Pago")
-with m4:
-    metric_card("A pagar", f"{len(a_pagar)}", "status pagamento = A pagar")
-with m5:
-    metric_card("Valor pago", format_brl(valor_pago), "somatório dos pagos")
-with m6:
-    metric_card("Valor pendente", format_brl(valor_pendente), "somatório em aberto")
-
-st.markdown("<br>", unsafe_allow_html=True)
-
-pf1, pf2 = st.columns(2)
-pf3, pf4 = st.columns(2)
-
-with pf1:
-    metric_card("Postagens feitas", f"{postagens_feitas}", "status da arte = Pronto", "metric-card-green")
-with pf2:
-    metric_card("Postagens a fazer", f"{postagens_a_fazer}", "status diferente de Pronto", "metric-card-orange")
-with pf3:
-    metric_card("Em andamento", f"{em_andamento_qtd}", "status da arte = Em andamento", "metric-card-orange")
-with pf4:
-    metric_card("Concluído", f"{concluido_qtd}", "status da arte = Concluído", "metric-card-blue")
+with c1:
+    metric_card(
+        "Publicações Feitas",
+        f"{postagens_feitas}",
+        "status da arte = Pronto",
+        "metric-card-green",
+    )
+with c2:
+    metric_card(
+        "Publicações A Fazer",
+        f"{postagens_a_fazer}",
+        "status diferente de Pronto",
+        "metric-card-orange",
+    )
+with c3:
+    metric_card(
+        "Valor Pago",
+        format_brl(valor_pago),
+        "status pagamento = Pago",
+        "metric-card-green",
+    )
+with c4:
+    metric_card(
+        "Valor A Pagar",
+        format_brl(valor_a_pagar),
+        "status pagamento = A pagar",
+        "metric-card-orange",
+    )
 
 st.markdown("<br>", unsafe_allow_html=True)
 
