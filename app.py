@@ -222,6 +222,72 @@ st.markdown("""
         box-shadow: 0 6px 20px rgba(15, 23, 42, 0.04);
     }
 
+    .filter-card div[data-testid="stForm"] {
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+    }
+
+    .filter-card div[data-testid="stTextInput"] label p,
+    .filter-card div[data-testid="stSelectbox"] label p,
+    .filter-card div[data-testid="stMultiSelect"] label p {
+        color: #0f172a !important;
+        font-size: 14px !important;
+        font-weight: 700 !important;
+    }
+
+    .filter-card div[data-testid="stTextInput"] input {
+        background: #ffffff !important;
+        border: 1px solid #d9e0eb !important;
+        border-radius: 12px !important;
+        color: #0f172a !important;
+        font-size: 15px !important;
+        font-weight: 600 !important;
+        height: 44px !important;
+        min-height: 44px !important;
+        padding: 0 12px !important;
+    }
+
+    .filter-card div[data-testid="stTextInput"] input::placeholder {
+        color: #94a3b8 !important;
+    }
+
+    .filter-card div[data-testid="stTextInput"] input:focus {
+        border-color: #7C3AED !important;
+        box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.10) !important;
+    }
+
+    .filter-card div[data-testid="stSelectbox"] div[data-baseweb="select"] > div,
+    .filter-card div[data-testid="stMultiSelect"] div[data-baseweb="select"] > div {
+        background: #ffffff !important;
+        border: 1px solid #d9e0eb !important;
+        border-radius: 12px !important;
+        color: #0f172a !important;
+        min-height: 44px !important;
+    }
+
+    .filter-card div[data-testid="stSelectbox"] div[data-baseweb="select"] span,
+    .filter-card div[data-testid="stMultiSelect"] div[data-baseweb="select"] span,
+    .filter-card div[data-testid="stSelectbox"] div[data-baseweb="select"] input,
+    .filter-card div[data-testid="stMultiSelect"] div[data-baseweb="select"] input {
+        color: #0f172a !important;
+        -webkit-text-fill-color: #0f172a !important;
+        font-size: 15px !important;
+        font-weight: 600 !important;
+    }
+
+    .filter-card div[data-testid="stSelectbox"] svg,
+    .filter-card div[data-testid="stMultiSelect"] svg {
+        fill: #0f172a !important;
+    }
+
+    .filter-card [data-testid="stFormSubmitButton"] > button {
+        background: linear-gradient(90deg, #7C3AED 0%, #C026D3 100%) !important;
+        color: #ffffff !important;
+        border: none !important;
+    }
+
     .metric-card {
         background: linear-gradient(180deg, #ffffff 0%, #fbfcff 100%);
         border: 1px solid #e7ebf3;
