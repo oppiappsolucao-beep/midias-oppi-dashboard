@@ -47,13 +47,6 @@ if "area_dashboard" not in st.session_state:
 if "traffic_form_reset_token" not in st.session_state:
     st.session_state.traffic_form_reset_token = 0
 
-if "sidebar_hidden" not in st.session_state:
-    st.session_state.sidebar_hidden = False
-
-if st.session_state.get("sidebar_menu_version") != "v2_black_btn":
-    st.session_state.sidebar_hidden = False
-    st.session_state.sidebar_menu_version = "v2_black_btn"
-
 # Garante a migração dos navegadores que ainda estavam presos
 # no padrão antigo da aba Gestão de Tráfego.
 if st.session_state.get("dashboard_nav_version") != "midias_primeiro_v1":
@@ -845,108 +838,6 @@ st.markdown("""
         padding: 10px 4px 0 4px;
     }
 
-    section[data-testid="stSidebar"] .sidebar-hide-wrap .stButton > button {
-        background: rgba(255, 255, 255, 0.08) !important;
-        color: #e2e8f0 !important;
-        border: 1px solid rgba(255, 255, 255, 0.16) !important;
-        border-radius: 10px !important;
-        font-size: 12px !important;
-        font-weight: 800 !important;
-        min-height: 40px !important;
-        height: 40px !important;
-        margin-top: 8px !important;
-        box-shadow: none !important;
-    }
-
-    section[data-testid="stSidebar"] .sidebar-hide-wrap .stButton > button:hover {
-        background: rgba(255, 255, 255, 0.14) !important;
-        border-color: rgba(192, 38, 211, 0.45) !important;
-    }
-
-    .stApp:has(#sidebar-hidden) .st-key-btn_show_sidebar {
-        position: fixed !important;
-        top: 16px !important;
-        left: 16px !important;
-        z-index: 999999 !important;
-        width: 220px !important;
-        margin: 0 !important;
-    }
-
-    .stApp:has(#sidebar-hidden) .st-key-btn_show_sidebar button,
-    .stApp:has(#sidebar-hidden) .st-key-btn_show_sidebar .stButton > button {
-        background: #0f172a !important;
-        background-color: #0f172a !important;
-        color: #ffffff !important;
-        border: 2px solid #0f172a !important;
-        border-radius: 12px !important;
-        font-size: 15px !important;
-        font-weight: 800 !important;
-        min-height: 50px !important;
-        height: 50px !important;
-        width: 100% !important;
-        max-width: none !important;
-        box-shadow: 0 8px 22px rgba(15, 23, 42, 0.35) !important;
-    }
-
-    .stApp:has(#sidebar-hidden) .st-key-btn_show_sidebar button:hover,
-    .stApp:has(#sidebar-hidden) .st-key-btn_show_sidebar .stButton > button:hover {
-        background: #16233b !important;
-        background-color: #16233b !important;
-        border-color: #16233b !important;
-        color: #ffffff !important;
-    }
-
-    .stApp:has(#sidebar-hidden) section.main [data-testid="stBaseButton-primary"] {
-        position: fixed !important;
-        top: 16px !important;
-        left: 16px !important;
-        z-index: 999999 !important;
-        width: 220px !important;
-        background: #0f172a !important;
-        background-color: #0f172a !important;
-        color: #ffffff !important;
-        border: 2px solid #0f172a !important;
-        border-radius: 12px !important;
-        font-size: 15px !important;
-        font-weight: 800 !important;
-        min-height: 50px !important;
-        height: 50px !important;
-        box-shadow: 0 8px 22px rgba(15, 23, 42, 0.35) !important;
-    }
-
-    .stApp:has(#sidebar-hidden) section.main [data-testid="stBaseButton-primary"]:hover {
-        background: #16233b !important;
-        background-color: #16233b !important;
-        border-color: #16233b !important;
-        color: #ffffff !important;
-    }
-
-    .stApp:has(#sidebar-hidden) section.main [data-testid="stBaseButton-primary"] p,
-    .stApp:has(#sidebar-hidden) section.main [data-testid="stBaseButton-primary"] span,
-    .stApp:has(#sidebar-hidden) section.main [data-testid="stBaseButton-primary"] div {
-        color: #ffffff !important;
-    }
-
-    .stApp:has(#sidebar-hidden) section[data-testid="stSidebar"] {
-        visibility: hidden !important;
-        width: 0 !important;
-        min-width: 0 !important;
-        overflow: hidden !important;
-        transform: translateX(-100%) !important;
-    }
-
-    .stApp:has(#sidebar-hidden) [data-testid="stSidebarCollapsedControl"],
-    .stApp:has(#sidebar-hidden) [data-testid="collapsedControl"] {
-        display: flex !important;
-        visibility: visible !important;
-        opacity: 1 !important;
-        z-index: 999998 !important;
-    }
-
-    .stApp:has(#sidebar-hidden) .block-container {
-        max-width: 1450px;
-    }
-
     section[data-testid="stSidebar"] div[data-testid="stRadio"] > div {
         gap: 8px !important;
     }
@@ -1008,11 +899,12 @@ st.markdown("""
 
     button[data-testid="stSidebarCollapseButton"],
     button[data-testid="collapsedControl"] {
-        background: linear-gradient(90deg, #7C3AED 0%, #C026D3 100%) !important;
+        background: #0f172a !important;
+        background-color: #0f172a !important;
         color: #ffffff !important;
         border-radius: 9px !important;
         border: none !important;
-        box-shadow: 0 6px 16px rgba(15, 23, 42, 0.18) !important;
+        box-shadow: 0 6px 16px rgba(15, 23, 42, 0.28) !important;
     }
 
     button[data-testid="stSidebarCollapseButton"] svg,
@@ -1170,7 +1062,6 @@ def show_login():
         if usuario == APP_USER and senha == APP_PASS:
             st.session_state.logged_in = True
             st.session_state.area_dashboard = "Mídias"
-            st.session_state.sidebar_hidden = False
             st.rerun()
         else:
             st.error("Usuário ou senha incorretos.")
@@ -1235,22 +1126,6 @@ def sidebar_logo_html(path: Path):
     return f'<img class="sidebar-brand-logo" src="data:{mime};base64,{img_base64}">'
 
 
-def inject_sidebar_visibility():
-    if st.session_state.get("sidebar_hidden"):
-        st.markdown('<div id="sidebar-hidden"></div>', unsafe_allow_html=True)
-
-
-def render_sidebar_open_button():
-    if not st.session_state.get("sidebar_hidden"):
-        return
-
-    btn_col, _ = st.columns([1.35, 3.65])
-    with btn_col:
-        if st.button("☰ ABRIR MENU LATERAL", key="btn_show_sidebar", type="primary", width="stretch"):
-            st.session_state.sidebar_hidden = False
-            st.rerun()
-
-
 def render_sidebar_navigation():
     logo_html = sidebar_logo_html(LOGO_PATH)
 
@@ -1284,14 +1159,8 @@ def render_sidebar_navigation():
             st.session_state.logged_in = False
             st.rerun()
 
-        st.markdown('<div class="sidebar-hide-wrap">', unsafe_allow_html=True)
-        if st.button("◀ Esconder menu lateral", key="btn_hide_sidebar", width="stretch"):
-            st.session_state.sidebar_hidden = True
-            st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
-
         st.markdown(
-            '<div class="sidebar-help">Para ocultar, use "Esconder menu lateral". Para abrir de novo, clique no botão preto "ABRIR MENU LATERAL" no topo.</div>',
+            '<div class="sidebar-help">Use a seta preta no topo do menu para esconder ou abrir a lateral.</div>',
             unsafe_allow_html=True
         )
 
@@ -1888,8 +1757,6 @@ if not st.session_state.logged_in:
     st.stop()
 
 area_dashboard = render_sidebar_navigation()
-inject_sidebar_visibility()
-render_sidebar_open_button()
 render_dashboard_top(area_dashboard)
 
 if area_dashboard == "Gestão de Tráfego":
