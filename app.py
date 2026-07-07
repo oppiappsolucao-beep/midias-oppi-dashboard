@@ -44,6 +44,11 @@ if "logged_in" not in st.session_state:
 if "area_dashboard" not in st.session_state:
     st.session_state.area_dashboard = "Mídias"
 
+if "midias_submenu" not in st.session_state:
+    st.session_state.midias_submenu = "Publicações"
+
+MIDIAS_SUBMENU_OPTIONS = ["Empresas", "Publicações", "Nova Arte"]
+
 if "traffic_form_reset_token" not in st.session_state:
     st.session_state.traffic_form_reset_token = 0
 
@@ -945,6 +950,36 @@ st.markdown("""
         transform: scale(0.90);
     }
 
+    .sidebar-submenu-label {
+        color: #C026D3;
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: 1.2px;
+        text-transform: uppercase;
+        margin: 2px 0 8px 4px;
+    }
+
+    section[data-testid="stSidebar"] .st-key-midias_submenu {
+        margin: 0 0 12px 0;
+        padding: 2px 0 2px 10px;
+        border-left: 2px solid rgba(192, 38, 211, 0.45);
+    }
+
+    section[data-testid="stSidebar"] .st-key-midias_submenu div[data-testid="stRadio"] > div {
+        gap: 6px !important;
+    }
+
+    section[data-testid="stSidebar"] .st-key-midias_submenu div[data-testid="stRadio"] label {
+        min-height: 36px !important;
+        padding: 8px 10px !important;
+        border-radius: 10px !important;
+    }
+
+    section[data-testid="stSidebar"] .st-key-midias_submenu div[data-testid="stRadio"] label p {
+        font-size: 13px !important;
+        font-weight: 700 !important;
+    }
+
     section[data-testid="stSidebar"] .stButton > button {
         background: linear-gradient(90deg, #7C3AED 0%, #C026D3 100%) !important;
         color: #ffffff !important;
@@ -1203,6 +1238,7 @@ def show_login():
         if usuario == APP_USER and senha == APP_PASS:
             st.session_state.logged_in = True
             st.session_state.area_dashboard = "Mídias"
+            st.session_state.midias_submenu = "Publicações"
             st.rerun()
         else:
             st.error("Usuário ou senha incorretos.")
@@ -1321,6 +1357,20 @@ def render_sidebar_navigation():
             label_visibility="collapsed"
         )
 
+        if area == "Mídias":
+            st.markdown('<div class="sidebar-submenu-label">Mídias</div>', unsafe_allow_html=True)
+            st.radio(
+                "Submenu Mídias",
+                options=MIDIAS_SUBMENU_OPTIONS,
+                format_func=lambda opcao: {
+                    "Empresas": "🏢  Empresas",
+                    "Publicações": "📄  Publicações",
+                    "Nova Arte": "🎨  Nova Arte",
+                }[opcao],
+                key="midias_submenu",
+                label_visibility="collapsed",
+            )
+
         sair = st.button("SAIR DA CONTA", key="btn_logout_sidebar")
         if sair:
             st.session_state.logged_in = False
@@ -1335,10 +1385,17 @@ def render_sidebar_navigation():
     return area
 
 
-def render_dashboard_top(area):
+def render_dashboard_top(area, midias_submenu=None):
     render_logo(LOGO_PATH)
 
-    subtitulo = "Resultados dos anúncios" if area == "Gestão de Tráfego" else "Gestão de publicações e pagamentos"
+    if area == "Gestão de Tráfego":
+        subtitulo = "Resultados dos anúncios"
+    elif midias_submenu == "Empresas":
+        subtitulo = "Visão por empresa"
+    elif midias_submenu == "Nova Arte":
+        subtitulo = "Cadastro de nova arte"
+    else:
+        subtitulo = "Gestão de publicações e pagamentos"
 
     st.markdown(
         f"""
@@ -1767,6 +1824,95 @@ def show_traffic_presentation(values):
             st.rerun()
 
 
+def render_midias_empresas(df):
+    st.markdown(
+        '<div class="section-title">🏢 Empresas</div>',
+        unsafe_allow_html=True
+    )
+
+    df_empresas = df[df["Empresa"].astype(str).str.strip().ne("")].copy()
+
+    if df_empresas.empty:
+        st.info("Nenhuma empresa encontrada na planilha.")
+        return
+
+    resumo = (
+        df_empresas.groupby("Empresa", dropna=False)
+        .agg(
+            publicacoes=("Tema", "count"),
+            valor_total=("Valor", "sum"),
+            pagos=("Status Pagamento", lambda s: int((s.astype(str).str.strip().str.lower() == "pago").sum())),
+        )
+        .reset_index()
+        .sort_values("Empresa")
+    )
+    resumo["Valor total"] = resumo["valor_total"].apply(format_brl)
+
+    st.markdown('<div class="section-card">', unsafe_allow_html=True)
+    st.dataframe(
+        resumo[["Empresa", "publicacoes", "Valor total", "pagos"]].rename(columns={
+            "publicacoes": "Publicações",
+            "pagos": "Pagas",
+        }),
+        width="stretch",
+        hide_index=True,
+    )
+    st.markdown('</div>', unsafe_allow_html=True)
+
+
+def render_midias_nova_arte():
+    st.markdown(
+        '<div class="section-title">🎨 Nova Arte</div>',
+        unsafe_allow_html=True
+    )
+
+    st.markdown('<div class="filter-card">', unsafe_allow_html=True)
+
+    with st.form("nova_arte_form", clear_on_submit=True):
+        c1, c2 = st.columns(2)
+
+        with c1:
+            empresa = st.text_input("Empresa", placeholder="Nome da empresa")
+            tema = st.text_input("Tema / Atividade", placeholder="Descrição da publicação")
+            mes = st.selectbox("Mês", MESES_ORDEM)
+            semana = st.text_input("Semana", placeholder="Ex.: 1")
+
+        with c2:
+            valor = st.text_input("Valor", placeholder="Ex.: 150,00")
+            tipo_arte = st.text_input("Tipo de arte", placeholder="Ex.: Feed, Story...")
+            data_publicacao = st.text_input("Data publicação", placeholder="DD/MM/AAAA")
+            status_pagamento = st.selectbox("Status pagamento", ["A pagar", "Pago"])
+            status_arte = st.selectbox(
+                "Status da arte",
+                ["Pendente", "Em andamento", "Pronto", "Pausado", "Concluído"]
+            )
+
+        cadastrar = st.form_submit_button("Cadastrar nova arte", width="stretch")
+
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    if cadastrar:
+        if not empresa.strip() or not tema.strip():
+            st.warning("Preencha ao menos Empresa e Tema / Atividade.")
+            return
+
+        worksheet = connect_sheet()
+        worksheet.append_row([
+            mes,
+            semana.strip(),
+            empresa.strip(),
+            tema.strip(),
+            valor.strip(),
+            status_pagamento,
+            tipo_arte.strip(),
+            status_arte,
+            data_publicacao.strip(),
+        ])
+        st.cache_data.clear()
+        st.success("Nova arte cadastrada com sucesso!")
+        st.rerun()
+
+
 def render_gestao_trafego():
     st.markdown('<div class="traffic-card">', unsafe_allow_html=True)
 
@@ -1927,7 +2073,11 @@ if not st.session_state.logged_in:
 area_dashboard = render_sidebar_navigation()
 render_sidebar_show_button()
 sync_sidebar_toggle_state()
-render_dashboard_top(area_dashboard)
+midias_submenu = st.session_state.get("midias_submenu", "Publicações")
+render_dashboard_top(
+    area_dashboard,
+    midias_submenu if area_dashboard == "Mídias" else None,
+)
 
 if area_dashboard == "Gestão de Tráfego":
     render_gestao_trafego()
@@ -2215,6 +2365,14 @@ if "Mês" in df.columns:
 # ---------------------------------------------------
 # MÍDIAS
 # ---------------------------------------------------
+
+if midias_submenu == "Empresas":
+    render_midias_empresas(df)
+    st.stop()
+
+if midias_submenu == "Nova Arte":
+    render_midias_nova_arte()
+    st.stop()
 
 st.markdown(
     '<div class="section-title">📱 Gestão de publicações e pagamentos</div>',
