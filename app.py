@@ -306,6 +306,31 @@ st.markdown("""
         box-shadow: 0 6px 20px rgba(15, 23, 42, 0.04) !important;
     }
 
+    .form-field-label {
+        color: #0f172a !important;
+        font-size: 14px !important;
+        font-weight: 800 !important;
+        margin: 0 0 6px 2px !important;
+        line-height: 1.2 !important;
+    }
+
+    .stApp:has(#nova-arte-page) section.main .st-key-nova_arte_empresa_opcao [data-baseweb="select"] > div,
+    .stApp:has(#nova-arte-page) section.main .st-key-nova_arte_mes [data-baseweb="select"] > div,
+    .stApp:has(#nova-arte-page) section.main .st-key-nova_arte_tipo [data-baseweb="select"] > div,
+    .stApp:has(#nova-arte-page) section.main .st-key-nova_arte_status [data-baseweb="select"] > div,
+    .stApp:has(#nova-arte-page) section.main .st-key-nova_arte_empresa_outra [data-baseweb="input"],
+    .stApp:has(#nova-arte-page) section.main .st-key-nova_arte_empresa_outra [data-baseweb="input"] > div,
+    .stApp:has(#nova-arte-page) section.main .st-key-nova_arte_semana [data-baseweb="input"],
+    .stApp:has(#nova-arte-page) section.main .st-key-nova_arte_semana [data-baseweb="input"] > div,
+    .stApp:has(#nova-arte-page) section.main .st-key-nova_arte_dia [data-baseweb="input"],
+    .stApp:has(#nova-arte-page) section.main .st-key-nova_arte_dia [data-baseweb="input"] > div,
+    .stApp:has(#nova-arte-page) section.main .st-key-nova_arte_tema [data-baseweb="input"],
+    .stApp:has(#nova-arte-page) section.main .st-key-nova_arte_tema [data-baseweb="input"] > div {
+        background-color: #ffffff !important;
+        color: #0f172a !important;
+        border: 1px solid #d9e0eb !important;
+    }
+
     .metric-card {
         background: linear-gradient(180deg, #ffffff 0%, #fbfcff 100%);
         border: 1px solid #e7ebf3;
@@ -2002,6 +2027,13 @@ def render_midias_empresas(df):
         )
 
 
+def form_field_label(text):
+    st.markdown(
+        f'<div class="form-field-label">{html.escape(text)}</div>',
+        unsafe_allow_html=True,
+    )
+
+
 def montar_data_publicacao(mes_nome, dia_txt):
     dia = str(dia_txt).strip()
     if not dia or not mes_nome:
@@ -2033,63 +2065,79 @@ def render_midias_nova_arte(df):
     opcoes_empresa = empresas_planilha + ["Outra"]
 
     with st.container(border=True):
+        form_field_label("Empresas")
         empresa_opcao = st.selectbox(
             "Empresas",
             options=opcoes_empresa,
             index=None,
             placeholder="Selecione a empresa",
             key="nova_arte_empresa_opcao",
+            label_visibility="collapsed",
         )
 
         empresa_outra = ""
         if empresa_opcao == "Outra":
+            form_field_label("Nome da nova empresa")
             empresa_outra = st.text_input(
                 "Nome da nova empresa",
                 placeholder="Digite o nome da empresa",
                 key="nova_arte_empresa_outra",
+                label_visibility="collapsed",
             )
 
         with st.form("nova_arte_form", clear_on_submit=True):
             c1, c2 = st.columns(2)
 
             with c1:
+                form_field_label("Mês")
                 mes = st.selectbox(
                     "Mês",
                     MESES_ORDEM,
                     index=None,
                     placeholder="Selecione o mês",
                     key="nova_arte_mes",
+                    label_visibility="collapsed",
                 )
+                form_field_label("Semana")
                 semana = st.text_input(
                     "Semana",
                     placeholder="Ex.: 1",
                     key="nova_arte_semana",
+                    label_visibility="collapsed",
                 )
+                form_field_label("Dia")
                 dia = st.text_input(
                     "Dia",
                     placeholder="Ex.: 15",
                     key="nova_arte_dia",
+                    label_visibility="collapsed",
                 )
 
             with c2:
+                form_field_label("Tema")
                 tema = st.text_input(
                     "Tema",
                     placeholder="Descrição da publicação",
                     key="nova_arte_tema",
+                    label_visibility="collapsed",
                 )
+                form_field_label("Tipo")
                 tipo_arte = st.selectbox(
                     "Tipo",
                     TIPO_ARTE_OPTIONS,
                     index=None,
                     placeholder="Selecione o tipo",
                     key="nova_arte_tipo",
+                    label_visibility="collapsed",
                 )
+                form_field_label("Status")
                 status_arte = st.selectbox(
                     "Status",
                     STATUS_ARTE_FORM_OPTIONS,
                     index=None,
                     placeholder="Selecione o status",
                     key="nova_arte_status",
+                    label_visibility="collapsed",
                 )
 
             cadastrar = st.form_submit_button("Cadastrar nova arte", width="stretch")
