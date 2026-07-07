@@ -1042,7 +1042,7 @@ def show_login():
     with st.form("login_form", clear_on_submit=False):
         usuario = st.text_input("Usuário", placeholder="Digite seu usuário")
         senha = st.text_input("Senha", placeholder="Digite sua senha", type="password")
-        entrar = st.form_submit_button("Entrar", use_container_width=True)
+        entrar = st.form_submit_button("Entrar", width="stretch")
 
     if entrar:
         if usuario == APP_USER and senha == APP_PASS:
@@ -1568,18 +1568,18 @@ def show_traffic_presentation(values):
         data=pdf_bytes,
         file_name=file_name,
         mime="application/pdf",
-        use_container_width=True,
+        width="stretch",
         key="btn_baixar_pdf_apresentacao",
     )
 
     c1, c2 = st.columns(2)
 
     with c1:
-        if st.button("Voltar para editar", use_container_width=True, key="btn_voltar_editar"):
+        if st.button("Voltar para editar", width="stretch", key="btn_voltar_editar"):
             st.rerun()
 
     with c2:
-        if st.button("Nova apresentação", use_container_width=True, key="btn_nova_apresentacao"):
+        if st.button("Nova apresentação", width="stretch", key="btn_nova_apresentacao"):
             clear_traffic_form()
             st.session_state["abrir_apresentacao"] = False
             st.rerun()
@@ -1708,7 +1708,7 @@ def render_gestao_trafego():
 
     abrir_apresentacao = st.button(
         "Abrir apresentação",
-        use_container_width=True,
+        width="stretch",
         key="btn_abrir_apresentacao"
     )
 
@@ -2180,7 +2180,7 @@ with g1:
             yaxis_title="Quantidade"
         )
         fig_empresa.update_traces(textposition="outside")
-        st.plotly_chart(fig_empresa, use_container_width=True)
+        st.plotly_chart(fig_empresa, width="stretch")
     else:
         st.info("Sem dados para esse filtro.")
     st.markdown('</div>', unsafe_allow_html=True)
@@ -2222,7 +2222,7 @@ with g2:
             showlegend=True
         )
 
-        st.plotly_chart(fig_status, use_container_width=True)
+        st.plotly_chart(fig_status, width="stretch")
     else:
         st.info("Sem valores para esse filtro.")
     st.markdown('</div>', unsafe_allow_html=True)
