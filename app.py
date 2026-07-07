@@ -222,70 +222,88 @@ st.markdown("""
         box-shadow: 0 6px 20px rgba(15, 23, 42, 0.04);
     }
 
-    .filter-card div[data-testid="stForm"] {
-        background: transparent !important;
+    .filter-card [data-testid="stFormSubmitButton"] > button {
+        background: linear-gradient(90deg, #7C3AED 0%, #C026D3 100%) !important;
+        color: #ffffff !important;
         border: none !important;
-        box-shadow: none !important;
-        padding: 0 !important;
     }
 
-    .filter-card div[data-testid="stTextInput"] label p,
-    .filter-card div[data-testid="stSelectbox"] label p,
-    .filter-card div[data-testid="stMultiSelect"] label p {
+    .stApp:has(#nova-arte-page) section.main label[data-testid="stWidgetLabel"] p,
+    .stApp:has(#nova-arte-page) section.main div[data-testid="stTextInput"] label p,
+    .stApp:has(#nova-arte-page) section.main div[data-testid="stSelectbox"] label p,
+    .stApp:has(#publicacoes-filtros) section.main label[data-testid="stWidgetLabel"] p,
+    .stApp:has(#publicacoes-filtros) section.main div[data-testid="stTextInput"] label p,
+    .stApp:has(#publicacoes-filtros) section.main div[data-testid="stSelectbox"] label p,
+    .stApp:has(#publicacoes-filtros) section.main div[data-testid="stMultiSelect"] label p {
         color: #0f172a !important;
         font-size: 14px !important;
         font-weight: 700 !important;
     }
 
-    .filter-card div[data-testid="stTextInput"] input {
+    .stApp:has(#nova-arte-page) section.main div[data-testid="stTextInput"] input,
+    .stApp:has(#nova-arte-page) section.main div[data-testid="stTextInput"] [data-baseweb="input"],
+    .stApp:has(#nova-arte-page) section.main div[data-testid="stTextInput"] [data-baseweb="input"] > div,
+    .stApp:has(#publicacoes-filtros) section.main div[data-testid="stTextInput"] input,
+    .stApp:has(#publicacoes-filtros) section.main div[data-testid="stTextInput"] [data-baseweb="input"],
+    .stApp:has(#publicacoes-filtros) section.main div[data-testid="stTextInput"] [data-baseweb="input"] > div {
         background: #ffffff !important;
+        background-color: #ffffff !important;
         border: 1px solid #d9e0eb !important;
         border-radius: 12px !important;
-        color: #0f172a !important;
-        font-size: 15px !important;
-        font-weight: 600 !important;
-        height: 44px !important;
-        min-height: 44px !important;
-        padding: 0 12px !important;
-    }
-
-    .filter-card div[data-testid="stTextInput"] input::placeholder {
-        color: #94a3b8 !important;
-    }
-
-    .filter-card div[data-testid="stTextInput"] input:focus {
-        border-color: #7C3AED !important;
-        box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.10) !important;
-    }
-
-    .filter-card div[data-testid="stSelectbox"] div[data-baseweb="select"] > div,
-    .filter-card div[data-testid="stMultiSelect"] div[data-baseweb="select"] > div {
-        background: #ffffff !important;
-        border: 1px solid #d9e0eb !important;
-        border-radius: 12px !important;
-        color: #0f172a !important;
-        min-height: 44px !important;
-    }
-
-    .filter-card div[data-testid="stSelectbox"] div[data-baseweb="select"] span,
-    .filter-card div[data-testid="stMultiSelect"] div[data-baseweb="select"] span,
-    .filter-card div[data-testid="stSelectbox"] div[data-baseweb="select"] input,
-    .filter-card div[data-testid="stMultiSelect"] div[data-baseweb="select"] input {
         color: #0f172a !important;
         -webkit-text-fill-color: #0f172a !important;
         font-size: 15px !important;
         font-weight: 600 !important;
     }
 
-    .filter-card div[data-testid="stSelectbox"] svg,
-    .filter-card div[data-testid="stMultiSelect"] svg {
+    .stApp:has(#nova-arte-page) section.main div[data-testid="stTextInput"] input::placeholder,
+    .stApp:has(#publicacoes-filtros) section.main div[data-testid="stTextInput"] input::placeholder {
+        color: #94a3b8 !important;
+    }
+
+    .stApp:has(#nova-arte-page) section.main div[data-testid="stSelectbox"] div[data-baseweb="select"] > div,
+    .stApp:has(#nova-arte-page) section.main div[data-testid="stMultiSelect"] div[data-baseweb="select"] > div,
+    .stApp:has(#publicacoes-filtros) section.main div[data-testid="stSelectbox"] div[data-baseweb="select"] > div,
+    .stApp:has(#publicacoes-filtros) section.main div[data-testid="stMultiSelect"] div[data-baseweb="select"] > div {
+        background: #ffffff !important;
+        background-color: #ffffff !important;
+        border: 1px solid #d9e0eb !important;
+        border-radius: 12px !important;
+        color: #0f172a !important;
+        min-height: 44px !important;
+    }
+
+    .stApp:has(#nova-arte-page) section.main div[data-testid="stSelectbox"] div[data-baseweb="select"] span,
+    .stApp:has(#nova-arte-page) section.main div[data-testid="stSelectbox"] div[data-baseweb="select"] input,
+    .stApp:has(#publicacoes-filtros) section.main div[data-testid="stSelectbox"] div[data-baseweb="select"] span,
+    .stApp:has(#publicacoes-filtros) section.main div[data-testid="stSelectbox"] div[data-baseweb="select"] input,
+    .stApp:has(#publicacoes-filtros) section.main div[data-testid="stMultiSelect"] div[data-baseweb="select"] span,
+    .stApp:has(#publicacoes-filtros) section.main div[data-testid="stMultiSelect"] div[data-baseweb="select"] input {
+        color: #0f172a !important;
+        -webkit-text-fill-color: #0f172a !important;
+        font-size: 15px !important;
+        font-weight: 600 !important;
+    }
+
+    .stApp:has(#nova-arte-page) section.main div[data-testid="stSelectbox"] svg,
+    .stApp:has(#publicacoes-filtros) section.main div[data-testid="stSelectbox"] svg,
+    .stApp:has(#publicacoes-filtros) section.main div[data-testid="stMultiSelect"] svg {
         fill: #0f172a !important;
     }
 
-    .filter-card [data-testid="stFormSubmitButton"] > button {
+    .stApp:has(#nova-arte-page) section.main [data-testid="stFormSubmitButton"] > button,
+    .stApp:has(#nova-arte-page) section.main [data-testid="stFormSubmitButton"] > button p {
         background: linear-gradient(90deg, #7C3AED 0%, #C026D3 100%) !important;
         color: #ffffff !important;
         border: none !important;
+    }
+
+    .stApp:has(#nova-arte-page) [data-testid="stVerticalBlockBorderWrapper"] {
+        background: #ffffff !important;
+        border: 1px solid #e7ebf3 !important;
+        border-radius: 24px !important;
+        padding: 18px !important;
+        box-shadow: 0 6px 20px rgba(15, 23, 42, 0.04) !important;
     }
 
     .metric-card {
@@ -2003,6 +2021,7 @@ def render_midias_nova_arte(df):
         '<div class="section-title">🎨 Nova Arte</div>',
         unsafe_allow_html=True
     )
+    st.markdown('<div id="nova-arte-page"></div>', unsafe_allow_html=True)
 
     empresas_planilha = sorted(
         {
@@ -2013,51 +2032,96 @@ def render_midias_nova_arte(df):
     )
     opcoes_empresa = empresas_planilha + ["Outra"]
 
-    st.markdown('<div class="filter-card">', unsafe_allow_html=True)
-
-    empresa_opcao = st.selectbox(
-        "Empresas",
-        options=opcoes_empresa,
-        key="nova_arte_empresa_opcao",
-    )
-
-    empresa_outra = ""
-    if empresa_opcao == "Outra":
-        empresa_outra = st.text_input(
-            "Nome da nova empresa",
-            placeholder="Digite o nome da empresa",
-            key="nova_arte_empresa_outra",
+    with st.container(border=True):
+        empresa_opcao = st.selectbox(
+            "Empresas",
+            options=opcoes_empresa,
+            index=None,
+            placeholder="Selecione a empresa",
+            key="nova_arte_empresa_opcao",
         )
 
-    with st.form("nova_arte_form", clear_on_submit=True):
-        c1, c2 = st.columns(2)
+        empresa_outra = ""
+        if empresa_opcao == "Outra":
+            empresa_outra = st.text_input(
+                "Nome da nova empresa",
+                placeholder="Digite o nome da empresa",
+                key="nova_arte_empresa_outra",
+            )
 
-        with c1:
-            mes = st.selectbox("Mês", MESES_ORDEM)
-            semana = st.text_input("Semana", placeholder="Ex.: 1")
-            dia = st.text_input("Dia", placeholder="Ex.: 15")
+        with st.form("nova_arte_form", clear_on_submit=True):
+            c1, c2 = st.columns(2)
 
-        with c2:
-            tema = st.text_input("Tema", placeholder="Descrição da publicação")
-            tipo_arte = st.selectbox("Tipo", TIPO_ARTE_OPTIONS)
-            status_arte = st.selectbox("Status", STATUS_ARTE_FORM_OPTIONS)
+            with c1:
+                mes = st.selectbox(
+                    "Mês",
+                    MESES_ORDEM,
+                    index=None,
+                    placeholder="Selecione o mês",
+                    key="nova_arte_mes",
+                )
+                semana = st.text_input(
+                    "Semana",
+                    placeholder="Ex.: 1",
+                    key="nova_arte_semana",
+                )
+                dia = st.text_input(
+                    "Dia",
+                    placeholder="Ex.: 15",
+                    key="nova_arte_dia",
+                )
 
-        cadastrar = st.form_submit_button("Cadastrar nova arte", width="stretch")
+            with c2:
+                tema = st.text_input(
+                    "Tema",
+                    placeholder="Descrição da publicação",
+                    key="nova_arte_tema",
+                )
+                tipo_arte = st.selectbox(
+                    "Tipo",
+                    TIPO_ARTE_OPTIONS,
+                    index=None,
+                    placeholder="Selecione o tipo",
+                    key="nova_arte_tipo",
+                )
+                status_arte = st.selectbox(
+                    "Status",
+                    STATUS_ARTE_FORM_OPTIONS,
+                    index=None,
+                    placeholder="Selecione o status",
+                    key="nova_arte_status",
+                )
 
-    st.markdown('</div>', unsafe_allow_html=True)
+            cadastrar = st.form_submit_button("Cadastrar nova arte", width="stretch")
 
     if cadastrar:
+        if not empresa_opcao:
+            st.warning("Selecione uma empresa.")
+            return
+
         if empresa_opcao == "Outra":
             empresa_final = empresa_outra.strip()
         else:
             empresa_final = empresa_opcao
 
         if not empresa_final:
-            st.warning('Selecione uma empresa ou escolha "Outra" e informe o nome.')
+            st.warning('Escolha "Outra" e informe o nome da nova empresa.')
+            return
+
+        if not mes:
+            st.warning("Selecione o mês.")
             return
 
         if not tema.strip():
             st.warning("Preencha o campo Tema.")
+            return
+
+        if not tipo_arte:
+            st.warning("Selecione o tipo.")
+            return
+
+        if not status_arte:
+            st.warning("Selecione o status.")
             return
 
         data_publicacao = montar_data_publicacao(mes, dia)
@@ -2076,6 +2140,7 @@ def render_midias_nova_arte(df):
             data_publicacao,
         ])
         st.cache_data.clear()
+        st.session_state.pop("nova_arte_empresa_opcao", None)
         st.success("Nova arte cadastrada com sucesso!")
         st.rerun()
 
@@ -2550,6 +2615,7 @@ st.markdown(
 # FILTROS
 # ---------------------------------------------------
 
+st.markdown('<div id="publicacoes-filtros"></div>', unsafe_allow_html=True)
 st.markdown('<div class="filter-card">', unsafe_allow_html=True)
 
 f1, f2, f3, f4 = st.columns(4)
