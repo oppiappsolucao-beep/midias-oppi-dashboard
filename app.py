@@ -860,31 +860,46 @@ st.markdown("""
     }
 
     .sidebar-open-wrap {
-        margin-bottom: 12px;
+        margin-bottom: 16px;
+    }
+
+    .stApp:has(#sidebar-hidden) .sidebar-open-wrap {
+        position: fixed !important;
+        top: 16px !important;
+        left: 16px !important;
+        z-index: 999999 !important;
+        width: 190px !important;
+        margin: 0 !important;
     }
 
     .sidebar-open-wrap .stButton > button {
-        background: #16233b !important;
+        background: linear-gradient(90deg, #7C3AED 0%, #C026D3 100%) !important;
         color: #ffffff !important;
         border: none !important;
         border-radius: 12px !important;
-        font-size: 13px !important;
+        font-size: 15px !important;
         font-weight: 800 !important;
-        min-height: 40px !important;
-        height: 40px !important;
-        max-width: 140px !important;
-        box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12) !important;
+        min-height: 48px !important;
+        height: 48px !important;
+        width: 100% !important;
+        max-width: none !important;
+        box-shadow: 0 8px 20px rgba(124, 58, 237, 0.35) !important;
     }
 
     .stApp:has(#sidebar-hidden) section[data-testid="stSidebar"] {
-        display: none !important;
-        min-width: 0 !important;
+        visibility: hidden !important;
         width: 0 !important;
+        min-width: 0 !important;
+        overflow: hidden !important;
+        transform: translateX(-100%) !important;
     }
 
     .stApp:has(#sidebar-hidden) [data-testid="stSidebarCollapsedControl"],
     .stApp:has(#sidebar-hidden) [data-testid="collapsedControl"] {
-        display: none !important;
+        display: flex !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        z-index: 999998 !important;
     }
 
     .stApp:has(#sidebar-hidden) .block-container {
@@ -1114,6 +1129,7 @@ def show_login():
         if usuario == APP_USER and senha == APP_PASS:
             st.session_state.logged_in = True
             st.session_state.area_dashboard = "Mídias"
+            st.session_state.sidebar_hidden = False
             st.rerun()
         else:
             st.error("Usuário ou senha incorretos.")
@@ -1188,9 +1204,11 @@ def render_sidebar_open_button():
         return
 
     st.markdown('<div class="sidebar-open-wrap">', unsafe_allow_html=True)
-    if st.button("☰ Abrir menu", key="btn_show_sidebar", width="stretch"):
-        st.session_state.sidebar_hidden = False
-        st.rerun()
+    col_btn, _ = st.columns([1.1, 3])
+    with col_btn:
+        if st.button("☰ Abrir menu lateral", key="btn_show_sidebar", width="stretch"):
+            st.session_state.sidebar_hidden = False
+            st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
 
@@ -1228,13 +1246,13 @@ def render_sidebar_navigation():
             st.rerun()
 
         st.markdown('<div class="sidebar-hide-wrap">', unsafe_allow_html=True)
-        if st.button("◀ Esconder menu", key="btn_hide_sidebar", width="stretch"):
+        if st.button("◀ Esconder menu lateral", key="btn_hide_sidebar", width="stretch"):
             st.session_state.sidebar_hidden = True
             st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
 
         st.markdown(
-            '<div class="sidebar-help">Use o botão acima ou a seta na lateral para recolher o menu.</div>',
+            '<div class="sidebar-help">Clique em "Esconder menu lateral" para ocultar. Para abrir de novo, use o botão roxo no topo da tela.</div>',
             unsafe_allow_html=True
         )
 
@@ -1242,7 +1260,6 @@ def render_sidebar_navigation():
 
 
 def render_dashboard_top(area):
-    render_sidebar_open_button()
     render_logo(LOGO_PATH)
 
     subtitulo = "Resultados dos anúncios" if area == "Gestão de Tráfego" else "Gestão de publicações e pagamentos"
@@ -1833,6 +1850,7 @@ if not st.session_state.logged_in:
 
 area_dashboard = render_sidebar_navigation()
 inject_sidebar_visibility()
+render_sidebar_open_button()
 render_dashboard_top(area_dashboard)
 
 if area_dashboard == "Gestão de Tráfego":
