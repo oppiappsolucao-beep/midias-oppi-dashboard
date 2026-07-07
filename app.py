@@ -838,7 +838,16 @@ st.markdown("""
     }
 
     section[data-testid="stSidebar"] [data-testid="stSidebarContent"] {
-        padding-top: 52px !important;
+        padding-top: 18px !important;
+    }
+
+    .sidebar-top-row {
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        min-height: 40px;
+        margin: 0 0 2px 0;
+        padding: 0 4px 0 0;
     }
 
     .sidebar-brand {
@@ -982,12 +991,9 @@ st.markdown("""
         max-width: 100% !important;
     }
 
-    /* Seta BRANCA — esconder menu (topo esquerdo da sidebar) */
+    /* Seta BRANCA — esconder menu (topo direito da sidebar) */
     section[data-testid="stSidebar"] .oppi-sidebar-hide {
-        position: absolute !important;
-        top: 8px !important;
-        left: 6px !important;
-        z-index: 30 !important;
+        position: static !important;
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
@@ -998,11 +1004,11 @@ st.markdown("""
         font-size: 32px !important;
         font-weight: 700 !important;
         line-height: 1 !important;
-        min-height: 48px !important;
-        height: 48px !important;
-        width: 48px !important;
-        min-width: 48px !important;
-        max-width: 48px !important;
+        min-height: 40px !important;
+        height: 40px !important;
+        width: 40px !important;
+        min-width: 40px !important;
+        max-width: 40px !important;
         margin: 0 !important;
         padding: 0 !important;
         cursor: pointer !important;
@@ -1261,13 +1267,6 @@ def sidebar_logo_html(path: Path):
     return f'<img class="sidebar-brand-logo" src="data:{mime};base64,{img_base64}">'
 
 
-def render_sidebar_hide_button():
-    st.sidebar.markdown(
-        '<button type="button" class="oppi-sidebar-hide" aria-label="Esconder menu lateral">«</button>',
-        unsafe_allow_html=True,
-    )
-
-
 def render_sidebar_show_button():
     st.markdown(
         '<button type="button" class="oppi-sidebar-show" aria-label="Abrir menu lateral">»</button>',
@@ -1297,6 +1296,9 @@ def render_sidebar_navigation():
     with st.sidebar:
         st.markdown(
             f"""
+            <div class="sidebar-top-row">
+                <button type="button" class="oppi-sidebar-hide" aria-label="Esconder menu lateral">«</button>
+            </div>
             <div class="sidebar-brand">
                 {logo_html}
                 <div>
@@ -1326,7 +1328,7 @@ def render_sidebar_navigation():
             st.rerun()
 
         st.markdown(
-            '<div class="sidebar-help">Seta branca no topo esconde o menu. Seta preta no canto esquerdo abre de novo.</div>',
+            '<div class="sidebar-help">Seta branca no topo direito esconde o menu. Seta preta no canto esquerdo abre de novo.</div>',
             unsafe_allow_html=True
         )
 
@@ -1922,7 +1924,6 @@ if not st.session_state.logged_in:
     show_login()
     st.stop()
 
-render_sidebar_hide_button()
 area_dashboard = render_sidebar_navigation()
 render_sidebar_show_button()
 sync_sidebar_toggle_state()
