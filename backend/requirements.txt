@@ -1,0 +1,10 @@
+fastapi
+uvicorn[standard]
+python-dotenv
+python-jose[cryptography]
+pandas
+gspread
+google-auth
+google-auth-oauthlib
+google-auth-httplib2
+reportlab
