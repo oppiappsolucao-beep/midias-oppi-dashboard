@@ -345,7 +345,7 @@ st.markdown("""
     }
 
     .stApp:has(#login-page) .block-container {
-        max-width: 420px;
+        max-width: 520px;
         margin-left: auto !important;
         margin-right: auto !important;
         padding-top: 3.5rem;
@@ -360,9 +360,9 @@ st.markdown("""
     .stApp:has(#login-page) div[data-testid="stForm"] {
         background: #ffffff;
         border: 1px solid #e7ebf3;
-        border-radius: 24px;
-        padding: 22px 20px 18px 20px;
-        box-shadow: 0 6px 20px rgba(15, 23, 42, 0.04);
+        border-radius: 28px;
+        padding: 32px 28px 26px 28px;
+        box-shadow: 0 8px 28px rgba(15, 23, 42, 0.06);
         width: 100%;
         box-sizing: border-box;
     }
@@ -377,52 +377,60 @@ st.markdown("""
 
     .stApp:has(#login-page) div[data-testid="stTextInput"] label p {
         color: #334155 !important;
-        font-size: 14px !important;
+        font-size: 15px !important;
         font-weight: 700 !important;
+        margin-bottom: 6px !important;
     }
 
     .stApp:has(#login-page) div[data-testid="stTextInput"] input {
         background: #ffffff !important;
         border: 1px solid #d9e0eb !important;
-        border-radius: 14px !important;
+        border-radius: 16px !important;
         color: #0f172a !important;
-        font-size: 15px !important;
+        font-size: 16px !important;
         font-weight: 500 !important;
-        height: 46px !important;
-        min-height: 46px !important;
+        height: 52px !important;
+        min-height: 52px !important;
         width: 100% !important;
-        padding: 0 14px !important;
+        padding: 0 16px !important;
         box-sizing: border-box !important;
     }
 
     .stApp:has(#login-page) div[data-testid="stTextInput"] input:focus {
         border-color: #7C3AED !important;
-        box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.12) !important;
+        box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.12) !important;
     }
 
     .stApp:has(#login-page) div[data-testid="stTextInput"] input::placeholder {
         color: #94a3b8 !important;
+        font-size: 16px !important;
+    }
+
+    .stApp:has(#login-page) div[data-testid="stTextInput"] [data-baseweb="input"] {
+        background: #ffffff !important;
+        border-radius: 16px !important;
     }
 
     .stApp:has(#login-page) div[data-testid="stTextInput"] .stButton {
         width: auto !important;
-        min-width: 42px !important;
-        max-width: 42px !important;
-        flex: 0 0 42px !important;
+        min-width: 48px !important;
+        max-width: 48px !important;
+        flex: 0 0 48px !important;
     }
 
     .stApp:has(#login-page) div[data-testid="stTextInput"] .stButton > button {
-        width: 42px !important;
-        min-width: 42px !important;
-        max-width: 42px !important;
-        height: 42px !important;
-        min-height: 42px !important;
-        max-height: 42px !important;
+        width: 48px !important;
+        min-width: 48px !important;
+        max-width: 48px !important;
+        height: 48px !important;
+        min-height: 48px !important;
+        max-height: 48px !important;
         padding: 0 !important;
         margin: 0 !important;
-        background: transparent !important;
+        background: #f8fafc !important;
         color: #64748b !important;
-        border: none !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 12px !important;
         box-shadow: none !important;
     }
 
@@ -434,11 +442,12 @@ st.markdown("""
         background: linear-gradient(90deg, #7C3AED 0%, #C026D3 100%) !important;
         color: #ffffff !important;
         border: none !important;
-        min-height: 52px !important;
-        height: 52px !important;
-        border-radius: 14px !important;
+        min-height: 56px !important;
+        height: 56px !important;
+        font-size: 17px !important;
+        border-radius: 16px !important;
         box-shadow: none !important;
-        margin-top: 8px !important;
+        margin-top: 12px !important;
         width: 100% !important;
         white-space: nowrap !important;
     }
@@ -451,13 +460,13 @@ st.markdown("""
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 14px;
-        margin-bottom: 6px;
+        gap: 16px;
+        margin-bottom: 10px;
     }
 
     .login-logo {
-        width: 46px;
-        height: 46px;
+        width: 56px;
+        height: 56px;
         border-radius: 50%;
         object-fit: cover;
         object-position: 58% center;
@@ -466,7 +475,7 @@ st.markdown("""
 
     .login-title {
         text-align: center;
-        font-size: 34px;
+        font-size: 40px;
         font-weight: 800;
         color: #0f2d63;
         margin: 0;
@@ -474,9 +483,9 @@ st.markdown("""
 
     .login-subtitle {
         text-align: center;
-        font-size: 16px;
+        font-size: 18px;
         color: #60708a;
-        margin-bottom: 24px;
+        margin-bottom: 28px;
     }
 
     .login-card {
