@@ -1279,6 +1279,9 @@ st.markdown("""
 def format_brl(valor):
     return f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
+def format_valor_input(valor):
+    return f"{float(valor):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
 def normalizar_valor(coluna):
     return (
         coluna.astype(str)
@@ -1320,6 +1323,14 @@ def status_arte_badge(status):
         return '<span class="status-pill status-pendente">Pendente</span>'
     if s in ("concluído", "concluido"):
         return '<span class="status-pill status-concluido">Concluído</span>'
+    return f'<span class="status-pill status-outro">{status if str(status).strip() else "-"}</span>'
+
+def status_pagamento_badge(status):
+    s = str(status).strip().lower()
+    if s == "pago":
+        return '<span class="status-pill status-pronto">Pago</span>'
+    if s == "a pagar":
+        return '<span class="status-pill status-pendente">A pagar</span>'
     return f'<span class="status-pill status-outro">{status if str(status).strip() else "-"}</span>'
 
 def metric_card(title, value, subtitle="", extra_class=""):
@@ -2996,7 +3007,10 @@ st.markdown("<br>", unsafe_allow_html=True)
 
 st.markdown('<div class="table-card">', unsafe_allow_html=True)
 st.markdown('<div class="section-title">✏️ Atualizar status da arte</div>', unsafe_allow_html=True)
-st.markdown('<div class="small-note">Atualize a coluna "Status da arte" diretamente pela interface abaixo.</div>', unsafe_allow_html=True)
+st.markdown(
+    '<div class="small-note">Atualize o nome, valor, pagamento e status da arte diretamente pela interface abaixo.</div>',
+    unsafe_allow_html=True,
+)
 
 busca = st.text_input("Buscar por empresa ou tema", placeholder="Ex.: Faiser, mulheres, internet...")
 
@@ -3018,6 +3032,7 @@ for index, row in df_status.iterrows():
     mes_txt = str(row.get("Mês", "")).strip() or "-"
     tipo_txt = str(row.get("Tipo de arte", "")).strip() or "-"
     status_arte_txt = str(row.get("Status da arte", "")).strip() or "-"
+    status_pagamento_txt = str(row.get("Status Pagamento", "")).strip() or "A pagar"
     valor_num = float(row.get("Valor", 0) or 0)
 
     if pd.notnull(row.get("Data Publicação")):
@@ -3027,7 +3042,7 @@ for index, row in df_status.iterrows():
 
     st.markdown('<div class="row-card">', unsafe_allow_html=True)
 
-    left, mid, right = st.columns([3.2, 1.2, 4.6])
+    left, mid, right = st.columns([3.0, 2.2, 4.8])
 
     with left:
         st.markdown(f'<div class="row-main">{tema_txt}</div>', unsafe_allow_html=True)
@@ -3053,7 +3068,43 @@ for index, row in df_status.iterrows():
 
     with mid:
         st.markdown(f'<div class="row-meta"><b>Valor</b></div>', unsafe_allow_html=True)
-        st.markdown(f'<div class="row-valor">{format_brl(valor_num)}</div>', unsafe_allow_html=True)
+        novo_valor = st.text_input(
+            "Editar valor",
+            value=format_valor_input(valor_num),
+            placeholder="Ex.: 38,00",
+            key=f"valor_input_{index}",
+            label_visibility="collapsed",
+        )
+
+        if st.button("Salvar valor", key=f"salvar_valor_{index}"):
+            valor_txt = str(novo_valor).strip()
+            if not valor_txt:
+                st.warning("Informe um valor.")
+            else:
+                valor_parsed = pd.to_numeric(
+                    normalizar_valor(pd.Series([valor_txt])),
+                    errors="coerce",
+                )
+                if pd.isna(valor_parsed.iloc[0]) or float(valor_parsed.iloc[0]) < 0:
+                    st.warning("Informe um valor válido.")
+                else:
+                    worksheet.update_cell(index + 2, 5, float(valor_parsed.iloc[0]))
+                    st.cache_data.clear()
+                    st.rerun()
+
+        st.markdown("**Pagamento**")
+        st.markdown(status_pagamento_badge(status_pagamento_txt), unsafe_allow_html=True)
+
+        pg1, pg2 = st.columns(2, gap="small")
+        if pg1.button("Pago", key=f"pago_{index}"):
+            worksheet.update_cell(index + 2, 6, "Pago")
+            st.cache_data.clear()
+            st.rerun()
+
+        if pg2.button("A Pagar", key=f"a_pagar_{index}"):
+            worksheet.update_cell(index + 2, 6, "A pagar")
+            st.cache_data.clear()
+            st.rerun()
 
     with right:
         info_col, buttons_col = st.columns([1.0, 4.0])
