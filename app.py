@@ -2058,6 +2058,68 @@ def montar_data_publicacao(mes_nome, dia_txt):
         return dia
 
 
+def indice_semana_por_dia(dia: int) -> int:
+    if dia <= 7:
+        return 0
+    if dia <= 14:
+        return 1
+    if dia <= 21:
+        return 2
+    if dia <= 28:
+        return 3
+    return 4
+
+
+def indice_semana_valor(valor) -> int | None:
+    texto = str(valor).strip().lower()
+    if not texto or texto == "nan":
+        return None
+
+    termos_por_semana = [
+        ("primeira", "1ª", "1a"),
+        ("segunda", "2ª", "2a"),
+        ("terceira", "3ª", "3a"),
+        ("quarta", "4ª", "4a"),
+        ("quinta", "5ª", "5a"),
+    ]
+
+    for idx, termos in enumerate(termos_por_semana):
+        if any(termo in texto for termo in termos):
+            return idx
+        if texto in (str(idx + 1), f"{idx + 1}ª"):
+            return idx
+
+    return None
+
+
+def mes_atual_nome():
+    return MESES_ORDEM[date.today().month - 1]
+
+
+def semana_atual_rotulo():
+    return SEMANA_OPTIONS[indice_semana_por_dia(date.today().day)]
+
+
+def semana_atual_em_opcoes(semanas_disponiveis):
+    idx_atual = indice_semana_por_dia(date.today().day)
+    for semana in semanas_disponiveis:
+        if indice_semana_valor(semana) == idx_atual:
+            return semana
+    return SEMANA_OPTIONS[idx_atual]
+
+
+def indice_semana_linha(row) -> int | None:
+    idx = indice_semana_valor(row.get("Semana"))
+    if idx is not None:
+        return idx
+
+    data_pub = row.get("Data Publicação")
+    if pd.notna(data_pub):
+        return indice_semana_por_dia(int(data_pub.day))
+
+    return None
+
+
 def render_midias_nova_arte(df):
     st.markdown(
         '<div class="section-title">🎨 Nova Arte</div>',
@@ -2671,6 +2733,15 @@ st.markdown(
     unsafe_allow_html=True
 )
 
+hoje = date.today()
+mes_corrente = mes_atual_nome()
+semana_corrente = semana_atual_rotulo()
+
+st.markdown(
+    f'<div class="small-note">Mostrando atividades de <b>{mes_corrente}</b> — <b>{semana_corrente}</b> (semana do dia {hoje.day}).</div>',
+    unsafe_allow_html=True,
+)
+
 # ---------------------------------------------------
 # FILTROS
 # ---------------------------------------------------
@@ -2682,11 +2753,28 @@ f1, f2, f3, f4 = st.columns(4)
 
 with f1:
     meses_disponiveis = [x for x in df["Mês"].dropna().astype(str).unique().tolist() if x.strip()]
-    mes = st.selectbox("Mês", ["Todos"] + ordenar_meses(meses_disponiveis))
+    mes_opcoes = ["Todos"] + ordenar_meses(meses_disponiveis)
+    if mes_corrente not in mes_opcoes:
+        mes_opcoes.insert(1, mes_corrente)
+    mes = st.selectbox(
+        "Mês",
+        mes_opcoes,
+        index=mes_opcoes.index(mes_corrente),
+    )
 
 with f2:
     semanas_disponiveis = [x for x in df["Semana"].dropna().astype(str).unique().tolist() if str(x).strip()]
-    semana = st.selectbox("Semana", ["Todas"] + sorted(semanas_disponiveis))
+    semana_default = semana_atual_em_opcoes(semanas_disponiveis)
+    semana_labels = sorted(
+        set(semanas_disponiveis + [semana_default]),
+        key=lambda x: indice_semana_valor(x) if indice_semana_valor(x) is not None else 99,
+    )
+    semana_opcoes = ["Todas"] + semana_labels
+    semana = st.selectbox(
+        "Semana",
+        semana_opcoes,
+        index=semana_opcoes.index(semana_default),
+    )
 
 with f3:
     empresas_disponiveis = [x for x in df["Empresa"].dropna().astype(str).unique().tolist() if str(x).strip()]
@@ -2720,7 +2808,13 @@ if mes != "Todos":
     df_filtrado = df_filtrado[df_filtrado["Mês"].astype(str) == mes]
 
 if semana != "Todas":
-    df_filtrado = df_filtrado[df_filtrado["Semana"].astype(str) == semana]
+    idx_semana = indice_semana_valor(semana)
+    if idx_semana is None:
+        df_filtrado = df_filtrado[df_filtrado["Semana"].astype(str) == semana]
+    else:
+        df_filtrado = df_filtrado[
+            df_filtrado.apply(lambda row: indice_semana_linha(row) == idx_semana, axis=1)
+        ]
 
 if empresa != "Todas":
     df_filtrado = df_filtrado[df_filtrado["Empresa"].astype(str) == empresa]
