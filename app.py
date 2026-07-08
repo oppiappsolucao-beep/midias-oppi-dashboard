@@ -66,6 +66,7 @@ STATUS_PAGAMENTO_SHEET_MAP = {
     "A Pagar": "A pagar",
 }
 STATUS_ARTE_EDIT_OPTIONS = ["Pronto", "Em andamento", "Pausado", "Pendente"]
+APP_UI_VERSION = "2026-07-08-select-v2"
 
 if "traffic_form_reset_token" not in st.session_state:
     st.session_state.traffic_form_reset_token = 0
@@ -3043,9 +3044,12 @@ st.markdown("<br>", unsafe_allow_html=True)
 # ---------------------------------------------------
 
 st.markdown('<div class="table-card">', unsafe_allow_html=True)
-st.markdown('<div class="section-title">✏️ Atualizar status da arte</div>', unsafe_allow_html=True)
 st.markdown(
-    '<div class="small-note">Edite nome, valor, pagamento e status da arte usando os campos abaixo. Selecione o status nos menus e clique em salvar.</div>',
+    f'<div class="section-title">✏️ Atualizar status da arte <span style="font-size:12px;color:#64748b;font-weight:600;">({APP_UI_VERSION})</span></div>',
+    unsafe_allow_html=True,
+)
+st.markdown(
+    '<div class="small-note">Selecione pagamento e status nos menus. Use <b>Salvar alterações</b> para gravar valor, pagamento e status da arte.</div>',
     unsafe_allow_html=True,
 )
 
@@ -3079,9 +3083,9 @@ for index, row in df_status.iterrows():
 
     st.markdown('<div class="row-card">', unsafe_allow_html=True)
 
-    left, right = st.columns([4.2, 5.8])
+    info_col, edit_col = st.columns([4.3, 5.7], gap="large")
 
-    with left:
+    with info_col:
         st.markdown(f'<div class="row-main">{tema_txt}</div>', unsafe_allow_html=True)
         st.markdown(
             f'<div class="row-meta"><b>Empresa:</b> {empresa_txt} &nbsp;&nbsp; <b>Mês:</b> {mes_txt} &nbsp;&nbsp; <b>Semana:</b> {semana_txt}</div>',
@@ -3110,10 +3114,10 @@ for index, row in df_status.iterrows():
             st.cache_data.clear()
             st.rerun()
 
-    with right:
-        edit1, edit2, edit3 = st.columns(3, gap="medium")
+    with edit_col:
+        with st.container(border=True):
+            st.markdown("**Editar valor e status**")
 
-        with edit1:
             novo_valor = st.text_input(
                 "Valor",
                 value=format_valor_input(valor_num),
@@ -3121,8 +3125,7 @@ for index, row in df_status.iterrows():
                 key=f"valor_input_{index}",
             )
 
-        pagamento_atual = status_pagamento_para_edicao(status_pagamento_txt)
-        with edit2:
+            pagamento_atual = status_pagamento_para_edicao(status_pagamento_txt)
             novo_pagamento = st.selectbox(
                 "Pagamento",
                 STATUS_PAGAMENTO_FORM_OPTIONS,
@@ -3130,8 +3133,7 @@ for index, row in df_status.iterrows():
                 key=f"pagamento_select_{index}",
             )
 
-        status_atual = status_arte_para_edicao(status_arte_txt)
-        with edit3:
+            status_atual = status_arte_para_edicao(status_arte_txt)
             novo_status = st.selectbox(
                 "Status da arte",
                 STATUS_ARTE_EDIT_OPTIONS,
@@ -3139,27 +3141,27 @@ for index, row in df_status.iterrows():
                 key=f"status_select_{index}",
             )
 
-        if st.button("Salvar alterações", key=f"salvar_alteracoes_{index}", width="stretch"):
-            valor_txt = str(novo_valor).strip()
-            if not valor_txt:
-                st.warning("Informe um valor.")
-            else:
-                valor_parsed = pd.to_numeric(
-                    normalizar_valor(pd.Series([valor_txt])),
-                    errors="coerce",
-                )
-                if pd.isna(valor_parsed.iloc[0]) or float(valor_parsed.iloc[0]) < 0:
-                    st.warning("Informe um valor válido.")
+            if st.button("Salvar alterações", key=f"salvar_alteracoes_{index}", width="stretch"):
+                valor_txt = str(novo_valor).strip()
+                if not valor_txt:
+                    st.warning("Informe um valor.")
                 else:
-                    worksheet.update_cell(index + 2, 5, float(valor_parsed.iloc[0]))
-                    worksheet.update_cell(
-                        index + 2,
-                        6,
-                        STATUS_PAGAMENTO_SHEET_MAP.get(novo_pagamento, novo_pagamento),
+                    valor_parsed = pd.to_numeric(
+                        normalizar_valor(pd.Series([valor_txt])),
+                        errors="coerce",
                     )
-                    worksheet.update_cell(index + 2, 8, novo_status)
-                    st.cache_data.clear()
-                    st.rerun()
+                    if pd.isna(valor_parsed.iloc[0]) or float(valor_parsed.iloc[0]) < 0:
+                        st.warning("Informe um valor válido.")
+                    else:
+                        worksheet.update_cell(index + 2, 5, float(valor_parsed.iloc[0]))
+                        worksheet.update_cell(
+                            index + 2,
+                            6,
+                            STATUS_PAGAMENTO_SHEET_MAP.get(novo_pagamento, novo_pagamento),
+                        )
+                        worksheet.update_cell(index + 2, 8, novo_status)
+                        st.cache_data.clear()
+                        st.rerun()
 
     st.markdown('</div>', unsafe_allow_html=True)
 
