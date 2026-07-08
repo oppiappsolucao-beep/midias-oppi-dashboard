@@ -527,6 +527,34 @@ st.markdown("""
         border: 1px solid #d9e0eb !important;
     }
 
+    .stApp:has(#nova-arte-page) section.main [data-testid="stSelectbox"] div[data-baseweb="select"] > div {
+        background: #ffffff !important;
+        background-color: #ffffff !important;
+        border: 1px solid #d9e0eb !important;
+        border-radius: 12px !important;
+        color: #0f172a !important;
+        min-height: 44px !important;
+    }
+
+    .stApp:has(#nova-arte-page) section.main [data-testid="stSelectbox"] div[data-baseweb="select"] span,
+    .stApp:has(#nova-arte-page) section.main [data-testid="stSelectbox"] div[data-baseweb="select"] input {
+        color: #0f172a !important;
+        -webkit-text-fill-color: #0f172a !important;
+        font-size: 15px !important;
+        font-weight: 600 !important;
+    }
+
+    .stApp:has(#nova-arte-page) section.main div[data-testid="stRadio"] label p {
+        color: #0f172a !important;
+        font-size: 14px !important;
+        font-weight: 600 !important;
+    }
+
+    .stApp:has(#nova-arte-page) section.main div[data-testid="stRadio"] label[data-baseweb="radio"] > div:first-child {
+        background-color: #ffffff !important;
+        border-color: #d9e0eb !important;
+    }
+
     .metric-card {
         background: linear-gradient(180deg, #ffffff 0%, #fbfcff 100%);
         border: 1px solid #e7ebf3;
@@ -2856,7 +2884,8 @@ def render_midias_nova_arte(df):
         recorrencia = st.selectbox(
             "Recorrência",
             RECORRENCIA_OPTIONS,
-            index=0,
+            index=None,
+            placeholder="Selecione Sim ou Não",
             key="nova_arte_recorrencia",
             label_visibility="collapsed",
         )
@@ -2864,16 +2893,15 @@ def render_midias_nova_arte(df):
         padrao_recorrencia = None
         if recorrencia == "Sim":
             form_field_label("Padrão de recorrência")
-            opcoes_padrao = opcoes_padrao_recorrencia(mes)
             if not mes:
-                st.caption("Selecione o mês acima para ver os padrões de recorrência.")
+                st.info("Selecione o **mês** acima para carregar as opções de recorrência.")
             else:
-                padrao_recorrencia = st.selectbox(
+                opcoes_padrao = opcoes_padrao_recorrencia(mes)
+                padrao_recorrencia = st.radio(
                     "Padrão de recorrência",
                     options=opcoes_padrao,
                     index=None,
-                    placeholder="Ex.: Toda terça-feira no mês de Julho",
-                    key="nova_arte_padrao_recorrencia",
+                    key=f"nova_arte_padrao_recorrencia_{mes}",
                     label_visibility="collapsed",
                 )
 
@@ -2972,6 +3000,10 @@ def render_midias_nova_arte(df):
             st.warning("Selecione o mês.")
             return
 
+        if not recorrencia:
+            st.warning("Selecione se a arte tem recorrência (Sim ou Não).")
+            return
+
         if recorrencia == "Sim":
             if not padrao_recorrencia:
                 st.warning("Selecione o padrão de recorrência.")
@@ -3055,6 +3087,7 @@ def render_midias_nova_arte(df):
         st.cache_data.clear()
         st.session_state.pop("nova_arte_empresa_opcao", None)
         st.session_state.pop("nova_arte_servico", None)
+        st.session_state.pop("nova_arte_recorrencia", None)
         st.session_state.pop("nova_arte_padrao_recorrencia", None)
         if recorrencia == "Sim":
             st.success(
