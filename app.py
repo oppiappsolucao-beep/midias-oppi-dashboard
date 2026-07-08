@@ -129,7 +129,7 @@ DIA_SEMANA_FORM_NOME = {
     "Sex": "sexta-feira",
 }
 STATUS_ARTE_EDIT_OPTIONS = ["Pronto", "Em andamento", "Pausado", "Pendente"]
-APP_UI_VERSION = "2026-07-08-valores-v9"
+APP_UI_VERSION = "2026-07-08-cards-v10"
 
 if "traffic_form_reset_token" not in st.session_state:
     st.session_state.traffic_form_reset_token = 0
@@ -774,22 +774,27 @@ st.markdown("""
         background: #fbfcfe !important;
         border: 1px solid #e8edf5 !important;
         border-radius: 18px !important;
-        padding: 14px 16px !important;
+        padding: 18px 16px !important;
         margin-bottom: 12px !important;
         box-shadow: none !important;
         position: relative !important;
     }
 
+    .stApp:has(#publicacoes-page) [class*="st-key-row_card_"] > [data-testid="stVerticalBlock"] {
+        gap: 0 !important;
+    }
+
     .stApp:has(#publicacoes-page) [class*="st-key-row_card_"] > [class*="st-key-edit_atividade_"] {
         position: absolute !important;
-        top: 12px !important;
-        right: 12px !important;
+        top: 14px !important;
+        right: 14px !important;
         width: 44px !important;
         height: 0 !important;
         min-height: 0 !important;
         overflow: visible !important;
         z-index: 5 !important;
-        margin: 0 !important;
+        margin: 0 0 -44px 0 !important;
+        padding: 0 !important;
     }
 
     .row-card div[data-testid="stSelectbox"] label p,
@@ -827,13 +832,14 @@ st.markdown("""
     }
 
     .pub-activity-heading {
-        margin-bottom: 12px;
+        margin: 0 0 12px 0;
         padding: 0 52px;
     }
 
     .pub-activity-card-view {
         width: 100%;
         text-align: center;
+        padding: 0 0 4px 0;
     }
 
     .pub-activity-rows {
@@ -859,6 +865,7 @@ st.markdown("""
     .pub-activity-row-valor {
         justify-content: center;
         padding-top: 2px;
+        padding-bottom: 2px;
     }
 
     .pub-activity-cell {
@@ -947,6 +954,10 @@ st.markdown("""
 
     .stApp:has(#publicacoes-page) [class*="st-key-row_card_"] div[data-testid="stMarkdownContainer"] {
         width: 100% !important;
+        margin-top: 0 !important;
+        margin-bottom: 0 !important;
+        padding-top: 0 !important;
+        padding-bottom: 0 !important;
     }
 
     .stApp:has(#publicacoes-page) [class*="st-key-row_card_"] [data-testid="stHorizontalBlock"] {
