@@ -129,7 +129,7 @@ DIA_SEMANA_FORM_NOME = {
     "Sex": "sexta-feira",
 }
 STATUS_ARTE_EDIT_OPTIONS = ["Pronto", "Em andamento", "Pausado", "Pendente"]
-APP_UI_VERSION = "2026-07-08-lista-v11"
+APP_UI_VERSION = "2026-07-08-logos-v12"
 
 if "traffic_form_reset_token" not in st.session_state:
     st.session_state.traffic_form_reset_token = 0
@@ -248,6 +248,17 @@ MESES_ORDEM = [
 LOGO_PATH = Path("logo-oppi.png")
 if not LOGO_PATH.exists():
     LOGO_PATH = Path("LOGOS.png")
+
+EMPRESAS_LOGOS_DIR = Path("logos-empresas")
+EMPRESA_LOGO_MAP = {
+    "skoob": EMPRESAS_LOGOS_DIR / "logo-skoob.png",
+    "skoobpet": EMPRESAS_LOGOS_DIR / "logo-skoob.png",
+    "casa das essencias": EMPRESAS_LOGOS_DIR / "logo-casa-essencias.png",
+    "faiser": EMPRESAS_LOGOS_DIR / "logo-faiser.png",
+    "faiser telecomunicacoes": EMPRESAS_LOGOS_DIR / "logo-faiser.png",
+    "oppi tech": LOGO_PATH,
+    "oppi": LOGO_PATH,
+}
 
 # ---------------------------------------------------
 # CSS
@@ -838,10 +849,12 @@ st.markdown("""
     }
 
     .pub-card-avatar img {
-        width: 38px;
-        height: 38px;
+        width: 44px;
+        height: 44px;
         border-radius: 50%;
-        object-fit: cover;
+        object-fit: contain;
+        background: #ffffff;
+        padding: 2px;
     }
 
     .pub-card-avatar-fallback {
@@ -1968,9 +1981,42 @@ def format_pagamento_pill_option(opcao):
     return f"💳 {opcao}"
 
 
-def card_logo_html(path: Path):
-    if not path.exists():
-        return '<div class="pub-card-avatar pub-card-avatar-fallback">O</div>'
+def normalize_empresa_key(nome):
+    texto = str(nome).strip().lower()
+    substituicoes = {
+        "á": "a", "à": "a", "ã": "a", "â": "a",
+        "é": "e", "ê": "e", "í": "i",
+        "ó": "o", "ô": "o", "õ": "o", "ú": "u", "ç": "c",
+    }
+    for antigo, novo in substituicoes.items():
+        texto = texto.replace(antigo, novo)
+    return re.sub(r"\s+", " ", texto).strip()
+
+
+def logo_empresa_path(empresa_nome):
+    chave = normalize_empresa_key(empresa_nome)
+
+    if chave in EMPRESA_LOGO_MAP:
+        caminho = EMPRESA_LOGO_MAP[chave]
+        if caminho.exists():
+            return caminho
+
+    for alias, caminho in EMPRESA_LOGO_MAP.items():
+        if alias in chave or chave in alias:
+            if caminho.exists():
+                return caminho
+
+    if LOGO_PATH.exists():
+        return LOGO_PATH
+
+    return None
+
+
+def card_logo_html(empresa_nome):
+    path = logo_empresa_path(empresa_nome)
+    if path is None or not path.exists():
+        inicial = str(empresa_nome).strip()[:1].upper() or "E"
+        return f'<div class="pub-card-avatar pub-card-avatar-fallback">{html.escape(inicial)}</div>'
 
     mime = "image/png"
     if path.suffix.lower() in [".jpg", ".jpeg"]:
@@ -1978,7 +2024,7 @@ def card_logo_html(path: Path):
     img_base64 = base64.b64encode(path.read_bytes()).decode()
     return (
         f'<div class="pub-card-avatar">'
-        f'<img src="data:{mime};base64,{img_base64}" alt="Logo">'
+        f'<img src="data:{mime};base64,{img_base64}" alt="{html.escape(str(empresa_nome))}">'
         f'</div>'
     )
 
@@ -4527,7 +4573,7 @@ with st.container(border=True):
                 )
 
                 with c_logo:
-                    st.markdown(card_logo_html(LOGO_PATH), unsafe_allow_html=True)
+                    st.markdown(card_logo_html(empresa_exibicao), unsafe_allow_html=True)
 
                 with c_info:
                     st.markdown(
