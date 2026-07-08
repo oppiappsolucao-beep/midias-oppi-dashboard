@@ -2225,18 +2225,17 @@ def render_midias_nova_arte(df):
                 label_visibility="collapsed",
             )
 
-        with st.form("nova_arte_form", clear_on_submit=True):
-            with st.expander("📋 Seleção de serviços", expanded=False):
-                form_field_label("Serviço")
-                servico = st.selectbox(
-                    "Serviço",
-                    SERVICO_OPTIONS,
-                    index=None,
-                    placeholder="Selecione o serviço",
-                    key="nova_arte_servico",
-                    label_visibility="collapsed",
-                )
+        form_field_label("Serviços")
+        servico = st.selectbox(
+            "Serviços",
+            SERVICO_OPTIONS,
+            index=None,
+            placeholder="Selecione o serviço",
+            key="nova_arte_servico",
+            label_visibility="collapsed",
+        )
 
+        with st.form("nova_arte_form", clear_on_submit=True):
             c1, c2 = st.columns(2)
 
             with c1:
@@ -2391,6 +2390,7 @@ def render_midias_nova_arte(df):
         ])
         st.cache_data.clear()
         st.session_state.pop("nova_arte_empresa_opcao", None)
+        st.session_state.pop("nova_arte_servico", None)
         st.success("Nova arte cadastrada com sucesso!")
         st.rerun()
 
