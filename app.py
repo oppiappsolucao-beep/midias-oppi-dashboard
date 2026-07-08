@@ -54,6 +54,16 @@ SEMANA_OPTIONS = [
     "Quarta Semana",
     "Quinta Semana",
 ]
+SERVICO_OPTIONS = [
+    "Post único",
+    "Carrossel",
+    "Vídeo",
+    "Stories",
+    "Reels",
+    "Arte estática",
+    "Banner",
+    "Thumb",
+]
 STATUS_ARTE_SHEET_MAP = {
     "Andamento": "Em andamento",
     "Finalizado": "Pronto",
@@ -348,6 +358,7 @@ st.markdown("""
     .stApp:has(#nova-arte-page) section.main .st-key-nova_arte_tipo [data-baseweb="select"] > div,
     .stApp:has(#nova-arte-page) section.main .st-key-nova_arte_status [data-baseweb="select"] > div,
     .stApp:has(#nova-arte-page) section.main .st-key-nova_arte_status_pagamento [data-baseweb="select"] > div,
+    .stApp:has(#nova-arte-page) section.main .st-key-nova_arte_servico [data-baseweb="select"] > div,
     .stApp:has(#nova-arte-page) section.main .st-key-nova_arte_empresa_outra [data-baseweb="input"],
     .stApp:has(#nova-arte-page) section.main .st-key-nova_arte_empresa_outra [data-baseweb="input"] > div,
     .stApp:has(#nova-arte-page) section.main .st-key-nova_arte_valor [data-baseweb="input"],
@@ -2215,6 +2226,17 @@ def render_midias_nova_arte(df):
             )
 
         with st.form("nova_arte_form", clear_on_submit=True):
+            with st.expander("📋 Seleção de serviços", expanded=False):
+                form_field_label("Serviço")
+                servico = st.selectbox(
+                    "Serviço",
+                    SERVICO_OPTIONS,
+                    index=None,
+                    placeholder="Selecione o serviço",
+                    key="nova_arte_servico",
+                    label_visibility="collapsed",
+                )
+
             c1, c2 = st.columns(2)
 
             with c1:
@@ -2317,6 +2339,10 @@ def render_midias_nova_arte(df):
             st.warning("Selecione a semana.")
             return
 
+        if not servico:
+            st.warning("Selecione um serviço.")
+            return
+
         if not tema.strip():
             st.warning("Preencha o campo Tema.")
             return
@@ -2361,6 +2387,7 @@ def render_midias_nova_arte(df):
             tipo_arte,
             status_arte_planilha,
             data_publicacao,
+            servico,
         ])
         st.cache_data.clear()
         st.session_state.pop("nova_arte_empresa_opcao", None)
@@ -2571,6 +2598,7 @@ EXPECTED_MEDIA_HEADERS = [
     "Tipo de arte",
     "Status da arte",
     "Data Publicação",
+    "Serviços",
 ]
 
 
@@ -2626,6 +2654,12 @@ HEADER_ALIASES = {
         "publicacao",
         "publicação",
         "data",
+    ],
+    "Serviços": [
+        "servicos",
+        "serviços",
+        "servico",
+        "serviço",
     ],
 }
 
@@ -2789,7 +2823,7 @@ df = load_data()
 # TRATAMENTO
 # ---------------------------------------------------
 
-for col in ["Mês", "Semana", "Empresa", "Tema", "Status Pagamento", "Status da arte", "Tipo de arte", "Data Publicação"]:
+for col in ["Mês", "Semana", "Empresa", "Tema", "Status Pagamento", "Status da arte", "Tipo de arte", "Data Publicação", "Serviços"]:
     if col not in df.columns:
         df[col] = ""
 
@@ -3072,6 +3106,7 @@ for index, row in df_status.iterrows():
     tema_txt = str(row.get("Tema", "")).strip() or "-"
     mes_txt = str(row.get("Mês", "")).strip() or "-"
     tipo_txt = str(row.get("Tipo de arte", "")).strip() or "-"
+    servico_txt = str(row.get("Serviços", "")).strip() or "-"
     status_arte_txt = str(row.get("Status da arte", "")).strip() or "-"
     status_pagamento_txt = str(row.get("Status Pagamento", "")).strip() or "A pagar"
     valor_num = float(row.get("Valor", 0) or 0)
@@ -3092,7 +3127,7 @@ for index, row in df_status.iterrows():
             unsafe_allow_html=True
         )
         st.markdown(
-            f'<div class="row-meta"><b>Tipo de arte:</b> {tipo_txt} &nbsp;&nbsp; <b>Data:</b> {data_txt}</div>',
+            f'<div class="row-meta"><b>Tipo de arte:</b> {tipo_txt} &nbsp;&nbsp; <b>Serviço:</b> {servico_txt} &nbsp;&nbsp; <b>Data:</b> {data_txt}</div>',
             unsafe_allow_html=True
         )
         st.markdown(
