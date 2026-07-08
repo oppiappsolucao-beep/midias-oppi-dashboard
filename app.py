@@ -114,7 +114,7 @@ DIAS_SEMANA_RECORRENCIA = [
     "domingo",
 ]
 STATUS_ARTE_EDIT_OPTIONS = ["Pronto", "Em andamento", "Pausado", "Pendente"]
-APP_UI_VERSION = "2026-07-08-inline-edit"
+APP_UI_VERSION = "2026-07-08-nova-arte-v3"
 
 if "traffic_form_reset_token" not in st.session_state:
     st.session_state.traffic_form_reset_token = 0
@@ -563,6 +563,40 @@ st.markdown("""
         color: #ffffff !important;
         border: none !important;
         margin-top: 8px !important;
+    }
+
+    .stApp:has(#nova-arte-page) section.main [data-testid="stHorizontalBlock"] {
+        margin-top: 0 !important;
+        margin-bottom: 0 !important;
+        padding-top: 0 !important;
+        padding-bottom: 0 !important;
+        gap: 0.75rem !important;
+    }
+
+    .stApp:has(#nova-arte-page) section.main [data-testid="stVerticalBlock"] > div {
+        margin-bottom: 0 !important;
+    }
+
+    .stApp:has(#nova-arte-page) section.main [data-testid="stVerticalBlockBorderWrapper"] > div {
+        gap: 0.5rem !important;
+    }
+
+    .stApp:has(#nova-arte-page) section.main .st-key-nova_arte_dia:has(input[disabled]) {
+        display: none !important;
+        height: 0 !important;
+        min-height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: hidden !important;
+    }
+
+    .stApp:has(#nova-arte-page) section.main .nova-arte-hide-dia {
+        display: none !important;
+        height: 0 !important;
+        min-height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: hidden !important;
     }
 
     .stApp:has(#nova-arte-page) section.main [data-testid="stForm"] {
@@ -2878,7 +2912,7 @@ def indice_semana_linha(row) -> int | None:
 
 def render_midias_nova_arte(df):
     st.markdown(
-        '<div class="section-title">🎨 Nova Arte</div>',
+        f'<div class="section-title">🎨 Nova Arte <span style="font-size:12px;color:#64748b;font-weight:600;">({APP_UI_VERSION})</span></div>',
         unsafe_allow_html=True
     )
     st.markdown('<div id="nova-arte-page"></div>', unsafe_allow_html=True)
@@ -2923,41 +2957,39 @@ def render_midias_nova_arte(df):
             label_visibility="collapsed",
         )
 
-        form_field_label("Mês")
-        mes = st.selectbox(
-            "Mês",
-            MESES_ORDEM,
-            index=None,
-            placeholder="Selecione o mês",
-            key="nova_arte_mes",
-            label_visibility="collapsed",
-        )
-
-        form_field_label("Recorrência")
-        recorrencia = st.selectbox(
-            "Recorrência",
-            RECORRENCIA_OPTIONS,
-            index=None,
-            placeholder="Selecione Sim ou Não",
-            key="nova_arte_recorrencia",
-            label_visibility="collapsed",
-        )
+        col_mes, col_rec = st.columns(2)
+        with col_mes:
+            form_field_label("Mês")
+            mes = st.selectbox(
+                "Mês",
+                MESES_ORDEM,
+                index=None,
+                placeholder="Selecione o mês",
+                key="nova_arte_mes",
+                label_visibility="collapsed",
+            )
+        with col_rec:
+            form_field_label("Recorrência")
+            recorrencia = st.selectbox(
+                "Recorrência",
+                RECORRENCIA_OPTIONS,
+                index=None,
+                placeholder="Selecione Sim ou Não",
+                key="nova_arte_recorrencia",
+                label_visibility="collapsed",
+            )
 
         padrao_recorrencia = None
-        if recorrencia == "Sim":
-            if not mes:
-                st.caption("Selecione o mês acima para carregar os padrões de recorrência.")
-            else:
-                form_field_label("Padrão de recorrência")
-                opcoes_padrao = opcoes_padrao_recorrencia(mes)
-                padrao_recorrencia = st.selectbox(
-                    "Padrão de recorrência",
-                    options=opcoes_padrao,
-                    index=None,
-                    placeholder="Selecione o dia da semana",
-                    key=f"nova_arte_padrao_recorrencia_{mes}",
-                    label_visibility="collapsed",
-                )
+        if recorrencia == "Sim" and mes:
+            form_field_label("Padrão de recorrência")
+            padrao_recorrencia = st.selectbox(
+                "Padrão de recorrência",
+                options=opcoes_padrao_recorrencia(mes),
+                index=None,
+                placeholder=f"Ex.: Toda terça-feira no mês de {mes}",
+                key="nova_arte_padrao_recorrencia",
+                label_visibility="collapsed",
+            )
 
         c1, c2 = st.columns(2)
 
@@ -2980,14 +3012,14 @@ def render_midias_nova_arte(df):
             )
             if recorrencia != "Sim":
                 form_field_label("Dia")
-                dia = st.text_input(
-                    "Dia",
-                    placeholder="Ex.: 15",
-                    key="nova_arte_dia",
-                    label_visibility="collapsed",
-                )
-            else:
-                dia = ""
+            dia_raw = st.text_input(
+                "Dia",
+                placeholder="Ex.: 15",
+                key="nova_arte_dia",
+                label_visibility="collapsed",
+                disabled=recorrencia == "Sim",
+            )
+            dia = "" if recorrencia == "Sim" else dia_raw
 
         with c2:
             form_field_label("Status")
@@ -3041,6 +3073,9 @@ def render_midias_nova_arte(df):
             return
 
         if recorrencia == "Sim":
+            if not mes:
+                st.warning("Selecione o mês antes de definir a recorrência.")
+                return
             if not padrao_recorrencia:
                 st.warning("Selecione o padrão de recorrência.")
                 return
@@ -3136,10 +3171,9 @@ def render_midias_nova_arte(df):
             "nova_arte_status",
             "nova_arte_status_pagamento",
             "nova_arte_valor",
+            "nova_arte_padrao_recorrencia",
         ]:
             st.session_state.pop(key, None)
-        if mes:
-            st.session_state.pop(f"nova_arte_padrao_recorrencia_{mes}", None)
         if recorrencia == "Sim":
             st.success(
                 f"Nova arte cadastrada com sucesso! "
