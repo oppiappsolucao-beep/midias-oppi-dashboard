@@ -2564,6 +2564,38 @@ def calcular_metricas_empresa(df_empresa):
     return postagens_feitas, postagens_a_fazer, valor_pago, valor_a_pagar
 
 
+def render_grafico_valores_pagamento(valor_pago, valor_a_pagar):
+    graf_pagamento = pd.DataFrame(
+        {
+            "Status": ["Pago", "A pagar"],
+            "Valor": [valor_pago, valor_a_pagar],
+        }
+    )
+    graf_pagamento["Rotulo"] = graf_pagamento["Valor"].map(format_brl)
+
+    fig_pagamento = px.bar(
+        graf_pagamento,
+        x="Status",
+        y="Valor",
+        color="Status",
+        text="Rotulo",
+        color_discrete_map={"Pago": "#22c55e", "A pagar": "#f97316"},
+    )
+    fig_pagamento.update_layout(
+        margin=dict(l=10, r=10, t=10, b=10),
+        height=380,
+        paper_bgcolor="white",
+        plot_bgcolor="white",
+        xaxis_title="",
+        yaxis_title="Valor (R$)",
+        showlegend=False,
+    )
+    fig_pagamento.update_traces(textposition="outside")
+    fig_pagamento.update_yaxes(tickformat=",.2f")
+
+    st.plotly_chart(fig_pagamento, width="stretch")
+
+
 def render_midias_empresas(df):
     st.markdown(
         '<div class="section-title">🏢 Empresas</div>',
@@ -3752,43 +3784,7 @@ with g1:
 with g2:
     with st.container(border=True):
         st.markdown('<div class="section-title">💳 Valor por status pagamento</div>', unsafe_allow_html=True)
-
-        graf_status = (
-            df_filtrado.groupby("Status Pagamento", dropna=False)["Valor"]
-            .sum()
-            .reset_index()
-        )
-
-        graf_status["Status Pagamento"] = graf_status["Status Pagamento"].astype(str).str.strip()
-        graf_status = graf_status[
-            (graf_status["Status Pagamento"] != "") &
-            (graf_status["Valor"] > 0)
-        ]
-
-        if not graf_status.empty and graf_status["Valor"].sum() > 0:
-            fig_status = px.pie(
-                graf_status,
-                values="Valor",
-                names="Status Pagamento",
-                hole=0.58
-            )
-
-            fig_status.update_traces(
-                texttemplate="R$ %{value:,.2f}",
-                textposition="inside",
-                hovertemplate="<b>%{label}</b><br>Valor: R$ %{value:,.2f}<extra></extra>"
-            )
-
-            fig_status.update_layout(
-                margin=dict(l=10, r=10, t=10, b=10),
-                height=380,
-                paper_bgcolor="white",
-                showlegend=True
-            )
-
-            st.plotly_chart(fig_status, width="stretch")
-        else:
-            st.info("Sem valores para esse filtro.")
+        render_grafico_valores_pagamento(valor_pago, valor_a_pagar)
 
 st.markdown("<br>", unsafe_allow_html=True)
 
