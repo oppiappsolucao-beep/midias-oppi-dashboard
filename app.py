@@ -129,7 +129,7 @@ DIA_SEMANA_FORM_NOME = {
     "Sex": "sexta-feira",
 }
 STATUS_ARTE_EDIT_OPTIONS = ["Pronto", "Em andamento", "Pausado", "Pendente"]
-APP_UI_VERSION = "2026-07-08-cards-v8"
+APP_UI_VERSION = "2026-07-08-valores-v9"
 
 if "traffic_form_reset_token" not in st.session_state:
     st.session_state.traffic_form_reset_token = 0
@@ -1763,14 +1763,50 @@ def format_brl(valor):
 def format_valor_input(valor):
     return f"{float(valor):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
+def parse_valor_texto(valor):
+    if valor is None:
+        return 0.0
+
+    if isinstance(valor, (int, float)):
+        if pd.isna(valor):
+            return 0.0
+        return float(valor)
+
+    texto = str(valor).strip()
+    if not texto or texto.lower() in {"nan", "none", "-"}:
+        return 0.0
+
+    texto = re.sub(r"[R$r$\s]", "", texto)
+    if not texto:
+        return 0.0
+
+    if re.search(r",\d{1,2}$", texto):
+        texto = texto.replace(".", "").replace(",", ".")
+    else:
+        texto = texto.replace(",", "")
+
+    numero = pd.to_numeric(texto, errors="coerce")
+    if pd.isna(numero):
+        return 0.0
+    return float(numero)
+
+
 def normalizar_valor(coluna):
-    return (
-        coluna.astype(str)
-        .str.replace("R$", "", regex=False)
-        .str.replace(".", "", regex=False)
-        .str.replace(",", ".", regex=False)
-        .str.strip()
-    )
+    return coluna.apply(parse_valor_texto)
+
+
+def normalizar_status_pagamento_coluna(coluna):
+    def map_status(valor):
+        texto = str(valor).strip().lower()
+        if texto in {"", "nan", "none"}:
+            return "a pagar"
+        if texto == "pago":
+            return "pago"
+        if texto in {"a pagar", "apagar"}:
+            return "a pagar"
+        return "a pagar"
+
+    return coluna.map(map_status)
 
 def ordenar_meses(lista):
     ordem = {mes: i for i, mes in enumerate(MESES_ORDEM)}
@@ -1842,16 +1878,13 @@ def salvar_atividade_planilha(worksheet, row_index, tema, valor_txt, pagamento, 
     if not valor_txt:
         return False, "Informe um valor."
 
-    valor_parsed = pd.to_numeric(
-        normalizar_valor(pd.Series([valor_txt])),
-        errors="coerce",
-    )
-    if pd.isna(valor_parsed.iloc[0]) or float(valor_parsed.iloc[0]) < 0:
+    valor_parsed = parse_valor_texto(valor_txt)
+    if valor_parsed < 0:
         return False, "Informe um valor válido."
 
     linha_planilha = row_index + 2
     worksheet.update_cell(linha_planilha, 4, str(tema).strip())
-    worksheet.update_cell(linha_planilha, 5, float(valor_parsed.iloc[0]))
+    worksheet.update_cell(linha_planilha, 5, valor_parsed)
     worksheet.update_cell(
         linha_planilha,
         6,
@@ -2810,7 +2843,9 @@ def show_traffic_presentation(values):
 
 
 def calcular_metricas_empresa(df_empresa):
-    status_pagamento_normalizado = df_empresa["Status Pagamento"].astype(str).str.strip().str.lower()
+    status_pagamento_normalizado = normalizar_status_pagamento_coluna(
+        df_empresa["Status Pagamento"]
+    )
     status_arte_normalizado = df_empresa["Status da arte"].astype(str).str.strip().str.lower()
 
     pagos = df_empresa[status_pagamento_normalizado == "pago"]
@@ -3308,8 +3343,8 @@ def render_midias_nova_arte(df):
             st.warning("Informe o valor da arte.")
             return
 
-        valor_num = pd.to_numeric(normalizar_valor(pd.Series([valor_txt])), errors="coerce")
-        if pd.isna(valor_num.iloc[0]) or float(valor_num.iloc[0]) < 0:
+        valor_num_val = parse_valor_texto(valor_txt)
+        if valor_num_val < 0:
             st.warning("Informe um valor válido para a arte.")
             return
 
@@ -3328,7 +3363,7 @@ def render_midias_nova_arte(df):
                 semana_linha,
                 empresa_final,
                 tema.strip(),
-                float(valor_num.iloc[0]),
+                float(valor_num_val),
                 status_pagamento_planilha,
                 tipo_arte,
                 status_arte_planilha,
@@ -3813,7 +3848,7 @@ HEADER_ALIASES = {
     "Semana": ["semana"],
     "Empresa": ["empresa", "cliente"],
     "Tema": ["tema", "atividade", "nome da atividade"],
-    "Valor": ["valor", "preco", "preço"],
+    "Valor": ["valor", "preco", "preço", "valor da arte", "valor arte", "preco da arte"],
     "Status Pagamento": [
         "status pagamento",
         "status de pagamento",
@@ -3881,6 +3916,55 @@ def count_parseable_dates(rows, column_index):
             total += 1
 
     return total
+
+
+def count_parseable_valores(rows, column_index):
+    total = 0
+
+    for row in rows:
+        if column_index >= len(row):
+            continue
+
+        if parse_valor_texto(row[column_index]) > 0:
+            total += 1
+
+    return total
+
+
+def detect_valor_column(raw_headers, data_rows, selected_indexes, used_indexes):
+    current_index = selected_indexes.get("Valor")
+    if current_index is not None and count_parseable_valores(data_rows, current_index) > 0:
+        return current_index
+
+    header_candidates = find_header_candidates(raw_headers, "Valor")
+    best_header_index = None
+    best_header_score = 0
+
+    for index in header_candidates:
+        score = count_parseable_valores(data_rows, index)
+        if score > best_header_score:
+            best_header_score = score
+            best_header_index = index
+
+    if best_header_index is not None:
+        return best_header_index
+
+    if count_parseable_valores(data_rows, 4) > 0:
+        return 4
+
+    best_index = None
+    best_score = 0
+
+    for index in range(len(raw_headers)):
+        if index in used_indexes and index != current_index:
+            continue
+
+        score = count_parseable_valores(data_rows, index)
+        if score > best_score:
+            best_score = score
+            best_index = index
+
+    return best_index if best_index is not None else current_index
 
 
 def find_header_candidates(raw_headers, expected_header):
@@ -3972,6 +4056,14 @@ def build_media_dataframe(rows):
     if date_index is not None:
         selected_indexes["Data Publicação"] = date_index
 
+    valor_index = detect_valor_column(raw_headers, data_rows, selected_indexes, used_indexes)
+    if valor_index is not None:
+        previous_valor_index = selected_indexes.get("Valor")
+        if previous_valor_index in used_indexes:
+            used_indexes.discard(previous_valor_index)
+        selected_indexes["Valor"] = valor_index
+        used_indexes.add(valor_index)
+
     records = []
 
     for row in data_rows:
@@ -4019,7 +4111,7 @@ for col in ["Mês", "Semana", "Empresa", "Tema", "Status Pagamento", "Status da 
 df["Data Publicação Raw"] = df["Data Publicação"].astype(str).str.strip()
 
 if "Valor" in df.columns:
-    df["Valor"] = pd.to_numeric(normalizar_valor(df["Valor"]), errors="coerce").fillna(0)
+    df["Valor"] = normalizar_valor(df["Valor"]).fillna(0)
 else:
     df["Valor"] = 0.0
 
