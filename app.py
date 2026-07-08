@@ -1,4 +1,5 @@
 import base64
+import calendar
 import html
 import io
 import textwrap
@@ -103,7 +104,7 @@ STATUS_PAGAMENTO_SHEET_MAP = {
     "A Pagar": "A pagar",
 }
 STATUS_ARTE_EDIT_OPTIONS = ["Pronto", "Em andamento", "Pausado", "Pendente"]
-APP_UI_VERSION = "2026-07-08-select-v2"
+APP_UI_VERSION = "2026-07-08-date-range"
 
 if "traffic_form_reset_token" not in st.session_state:
     st.session_state.traffic_form_reset_token = 0
@@ -315,7 +316,8 @@ st.markdown("""
     .stApp:has(#publicacoes-filtros) section.main label[data-testid="stWidgetLabel"] p,
     .stApp:has(#publicacoes-filtros) section.main div[data-testid="stTextInput"] label p,
     .stApp:has(#publicacoes-filtros) section.main div[data-testid="stSelectbox"] label p,
-    .stApp:has(#publicacoes-filtros) section.main div[data-testid="stMultiSelect"] label p {
+    .stApp:has(#publicacoes-filtros) section.main div[data-testid="stMultiSelect"] label p,
+    .stApp:has(#publicacoes-filtros) section.main div[data-testid="stDateInput"] label p {
         color: #0f172a !important;
         font-size: 14px !important;
         font-weight: 700 !important;
@@ -367,6 +369,22 @@ st.markdown("""
     }
 
     .stApp:has(#nova-arte-page) section.main div[data-testid="stSelectbox"] svg,
+    .stApp:has(#publicacoes-filtros) section.main div[data-testid="stDateInput"] input {
+        background: #ffffff !important;
+        border: 1px solid #d9e0eb !important;
+        border-radius: 12px !important;
+        color: #0f172a !important;
+        font-size: 15px !important;
+        font-weight: 600 !important;
+        min-height: 44px !important;
+        padding: 0 12px !important;
+    }
+
+    .stApp:has(#publicacoes-filtros) section.main div[data-testid="stDateInput"] input:focus {
+        border-color: #7C3AED !important;
+        box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.10) !important;
+    }
+
     .stApp:has(#publicacoes-filtros) section.main div[data-testid="stSelectbox"] svg,
     .stApp:has(#publicacoes-filtros) section.main div[data-testid="stMultiSelect"] svg {
         fill: #0f172a !important;
@@ -2584,6 +2602,15 @@ def semana_atual_rotulo():
     return SEMANA_OPTIONS[indice_semana_por_dia(date.today().day)]
 
 
+def intervalo_semana_atual(ref=None):
+    ref = ref or date.today()
+    limites = [(1, 7), (8, 14), (15, 21), (22, 28), (29, 31)]
+    inicio_dia, fim_dia = limites[indice_semana_por_dia(ref.day)]
+    ultimo_dia_mes = calendar.monthrange(ref.year, ref.month)[1]
+    fim_dia = min(fim_dia, ultimo_dia_mes)
+    return date(ref.year, ref.month, inicio_dia), date(ref.year, ref.month, fim_dia)
+
+
 def semana_atual_em_opcoes(semanas_disponiveis):
     idx_atual = indice_semana_por_dia(date.today().day)
     for semana in semanas_disponiveis:
@@ -3494,12 +3521,7 @@ st.markdown(
 
 hoje = date.today()
 mes_corrente = mes_atual_nome()
-semana_corrente = semana_atual_rotulo()
-
-st.markdown(
-    f'<div class="small-note">Mostrando atividades de <b>{mes_corrente}</b> — <b>{semana_corrente}</b> (semana do dia {hoje.day}).</div>',
-    unsafe_allow_html=True,
-)
+data_inicio_default, data_fim_default = intervalo_semana_atual(hoje)
 
 # ---------------------------------------------------
 # FILTROS
@@ -3522,65 +3544,52 @@ with f1:
     )
 
 with f2:
-    semanas_disponiveis = [x for x in df["Semana"].dropna().astype(str).unique().tolist() if str(x).strip()]
-    semana_default = semana_atual_em_opcoes(semanas_disponiveis)
-    semana_labels = sorted(
-        set(semanas_disponiveis + [semana_default]),
-        key=lambda x: indice_semana_valor(x) if indice_semana_valor(x) is not None else 99,
-    )
-    semana_opcoes = ["Todas"] + semana_labels
-    semana = st.selectbox(
-        "Semana",
-        semana_opcoes,
-        index=semana_opcoes.index(semana_default),
+    data_inicio = st.date_input(
+        "De",
+        value=data_inicio_default,
+        format="DD/MM/YYYY",
+        key="pub_data_inicio",
     )
 
 with f3:
+    data_fim = st.date_input(
+        "Até",
+        value=data_fim_default,
+        format="DD/MM/YYYY",
+        key="pub_data_fim",
+    )
+
+with f4:
     empresas_disponiveis = [x for x in df["Empresa"].dropna().astype(str).unique().tolist() if str(x).strip()]
     empresa = st.selectbox("Empresa", ["Todas"] + sorted(empresas_disponiveis))
 
-with f4:
-    datas_disponiveis_str = [
-        x for x in df["Data Publicação Raw"].dropna().astype(str).unique().tolist()
-        if str(x).strip() and str(x).strip().lower() != "nan"
-    ]
-
-    def chave_data(txt):
-        dt = parse_data_publicacao(txt)
-        return dt if pd.notna(dt) else pd.Timestamp.max
-
-    datas_disponiveis_str = sorted(set(datas_disponiveis_str), key=chave_data)
-
-    datas_selecionadas_str = st.multiselect(
-        "Datas publicação",
-        options=datas_disponiveis_str,
-        default=[],
-        placeholder="Selecione uma ou mais datas",
-        key="filtro_datas_publicacao_midias"
-    )
-
 st.markdown('</div>', unsafe_allow_html=True)
+
+periodo_txt = f"{format_date_br(data_inicio)} até {format_date_br(data_fim)}"
+if mes != "Todos":
+    periodo_txt = f"{mes} — {periodo_txt}"
+
+st.markdown(
+    f'<div class="small-note">Mostrando atividades de <b>{periodo_txt}</b>.</div>',
+    unsafe_allow_html=True,
+)
 
 df_filtrado = df.copy()
 
 if mes != "Todos":
     df_filtrado = df_filtrado[df_filtrado["Mês"].astype(str) == mes]
 
-if semana != "Todas":
-    idx_semana = indice_semana_valor(semana)
-    if idx_semana is None:
-        df_filtrado = df_filtrado[df_filtrado["Semana"].astype(str) == semana]
-    else:
-        df_filtrado = df_filtrado[
-            df_filtrado.apply(lambda row: indice_semana_linha(row) == idx_semana, axis=1)
-        ]
-
 if empresa != "Todas":
     df_filtrado = df_filtrado[df_filtrado["Empresa"].astype(str) == empresa]
 
-if datas_selecionadas_str:
+if data_fim < data_inicio:
+    st.warning("A data final deve ser igual ou posterior à data inicial.")
+    df_filtrado = df_filtrado.iloc[0:0]
+else:
+    df_filtrado = df_filtrado[df_filtrado["Data Publicação"].notna()]
     df_filtrado = df_filtrado[
-        df_filtrado["Data Publicação Raw"].isin(datas_selecionadas_str)
+        (df_filtrado["Data Publicação"].dt.date >= data_inicio)
+        & (df_filtrado["Data Publicação"].dt.date <= data_fim)
     ]
 
 # ---------------------------------------------------
