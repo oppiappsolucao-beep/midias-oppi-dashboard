@@ -129,7 +129,7 @@ DIA_SEMANA_FORM_NOME = {
     "Sex": "sexta-feira",
 }
 STATUS_ARTE_EDIT_OPTIONS = ["Pronto", "Em andamento", "Pausado", "Pendente"]
-APP_UI_VERSION = "2026-07-08-cards-v6"
+APP_UI_VERSION = "2026-07-08-cards-v7"
 
 if "traffic_form_reset_token" not in st.session_state:
     st.session_state.traffic_form_reset_token = 0
@@ -801,6 +801,7 @@ st.markdown("""
         color: #16233b;
         margin: 0 0 4px 0;
         line-height: 1.2;
+        text-align: center;
     }
 
     .row-tema-subtitle {
@@ -809,10 +810,61 @@ st.markdown("""
         color: #64748b;
         margin: 0;
         line-height: 1.35;
+        text-align: center;
     }
 
     .pub-activity-heading {
-        margin-bottom: 8px;
+        margin-bottom: 10px;
+        padding-right: 44px;
+    }
+
+    .pub-activity-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px 14px;
+        width: 100%;
+    }
+
+    .pub-activity-cell {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        gap: 3px;
+        min-width: 0;
+    }
+
+    .pub-activity-cell .cell-label {
+        font-size: 11px;
+        font-weight: 700;
+        color: #94a3b8;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        line-height: 1.2;
+    }
+
+    .pub-activity-cell .cell-value {
+        color: #667085;
+        font-size: 13px;
+        line-height: 1.4;
+        word-break: break-word;
+    }
+
+    .pub-activity-cell.pub-activity-valor .cell-value {
+        font-size: 22px;
+        font-weight: 800;
+        color: #111827;
+        line-height: 1.1;
+    }
+
+    .pub-activity-cell.pub-activity-valor-full {
+        grid-column: 1 / -1;
+        padding-top: 2px;
+    }
+
+    .pub-activity-cell .cell-value .status-badge {
+        justify-content: center;
     }
 
     .row-meta {
@@ -831,15 +883,15 @@ st.markdown("""
         font-weight: 800;
         color: #111827;
         margin: 0;
-        text-align: right;
+        text-align: center;
         line-height: 1.1;
     }
 
     .row-valor-wrap {
         display: flex;
         flex-direction: column;
-        align-items: flex-end;
-        justify-content: flex-end;
+        align-items: center;
+        justify-content: center;
         min-height: 100%;
         padding-top: 2px;
     }
@@ -4263,37 +4315,39 @@ with st.container(border=True):
                         st.session_state[edit_key] = False
                         st.rerun()
             else:
-                info_col, valor_col = st.columns([2.4, 1], vertical_alignment="center")
-                with info_col:
-                    st.markdown(
-                        f'<div class="row-meta row-meta-line">'
-                        f'<b>Mês:</b> {html.escape(mes_txt)} &nbsp;·&nbsp; '
-                        f'<b>Data:</b> {html.escape(data_txt)}'
-                        f'</div>',
-                        unsafe_allow_html=True,
-                    )
-                    st.markdown(
-                        f'<div class="row-meta row-meta-line">'
-                        f'<b>Tipo:</b> {html.escape(tipo_txt)} &nbsp;·&nbsp; '
-                        f'<b>Serviço:</b> {html.escape(servico_txt)}'
-                        f'</div>',
-                        unsafe_allow_html=True,
-                    )
-                    st.markdown(
-                        f'<div class="row-meta">'
-                        f'<b>Status:</b> {status_arte_badge(status_arte_txt)} &nbsp;&nbsp; '
-                        f'<b>Pagamento:</b> {status_pagamento_badge(status_pagamento_txt)}'
-                        f'</div>',
-                        unsafe_allow_html=True,
-                    )
-                with valor_col:
-                    st.markdown(
-                        f'<div class="row-valor-wrap">'
-                        f'<div class="row-valor-label">Valor</div>'
-                        f'<div class="row-valor">{format_brl(valor_num)}</div>'
-                        f'</div>',
-                        unsafe_allow_html=True,
-                    )
+                st.markdown(
+                    f'<div class="pub-activity-grid">'
+                    f'<div class="pub-activity-cell">'
+                    f'<div class="cell-label">Mês</div>'
+                    f'<div class="cell-value">{html.escape(mes_txt)}</div>'
+                    f'</div>'
+                    f'<div class="pub-activity-cell">'
+                    f'<div class="cell-label">Data</div>'
+                    f'<div class="cell-value">{html.escape(data_txt)}</div>'
+                    f'</div>'
+                    f'<div class="pub-activity-cell">'
+                    f'<div class="cell-label">Tipo</div>'
+                    f'<div class="cell-value">{html.escape(tipo_txt)}</div>'
+                    f'</div>'
+                    f'<div class="pub-activity-cell">'
+                    f'<div class="cell-label">Serviço</div>'
+                    f'<div class="cell-value">{html.escape(servico_txt)}</div>'
+                    f'</div>'
+                    f'<div class="pub-activity-cell">'
+                    f'<div class="cell-label">Status</div>'
+                    f'<div class="cell-value">{status_arte_badge(status_arte_txt)}</div>'
+                    f'</div>'
+                    f'<div class="pub-activity-cell">'
+                    f'<div class="cell-label">Pagamento</div>'
+                    f'<div class="cell-value">{status_pagamento_badge(status_pagamento_txt)}</div>'
+                    f'</div>'
+                    f'<div class="pub-activity-cell pub-activity-valor pub-activity-valor-full">'
+                    f'<div class="cell-label">Valor</div>'
+                    f'<div class="cell-value">{format_brl(valor_num)}</div>'
+                    f'</div>'
+                    f'</div>',
+                    unsafe_allow_html=True,
+                )
 
     if df_status.empty:
         st.info("Nenhum registro encontrado com esse filtro.")
