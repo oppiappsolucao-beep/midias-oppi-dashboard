@@ -392,6 +392,40 @@ st.markdown("""
         font-weight: 600 !important;
     }
 
+    .stApp:has(#acessos-page) section.main label[data-testid="stWidgetLabel"] p,
+    .stApp:has(#acessos-page) section.main div[data-testid="stSelectbox"] label p,
+    .stApp:has(#acessos-page) section.main div[data-testid="stRadio"] label p {
+        color: #0f172a !important;
+        font-size: 14px !important;
+        font-weight: 700 !important;
+    }
+
+    .stApp:has(#acessos-page) section.main .stButton > button {
+        background: #ffffff !important;
+        color: #0f172a !important;
+        border: 1px solid #d9e0eb !important;
+    }
+
+    .stApp:has(#acessos-page) section.main .stButton > button:hover {
+        background: #f8fafc !important;
+        border-color: #cbd5e1 !important;
+    }
+
+    .stApp:has(#acessos-page) [data-testid="stVerticalBlockBorderWrapper"] {
+        background: #ffffff !important;
+        border: 1px solid #e7ebf3 !important;
+        border-radius: 18px !important;
+        padding: 16px !important;
+    }
+
+    .acessos-user-list {
+        background: #f8fafc;
+        border: 1px solid #e7ebf3;
+        border-radius: 14px;
+        padding: 8px 10px;
+        margin-bottom: 12px;
+    }
+
     .stApp:has(#nova-arte-page) section.main [data-testid="stFormSubmitButton"] > button,
     .stApp:has(#nova-arte-page) section.main [data-testid="stFormSubmitButton"] > button p {
         background: linear-gradient(90deg, #7C3AED 0%, #C026D3 100%) !important;
@@ -2930,16 +2964,21 @@ def render_user_access_detail(user, usuario_logado):
     status_txt = "Ativo" if user["active"] else "Bloqueado"
     status_class = "status-pronto" if user["active"] else "status-pausado"
     st.markdown(
-        f'<div class="row-main">{html.escape(user["username"])}</div>'
-        f'<div class="row-meta"><b>Perfil:</b> {html.escape(ROLE_LABELS.get(user["role"], user["role"]))} '
-        f'&nbsp;&nbsp; <b>Status:</b> <span class="status-pill {status_class}">{status_txt}</span></div>',
+        f'<div class="row-meta"><b>Usuário:</b> {html.escape(user["username"])} &nbsp;&nbsp; '
+        f'<b>Perfil:</b> {html.escape(ROLE_LABELS.get(user["role"], user["role"]))} &nbsp;&nbsp; '
+        f'<b>Status:</b> <span class="status-pill {status_class}">{status_txt}</span></div>',
         unsafe_allow_html=True,
     )
 
-    perm_cols = st.columns(len(CONTENT_AREAS))
+    st.markdown("<div style='height: 12px;'></div>", unsafe_allow_html=True)
+    st.markdown("**Permissões de acesso**")
+
     novas_permissoes = {}
-    for idx, area in enumerate(CONTENT_AREAS):
-        with perm_cols[idx]:
+    perm_row1 = st.columns(3)
+    perm_row2 = st.columns(2)
+
+    for col, area in zip(perm_row1, CONTENT_AREAS[:3]):
+        with col:
             form_field_label(area)
             valor_atual = user["permissions"].get(area, "Não")
             if valor_atual not in PERMISSION_OPTIONS:
@@ -2952,7 +2991,22 @@ def render_user_access_detail(user, usuario_logado):
                 label_visibility="collapsed",
             )
 
-    action1, action2 = st.columns([1.2, 1])
+    for col, area in zip(perm_row2, CONTENT_AREAS[3:]):
+        with col:
+            form_field_label(area)
+            valor_atual = user["permissions"].get(area, "Não")
+            if valor_atual not in PERMISSION_OPTIONS:
+                valor_atual = "Não"
+            novas_permissoes[area] = st.selectbox(
+                area,
+                PERMISSION_OPTIONS,
+                index=PERMISSION_OPTIONS.index(valor_atual),
+                key=f"perm_{user['row_number']}_{area}",
+                label_visibility="collapsed",
+            )
+
+    st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
+    action1, action2 = st.columns(2)
     with action1:
         if st.button(
             "Salvar permissões",
@@ -3030,15 +3084,17 @@ def render_acessos():
             perfil = ROLE_LABELS.get(user["role"], user["role"])
             return f"{username} — {perfil} — {status}"
 
-        usuario_selecionado = st.radio(
+        st.markdown('<div class="acessos-user-list">', unsafe_allow_html=True)
+        form_field_label("Selecione o usuário")
+        usuario_selecionado = st.selectbox(
             "Selecione o usuário",
             options=list(opcoes_usuarios.keys()),
             format_func=formatar_usuario_lista,
             key="acesso_usuario_selecionado",
             label_visibility="collapsed",
         )
+        st.markdown("</div>", unsafe_allow_html=True)
 
-        st.markdown("<br>", unsafe_allow_html=True)
         with st.container(border=True):
             st.markdown("**Acessos do usuário selecionado**")
             render_user_access_detail(opcoes_usuarios[usuario_selecionado], usuario_logado)
