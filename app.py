@@ -113,8 +113,23 @@ DIAS_SEMANA_RECORRENCIA = [
     "sábado",
     "domingo",
 ]
+DIA_SEMANA_FORM_OPTIONS = ["Seg", "Ter", "Qua", "Qui", "Sex"]
+DIA_SEMANA_FORM_WEEKDAY = {
+    "Seg": 0,
+    "Ter": 1,
+    "Qua": 2,
+    "Qui": 3,
+    "Sex": 4,
+}
+DIA_SEMANA_FORM_NOME = {
+    "Seg": "segunda-feira",
+    "Ter": "terça-feira",
+    "Qua": "quarta-feira",
+    "Qui": "quinta-feira",
+    "Sex": "sexta-feira",
+}
 STATUS_ARTE_EDIT_OPTIONS = ["Pronto", "Em andamento", "Pausado", "Pendente"]
-APP_UI_VERSION = "2026-07-08-nova-arte-v3"
+APP_UI_VERSION = "2026-07-08-nova-arte-v5"
 
 if "traffic_form_reset_token" not in st.session_state:
     st.session_state.traffic_form_reset_token = 0
@@ -520,6 +535,7 @@ st.markdown("""
     .stApp:has(#nova-arte-page) section.main .st-key-nova_arte_empresa_outra [data-baseweb="input"] > div,
     .stApp:has(#nova-arte-page) section.main .st-key-nova_arte_valor [data-baseweb="input"],
     .stApp:has(#nova-arte-page) section.main .st-key-nova_arte_valor [data-baseweb="input"] > div,
+    .stApp:has(#nova-arte-page) section.main .st-key-nova_arte_dia [data-baseweb="select"] > div,
     .stApp:has(#nova-arte-page) section.main .st-key-nova_arte_dia [data-baseweb="input"],
     .stApp:has(#nova-arte-page) section.main .st-key-nova_arte_dia [data-baseweb="input"] > div,
     .stApp:has(#nova-arte-page) section.main .st-key-nova_arte_tema [data-baseweb="input"],
@@ -2785,12 +2801,42 @@ def montar_data_publicacao(mes_nome, dia_txt):
         return dia
 
 
-def opcoes_padrao_recorrencia(mes_nome):
-    if not mes_nome:
+def opcoes_padrao_recorrencia(mes_nome=None):
+    if mes_nome:
+        return [
+            f"Toda {dia} no mês de {mes_nome}"
+            for dia in DIAS_SEMANA_RECORRENCIA
+        ]
+    return [f"Toda {dia}" for dia in DIAS_SEMANA_RECORRENCIA]
+
+
+def padrao_recorrencia_completo(padrao, mes_nome):
+    texto = str(padrao or "").strip()
+    if not texto or not mes_nome:
+        return texto
+    if "no mês de" in texto.lower():
+        return texto
+    dia_encontrado = next(
+        (dia for dia in DIAS_SEMANA_RECORRENCIA if dia in texto.lower()),
+        None,
+    )
+    if dia_encontrado:
+        return f"Toda {dia_encontrado} no mês de {mes_nome}"
+    return texto
+
+
+def datas_dia_semana_form_mes(mes_nome, dia_abrev, ano=None):
+    weekday = DIA_SEMANA_FORM_WEEKDAY.get(str(dia_abrev).strip())
+    if weekday is None or not mes_nome:
         return []
+
+    ano = ano or date.today().year
+    mes_int = MESES_ORDEM.index(mes_nome) + 1
+    ultimo_dia = calendar.monthrange(ano, mes_int)[1]
     return [
-        f"Toda {dia} no mês de {mes_nome}"
-        for dia in DIAS_SEMANA_RECORRENCIA
+        date(ano, mes_int, dia)
+        for dia in range(1, ultimo_dia + 1)
+        if date(ano, mes_int, dia).weekday() == weekday
     ]
 
 
@@ -2980,16 +3026,18 @@ def render_midias_nova_arte(df):
             )
 
         padrao_recorrencia = None
-        if recorrencia == "Sim" and mes:
+        if recorrencia == "Sim":
             form_field_label("Padrão de recorrência")
             padrao_recorrencia = st.selectbox(
                 "Padrão de recorrência",
                 options=opcoes_padrao_recorrencia(mes),
                 index=None,
-                placeholder=f"Ex.: Toda terça-feira no mês de {mes}",
+                placeholder="Selecione o dia da semana",
                 key="nova_arte_padrao_recorrencia",
                 label_visibility="collapsed",
             )
+            if not mes:
+                st.caption("Selecione também o **mês** para aplicar a recorrência.")
 
         c1, c2 = st.columns(2)
 
@@ -3010,16 +3058,15 @@ def render_midias_nova_arte(df):
                 key="nova_arte_tipo",
                 label_visibility="collapsed",
             )
-            if recorrencia != "Sim":
-                form_field_label("Dia")
-            dia_raw = st.text_input(
+            form_field_label("Dia")
+            dia = st.selectbox(
                 "Dia",
-                placeholder="Ex.: 15",
+                DIA_SEMANA_FORM_OPTIONS,
+                index=None,
+                placeholder="Selecione o dia",
                 key="nova_arte_dia",
                 label_visibility="collapsed",
-                disabled=recorrencia == "Sim",
             )
-            dia = "" if recorrencia == "Sim" else dia_raw
 
         with c2:
             form_field_label("Status")
@@ -3074,15 +3121,19 @@ def render_midias_nova_arte(df):
 
         if recorrencia == "Sim":
             if not mes:
-                st.warning("Selecione o mês antes de definir a recorrência.")
+                st.warning("Selecione o mês para aplicar a recorrência.")
                 return
             if not padrao_recorrencia:
                 st.warning("Selecione o padrão de recorrência.")
                 return
+            padrao_recorrencia = padrao_recorrencia_completo(padrao_recorrencia, mes)
         else:
-            semana, erro_dia = semana_por_dia_mes(mes, dia)
-            if erro_dia:
-                st.warning(erro_dia)
+            if not dia:
+                st.warning("Selecione o dia da semana.")
+                return
+            datas_dia = datas_dia_semana_form_mes(mes, dia)
+            if not datas_dia:
+                st.warning("Não foi possível encontrar essa data no mês selecionado.")
                 return
 
         if not servico:
@@ -3115,7 +3166,7 @@ def render_midias_nova_arte(df):
             st.warning("Informe um valor válido para a arte.")
             return
 
-        data_publicacao = montar_data_publicacao(mes, dia)
+        data_publicacao = ""
         status_arte_planilha = STATUS_ARTE_SHEET_MAP.get(status_arte, status_arte)
         status_pagamento_planilha = STATUS_PAGAMENTO_SHEET_MAP.get(
             status_pagamento,
@@ -3152,10 +3203,9 @@ def render_midias_nova_arte(df):
                     montar_linha_planilha(semana_linha, data_linha, padrao_recorrencia)
                 )
         else:
-            data_publicacao = montar_data_publicacao(mes, dia)
-            if not data_publicacao:
-                st.warning("Informe um dia válido.")
-                return
+            data_ref = datas_dia[0]
+            semana = SEMANA_OPTIONS[indice_semana_por_dia(data_ref.day)]
+            data_publicacao = data_ref.strftime("%d/%m/%Y")
             worksheet.append_row(montar_linha_planilha(semana, data_publicacao, "Não"))
 
         st.cache_data.clear()
