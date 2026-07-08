@@ -2926,6 +2926,68 @@ def render_gestao_trafego():
     st.markdown('</div>', unsafe_allow_html=True)
 
 
+def render_user_access_detail(user, usuario_logado):
+    status_txt = "Ativo" if user["active"] else "Bloqueado"
+    status_class = "status-pronto" if user["active"] else "status-pausado"
+    st.markdown(
+        f'<div class="row-main">{html.escape(user["username"])}</div>'
+        f'<div class="row-meta"><b>Perfil:</b> {html.escape(ROLE_LABELS.get(user["role"], user["role"]))} '
+        f'&nbsp;&nbsp; <b>Status:</b> <span class="status-pill {status_class}">{status_txt}</span></div>',
+        unsafe_allow_html=True,
+    )
+
+    perm_cols = st.columns(len(CONTENT_AREAS))
+    novas_permissoes = {}
+    for idx, area in enumerate(CONTENT_AREAS):
+        with perm_cols[idx]:
+            form_field_label(area)
+            valor_atual = user["permissions"].get(area, "Não")
+            if valor_atual not in PERMISSION_OPTIONS:
+                valor_atual = "Não"
+            novas_permissoes[area] = st.selectbox(
+                area,
+                PERMISSION_OPTIONS,
+                index=PERMISSION_OPTIONS.index(valor_atual),
+                key=f"perm_{user['row_number']}_{area}",
+                label_visibility="collapsed",
+            )
+
+    action1, action2 = st.columns([1.2, 1])
+    with action1:
+        if st.button(
+            "Salvar permissões",
+            key=f"salvar_perm_{user['row_number']}",
+            width="stretch",
+        ):
+            update_user_permissions(user["row_number"], novas_permissoes)
+            if user["username"] == usuario_logado:
+                st.session_state.user_permissions = permissions_to_nav_list(novas_permissoes)
+            st.success("Permissões atualizadas.")
+            st.rerun()
+
+    with action2:
+        if user["active"]:
+            if st.button(
+                "Bloquear usuário",
+                key=f"bloquear_{user['row_number']}",
+                width="stretch",
+            ):
+                if user["username"] == usuario_logado:
+                    st.warning("Você não pode bloquear seu próprio acesso.")
+                else:
+                    set_user_active(user["row_number"], False)
+                    st.success("Usuário bloqueado.")
+                    st.rerun()
+        elif st.button(
+            "Desbloquear usuário",
+            key=f"desbloquear_{user['row_number']}",
+            width="stretch",
+        ):
+            set_user_active(user["row_number"], True)
+            st.success("Usuário desbloqueado.")
+            st.rerun()
+
+
 def render_acessos():
     st.markdown(
         '<div class="section-title">🔐 Acessos do painel</div>',
@@ -2933,8 +2995,8 @@ def render_acessos():
     )
     st.markdown('<div id="acessos-page"></div>', unsafe_allow_html=True)
     st.markdown(
-        '<div class="small-note">Marque <b>Sim</b> ou <b>Não</b> para liberar cada conteúdo. '
-        "Use <b>Bloquear</b> ou <b>Desbloquear</b> para impedir ou permitir o login do usuário.</div>",
+        '<div class="small-note">Selecione um usuário na lista para ver e editar os acessos. '
+        "Marque <b>Sim</b> ou <b>Não</b> em cada conteúdo e use <b>Bloquear</b> ou <b>Desbloquear</b> quando necessário.</div>",
         unsafe_allow_html=True,
     )
 
@@ -2946,77 +3008,40 @@ def render_acessos():
         st.info("Não foi possível carregar os usuários da planilha.")
         return
 
+    usuarios_gerenciaveis = [
+        user
+        for user in usuarios
+        if user["row_number"] is not None and can_manage_user(perfil_atual, user)
+    ]
+
     st.markdown('<div class="section-card">', unsafe_allow_html=True)
-    st.markdown("**Permissões por usuário**")
+    st.markdown("**Usuários**")
 
-    for user in usuarios:
-        if not can_manage_user(perfil_atual, user):
-            continue
+    if not usuarios_gerenciaveis:
+        st.info("Nenhum usuário disponível para gerenciar.")
+    else:
+        opcoes_usuarios = {
+            user["username"]: user for user in sorted(usuarios_gerenciaveis, key=lambda item: item["username"])
+        }
 
-        if user["row_number"] is None:
-            continue
+        def formatar_usuario_lista(username):
+            user = opcoes_usuarios[username]
+            status = "Ativo" if user["active"] else "Bloqueado"
+            perfil = ROLE_LABELS.get(user["role"], user["role"])
+            return f"{username} — {perfil} — {status}"
 
-        status_txt = "Ativo" if user["active"] else "Bloqueado"
-        status_class = "status-pronto" if user["active"] else "status-pausado"
-        st.markdown(
-            f'<div class="row-main">{html.escape(user["username"])}</div>'
-            f'<div class="row-meta"><b>Perfil:</b> {html.escape(ROLE_LABELS.get(user["role"], user["role"]))} '
-            f'&nbsp;&nbsp; <b>Status:</b> <span class="status-pill {status_class}">{status_txt}</span></div>',
-            unsafe_allow_html=True,
+        usuario_selecionado = st.radio(
+            "Selecione o usuário",
+            options=list(opcoes_usuarios.keys()),
+            format_func=formatar_usuario_lista,
+            key="acesso_usuario_selecionado",
+            label_visibility="collapsed",
         )
 
-        perm_cols = st.columns(len(CONTENT_AREAS))
-        novas_permissoes = {}
-        for idx, area in enumerate(CONTENT_AREAS):
-            with perm_cols[idx]:
-                form_field_label(area)
-                valor_atual = user["permissions"].get(area, "Não")
-                if valor_atual not in PERMISSION_OPTIONS:
-                    valor_atual = "Não"
-                novas_permissoes[area] = st.selectbox(
-                    area,
-                    PERMISSION_OPTIONS,
-                    index=PERMISSION_OPTIONS.index(valor_atual),
-                    key=f"perm_{user['row_number']}_{area}",
-                    label_visibility="collapsed",
-                )
-
-        action1, action2 = st.columns([1.2, 1])
-        with action1:
-            if st.button(
-                "Salvar permissões",
-                key=f"salvar_perm_{user['row_number']}",
-                width="stretch",
-            ):
-                update_user_permissions(user["row_number"], novas_permissoes)
-                if user["username"] == usuario_logado:
-                    st.session_state.user_permissions = permissions_to_nav_list(novas_permissoes)
-                st.success("Permissões atualizadas.")
-                st.rerun()
-
-        with action2:
-            if user["active"]:
-                if st.button(
-                    "Bloquear usuário",
-                    key=f"bloquear_{user['row_number']}",
-                    width="stretch",
-                ):
-                    if user["username"] == usuario_logado:
-                        st.warning("Você não pode bloquear seu próprio acesso.")
-                    else:
-                        set_user_active(user["row_number"], False)
-                        st.success("Usuário bloqueado.")
-                        st.rerun()
-            elif st.button(
-                "Desbloquear usuário",
-                key=f"desbloquear_{user['row_number']}",
-                width="stretch",
-            ):
-                set_user_active(user["row_number"], True)
-                st.success("Usuário desbloqueado.")
-                st.rerun()
-
-        st.markdown('<div style="height: 14px;"></div>', unsafe_allow_html=True)
+        st.markdown("<br>", unsafe_allow_html=True)
+        with st.container(border=True):
+            st.markdown("**Acessos do usuário selecionado**")
+            render_user_access_detail(opcoes_usuarios[usuario_selecionado], usuario_logado)
 
     st.markdown('</div>', unsafe_allow_html=True)
 
