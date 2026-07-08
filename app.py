@@ -129,7 +129,7 @@ DIA_SEMANA_FORM_NOME = {
     "Sex": "sexta-feira",
 }
 STATUS_ARTE_EDIT_OPTIONS = ["Pronto", "Em andamento", "Pausado", "Pendente"]
-APP_UI_VERSION = "2026-07-08-nova-arte-v5"
+APP_UI_VERSION = "2026-07-08-cards-v6"
 
 if "traffic_form_reset_token" not in st.session_state:
     st.session_state.traffic_form_reset_token = 0
@@ -795,17 +795,77 @@ st.markdown("""
         margin-bottom: 6px;
     }
 
+    .row-empresa-title {
+        font-size: 18px;
+        font-weight: 800;
+        color: #16233b;
+        margin: 0 0 4px 0;
+        line-height: 1.2;
+    }
+
+    .row-tema-subtitle {
+        font-size: 14px;
+        font-weight: 600;
+        color: #64748b;
+        margin: 0;
+        line-height: 1.35;
+    }
+
+    .pub-activity-heading {
+        margin-bottom: 8px;
+    }
+
     .row-meta {
         color: #667085;
         font-size: 13px;
-        line-height: 1.5;
+        line-height: 1.55;
+        margin-bottom: 4px;
+    }
+
+    .row-meta-line {
+        margin-bottom: 6px;
     }
 
     .row-valor {
-        font-size: 24px;
+        font-size: 22px;
         font-weight: 800;
         color: #111827;
-        margin-top: 4px;
+        margin: 0;
+        text-align: right;
+        line-height: 1.1;
+    }
+
+    .row-valor-wrap {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        justify-content: flex-end;
+        min-height: 100%;
+        padding-top: 2px;
+    }
+
+    .row-valor-label {
+        font-size: 11px;
+        font-weight: 700;
+        color: #94a3b8;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        margin-bottom: 4px;
+    }
+
+    .stApp:has(#publicacoes-page) [class*="st-key-row_card_"] {
+        background: #fbfcfe !important;
+        border: 1px solid #e8edf5 !important;
+        border-radius: 18px !important;
+        padding: 12px 14px !important;
+        margin-bottom: 10px !important;
+        box-shadow: none !important;
+    }
+
+    .stApp:has(#publicacoes-page) [class*="st-key-row_card_"] [data-testid="stHorizontalBlock"] {
+        margin-top: 0 !important;
+        margin-bottom: 0 !important;
+        gap: 0.5rem !important;
     }
 
     [class*="st-key-row_card_"] [class*="st-key-edit_atividade_"] .stButton > button,
@@ -4100,7 +4160,6 @@ with st.container(border=True):
 
     for index, row in df_status.iterrows():
         empresa_txt = str(row.get("Empresa", "")).strip() or "-"
-        semana_txt = str(row.get("Semana", "")).strip() or "-"
         tema_txt = str(row.get("Tema", "")).strip() or "-"
         mes_txt = str(row.get("Mês", "")).strip() or "-"
         tipo_txt = str(row.get("Tipo de arte", "")).strip() or "-"
@@ -4118,18 +4177,26 @@ with st.container(border=True):
         edit_ativo = st.session_state.get(edit_key, False)
 
         with st.container(border=True, key=f"row_card_{index}"):
-            titulo_col, lapis_col = st.columns([11, 1], vertical_alignment="center")
+            titulo_col, lapis_col = st.columns([11, 1], vertical_alignment="top")
             with titulo_col:
                 if edit_ativo:
                     form_field_label("Nome da atividade")
                     novo_tema = st.text_input(
                         "Nome da atividade",
-                        value=tema_txt,
+                        value=tema_txt if tema_txt != "-" else "",
                         key=f"tema_input_{index}",
                         label_visibility="collapsed",
                     )
                 else:
-                    st.markdown(f'<div class="row-main">{html.escape(tema_txt)}</div>', unsafe_allow_html=True)
+                    empresa_exibicao = empresa_txt if empresa_txt != "-" else "Empresa não informada"
+                    tema_exibicao = tema_txt if tema_txt != "-" else "Sem tema definido"
+                    st.markdown(
+                        f'<div class="pub-activity-heading">'
+                        f'<div class="row-empresa-title">{html.escape(empresa_exibicao)}</div>'
+                        f'<div class="row-tema-subtitle">{html.escape(tema_exibicao)}</div>'
+                        f'</div>',
+                        unsafe_allow_html=True,
+                    )
 
             with lapis_col:
                 icone = "✕" if edit_ativo else "✏️"
@@ -4140,17 +4207,6 @@ with st.container(border=True):
                 ):
                     st.session_state[edit_key] = not edit_ativo
                     st.rerun()
-
-            st.markdown(
-                f'<div class="row-meta"><b>Empresa:</b> {html.escape(empresa_txt)} &nbsp;&nbsp; '
-                f'<b>Mês:</b> {html.escape(mes_txt)} &nbsp;&nbsp; <b>Semana:</b> {html.escape(semana_txt)}</div>',
-                unsafe_allow_html=True,
-            )
-            st.markdown(
-                f'<div class="row-meta"><b>Tipo de arte:</b> {html.escape(tipo_txt)} &nbsp;&nbsp; '
-                f'<b>Serviço:</b> {html.escape(servico_txt)} &nbsp;&nbsp; <b>Data:</b> {html.escape(data_txt)}</div>',
-                unsafe_allow_html=True,
-            )
 
             if edit_ativo:
                 pagamento_atual = status_pagamento_para_edicao(status_pagamento_txt)
@@ -4207,17 +4263,37 @@ with st.container(border=True):
                         st.session_state[edit_key] = False
                         st.rerun()
             else:
-                st.markdown(
-                    f'<div class="row-meta" style="margin-top:8px;">'
-                    f'<b>Status da arte:</b> {status_arte_badge(status_arte_txt)} &nbsp;&nbsp; '
-                    f'<b>Pagamento:</b> {status_pagamento_badge(status_pagamento_txt)}'
-                    f'</div>',
-                    unsafe_allow_html=True,
-                )
-                st.markdown(
-                    f'<div class="row-valor">{format_brl(valor_num)}</div>',
-                    unsafe_allow_html=True,
-                )
+                info_col, valor_col = st.columns([2.4, 1], vertical_alignment="center")
+                with info_col:
+                    st.markdown(
+                        f'<div class="row-meta row-meta-line">'
+                        f'<b>Mês:</b> {html.escape(mes_txt)} &nbsp;·&nbsp; '
+                        f'<b>Data:</b> {html.escape(data_txt)}'
+                        f'</div>',
+                        unsafe_allow_html=True,
+                    )
+                    st.markdown(
+                        f'<div class="row-meta row-meta-line">'
+                        f'<b>Tipo:</b> {html.escape(tipo_txt)} &nbsp;·&nbsp; '
+                        f'<b>Serviço:</b> {html.escape(servico_txt)}'
+                        f'</div>',
+                        unsafe_allow_html=True,
+                    )
+                    st.markdown(
+                        f'<div class="row-meta">'
+                        f'<b>Status:</b> {status_arte_badge(status_arte_txt)} &nbsp;&nbsp; '
+                        f'<b>Pagamento:</b> {status_pagamento_badge(status_pagamento_txt)}'
+                        f'</div>',
+                        unsafe_allow_html=True,
+                    )
+                with valor_col:
+                    st.markdown(
+                        f'<div class="row-valor-wrap">'
+                        f'<div class="row-valor-label">Valor</div>'
+                        f'<div class="row-valor">{format_brl(valor_num)}</div>'
+                        f'</div>',
+                        unsafe_allow_html=True,
+                    )
 
     if df_status.empty:
         st.info("Nenhum registro encontrado com esse filtro.")
