@@ -129,7 +129,7 @@ DIA_SEMANA_FORM_NOME = {
     "Sex": "sexta-feira",
 }
 STATUS_ARTE_EDIT_OPTIONS = ["Pronto", "Em andamento", "Pausado", "Pendente"]
-APP_UI_VERSION = "2026-07-08-cards-v7"
+APP_UI_VERSION = "2026-07-08-cards-v8"
 
 if "traffic_form_reset_token" not in st.session_state:
     st.session_state.traffic_form_reset_token = 0
@@ -777,6 +777,19 @@ st.markdown("""
         padding: 14px 16px !important;
         margin-bottom: 12px !important;
         box-shadow: none !important;
+        position: relative !important;
+    }
+
+    .stApp:has(#publicacoes-page) [class*="st-key-row_card_"] > [class*="st-key-edit_atividade_"] {
+        position: absolute !important;
+        top: 12px !important;
+        right: 12px !important;
+        width: 44px !important;
+        height: 0 !important;
+        min-height: 0 !important;
+        overflow: visible !important;
+        z-index: 5 !important;
+        margin: 0 !important;
     }
 
     .row-card div[data-testid="stSelectbox"] label p,
@@ -814,15 +827,38 @@ st.markdown("""
     }
 
     .pub-activity-heading {
-        margin-bottom: 10px;
-        padding-right: 44px;
+        margin-bottom: 12px;
+        padding: 0 52px;
     }
 
-    .pub-activity-grid {
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 12px 14px;
+    .pub-activity-card-view {
         width: 100%;
+        text-align: center;
+    }
+
+    .pub-activity-rows {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .pub-activity-row {
+        display: flex;
+        justify-content: space-evenly;
+        align-items: flex-start;
+        width: 100%;
+        gap: 8px;
+    }
+
+    .pub-activity-row .pub-activity-cell {
+        flex: 1 1 0;
+        min-width: 0;
+    }
+
+    .pub-activity-row-valor {
+        justify-content: center;
+        padding-top: 2px;
     }
 
     .pub-activity-cell {
@@ -905,13 +941,12 @@ st.markdown("""
         margin-bottom: 4px;
     }
 
-    .stApp:has(#publicacoes-page) [class*="st-key-row_card_"] {
-        background: #fbfcfe !important;
-        border: 1px solid #e8edf5 !important;
-        border-radius: 18px !important;
-        padding: 12px 14px !important;
-        margin-bottom: 10px !important;
-        box-shadow: none !important;
+    .stApp:has(#publicacoes-page) [class*="st-key-row_card_"] > [class*="st-key-edit_atividade_"] [data-testid="stVerticalBlock"] {
+        gap: 0 !important;
+    }
+
+    .stApp:has(#publicacoes-page) [class*="st-key-row_card_"] div[data-testid="stMarkdownContainer"] {
+        width: 100% !important;
     }
 
     .stApp:has(#publicacoes-page) [class*="st-key-row_card_"] [data-testid="stHorizontalBlock"] {
@@ -4229,9 +4264,9 @@ with st.container(border=True):
         edit_ativo = st.session_state.get(edit_key, False)
 
         with st.container(border=True, key=f"row_card_{index}"):
-            titulo_col, lapis_col = st.columns([11, 1], vertical_alignment="top")
-            with titulo_col:
-                if edit_ativo:
+            if edit_ativo:
+                titulo_col, lapis_col = st.columns([11, 1], vertical_alignment="top")
+                with titulo_col:
                     form_field_label("Nome da atividade")
                     novo_tema = st.text_input(
                         "Nome da atividade",
@@ -4239,28 +4274,16 @@ with st.container(border=True):
                         key=f"tema_input_{index}",
                         label_visibility="collapsed",
                     )
-                else:
-                    empresa_exibicao = empresa_txt if empresa_txt != "-" else "Empresa não informada"
-                    tema_exibicao = tema_txt if tema_txt != "-" else "Sem tema definido"
-                    st.markdown(
-                        f'<div class="pub-activity-heading">'
-                        f'<div class="row-empresa-title">{html.escape(empresa_exibicao)}</div>'
-                        f'<div class="row-tema-subtitle">{html.escape(tema_exibicao)}</div>'
-                        f'</div>',
-                        unsafe_allow_html=True,
-                    )
 
-            with lapis_col:
-                icone = "✕" if edit_ativo else "✏️"
-                if st.button(
-                    icone,
-                    key=f"edit_atividade_{index}",
-                    help="Fechar edição" if edit_ativo else "Editar atividade",
-                ):
-                    st.session_state[edit_key] = not edit_ativo
-                    st.rerun()
+                with lapis_col:
+                    if st.button(
+                        "✕",
+                        key=f"edit_atividade_{index}",
+                        help="Fechar edição",
+                    ):
+                        st.session_state[edit_key] = False
+                        st.rerun()
 
-            if edit_ativo:
                 pagamento_atual = status_pagamento_para_edicao(status_pagamento_txt)
                 status_atual = status_arte_para_edicao(status_arte_txt)
 
@@ -4315,8 +4338,24 @@ with st.container(border=True):
                         st.session_state[edit_key] = False
                         st.rerun()
             else:
+                if st.button(
+                    "✏️",
+                    key=f"edit_atividade_{index}",
+                    help="Editar atividade",
+                ):
+                    st.session_state[edit_key] = True
+                    st.rerun()
+
+                empresa_exibicao = empresa_txt if empresa_txt != "-" else "Empresa não informada"
+                tema_exibicao = tema_txt if tema_txt != "-" else "Sem tema definido"
                 st.markdown(
-                    f'<div class="pub-activity-grid">'
+                    f'<div class="pub-activity-card-view">'
+                    f'<div class="pub-activity-heading">'
+                    f'<div class="row-empresa-title">{html.escape(empresa_exibicao)}</div>'
+                    f'<div class="row-tema-subtitle">{html.escape(tema_exibicao)}</div>'
+                    f'</div>'
+                    f'<div class="pub-activity-rows">'
+                    f'<div class="pub-activity-row">'
                     f'<div class="pub-activity-cell">'
                     f'<div class="cell-label">Mês</div>'
                     f'<div class="cell-value">{html.escape(mes_txt)}</div>'
@@ -4329,6 +4368,8 @@ with st.container(border=True):
                     f'<div class="cell-label">Tipo</div>'
                     f'<div class="cell-value">{html.escape(tipo_txt)}</div>'
                     f'</div>'
+                    f'</div>'
+                    f'<div class="pub-activity-row">'
                     f'<div class="pub-activity-cell">'
                     f'<div class="cell-label">Serviço</div>'
                     f'<div class="cell-value">{html.escape(servico_txt)}</div>'
@@ -4341,9 +4382,13 @@ with st.container(border=True):
                     f'<div class="cell-label">Pagamento</div>'
                     f'<div class="cell-value">{status_pagamento_badge(status_pagamento_txt)}</div>'
                     f'</div>'
-                    f'<div class="pub-activity-cell pub-activity-valor pub-activity-valor-full">'
+                    f'</div>'
+                    f'<div class="pub-activity-row pub-activity-row-valor">'
+                    f'<div class="pub-activity-cell pub-activity-valor">'
                     f'<div class="cell-label">Valor</div>'
                     f'<div class="cell-value">{format_brl(valor_num)}</div>'
+                    f'</div>'
+                    f'</div>'
                     f'</div>'
                     f'</div>',
                     unsafe_allow_html=True,
