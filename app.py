@@ -129,7 +129,7 @@ DIA_SEMANA_FORM_NOME = {
     "Sex": "sexta-feira",
 }
 STATUS_ARTE_EDIT_OPTIONS = ["Pronto", "Em andamento", "Pausado", "Pendente"]
-APP_UI_VERSION = "2026-07-08-cards-v10"
+APP_UI_VERSION = "2026-07-08-lista-v11"
 
 if "traffic_form_reset_token" not in st.session_state:
     st.session_state.traffic_form_reset_token = 0
@@ -771,12 +771,12 @@ st.markdown("""
     }
 
     .stApp:has(#publicacoes-page) [class*="st-key-row_card_"] {
-        background: #fbfcfe !important;
+        background: #ffffff !important;
         border: 1px solid #e8edf5 !important;
-        border-radius: 18px !important;
-        padding: 18px 16px !important;
-        margin-bottom: 12px !important;
-        box-shadow: none !important;
+        border-radius: 16px !important;
+        padding: 16px 18px !important;
+        margin-bottom: 10px !important;
+        box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04) !important;
         position: relative !important;
     }
 
@@ -784,17 +784,11 @@ st.markdown("""
         gap: 0 !important;
     }
 
-    .stApp:has(#publicacoes-page) [class*="st-key-row_card_"] > [class*="st-key-edit_atividade_"] {
-        position: absolute !important;
-        top: 14px !important;
-        right: 14px !important;
-        width: 44px !important;
-        height: 0 !important;
-        min-height: 0 !important;
-        overflow: visible !important;
-        z-index: 5 !important;
-        margin: 0 0 -44px 0 !important;
-        padding: 0 !important;
+    .stApp:has(#publicacoes-page) [class*="st-key-row_card_"] [data-testid="stHorizontalBlock"] {
+        margin-top: 0 !important;
+        margin-bottom: 0 !important;
+        gap: 0.75rem !important;
+        align-items: center !important;
     }
 
     .row-card div[data-testid="stSelectbox"] label p,
@@ -814,100 +808,112 @@ st.markdown("""
     }
 
     .row-empresa-title {
-        font-size: 18px;
+        font-size: 17px;
         font-weight: 800;
         color: #16233b;
-        margin: 0 0 4px 0;
+        margin: 0 0 2px 0;
         line-height: 1.2;
-        text-align: center;
+        text-align: left;
     }
 
     .row-tema-subtitle {
-        font-size: 14px;
+        font-size: 13px;
         font-weight: 600;
         color: #64748b;
-        margin: 0;
+        margin: 0 0 8px 0;
         line-height: 1.35;
-        text-align: center;
+        text-align: left;
+    }
+
+    .pub-card-avatar {
+        width: 52px;
+        height: 52px;
+        border-radius: 50%;
+        background: #f3e8ff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        margin: 0 auto;
+    }
+
+    .pub-card-avatar img {
+        width: 38px;
+        height: 38px;
+        border-radius: 50%;
+        object-fit: cover;
+    }
+
+    .pub-card-avatar-fallback {
+        font-size: 18px;
+        font-weight: 800;
+        color: #7c3aed;
+    }
+
+    .pub-card-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        font-size: 12px;
+        color: #94a3b8;
+        line-height: 1.4;
+    }
+
+    .pub-card-meta-item {
+        white-space: nowrap;
+    }
+
+    .pub-card-valor {
+        font-size: 20px;
+        font-weight: 800;
+        color: #111827;
+        text-align: right;
+        white-space: nowrap;
+        line-height: 1.1;
+        padding-top: 4px;
+    }
+
+    [class*="st-key-row_card_"] [class*="st-key-status_inline_"] div[data-testid="stSelectbox"],
+    [class*="st-key-row_card_"] [class*="st-key-pagamento_inline_"] div[data-testid="stSelectbox"] {
+        margin: 0 !important;
+    }
+
+    [class*="st-key-row_card_"] [class*="st-key-status_inline_"] div[data-baseweb="select"] > div,
+    [class*="st-key-row_card_"] [class*="st-key-pagamento_inline_"] div[data-baseweb="select"] > div {
+        min-height: 34px !important;
+        height: 34px !important;
+        border-radius: 999px !important;
+        font-size: 12px !important;
+        font-weight: 700 !important;
+        border-width: 1px !important;
+        box-shadow: none !important;
+    }
+
+    [class*="st-key-row_card_"] [class*="st-key-status_inline_"] div[data-baseweb="select"] > div {
+        background: #eff6ff !important;
+        border-color: #bfdbfe !important;
+        color: #1d4ed8 !important;
+    }
+
+    [class*="st-key-row_card_"] [class*="st-key-pagamento_inline_"] div[data-baseweb="select"] > div {
+        background: #eff6ff !important;
+        border-color: #bfdbfe !important;
+        color: #1d4ed8 !important;
+    }
+
+    [class*="st-key-row_card_"] [class*="st-key-status_inline_"] div[data-baseweb="select"] svg,
+    [class*="st-key-row_card_"] [class*="st-key-pagamento_inline_"] div[data-baseweb="select"] svg {
+        width: 14px !important;
+        height: 14px !important;
     }
 
     .pub-activity-heading {
-        margin: 0 0 12px 0;
-        padding: 0 52px;
+        margin: 0;
+        padding: 0;
     }
 
     .pub-activity-card-view {
         width: 100%;
-        text-align: center;
-        padding: 0 0 4px 0;
-    }
-
-    .pub-activity-rows {
-        width: 100%;
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-    }
-
-    .pub-activity-row {
-        display: flex;
-        justify-content: space-evenly;
-        align-items: flex-start;
-        width: 100%;
-        gap: 8px;
-    }
-
-    .pub-activity-row .pub-activity-cell {
-        flex: 1 1 0;
-        min-width: 0;
-    }
-
-    .pub-activity-row-valor {
-        justify-content: center;
-        padding-top: 2px;
-        padding-bottom: 2px;
-    }
-
-    .pub-activity-cell {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        text-align: center;
-        gap: 3px;
-        min-width: 0;
-    }
-
-    .pub-activity-cell .cell-label {
-        font-size: 11px;
-        font-weight: 700;
-        color: #94a3b8;
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
-        line-height: 1.2;
-    }
-
-    .pub-activity-cell .cell-value {
-        color: #667085;
-        font-size: 13px;
-        line-height: 1.4;
-        word-break: break-word;
-    }
-
-    .pub-activity-cell.pub-activity-valor .cell-value {
-        font-size: 22px;
-        font-weight: 800;
-        color: #111827;
-        line-height: 1.1;
-    }
-
-    .pub-activity-cell.pub-activity-valor-full {
-        grid-column: 1 / -1;
-        padding-top: 2px;
-    }
-
-    .pub-activity-cell .cell-value .status-badge {
-        justify-content: center;
     }
 
     .row-meta {
@@ -946,10 +952,6 @@ st.markdown("""
         text-transform: uppercase;
         letter-spacing: 0.04em;
         margin-bottom: 4px;
-    }
-
-    .stApp:has(#publicacoes-page) [class*="st-key-row_card_"] > [class*="st-key-edit_atividade_"] [data-testid="stVerticalBlock"] {
-        gap: 0 !important;
     }
 
     .stApp:has(#publicacoes-page) [class*="st-key-row_card_"] div[data-testid="stMarkdownContainer"] {
@@ -1008,6 +1010,28 @@ st.markdown("""
         min-height: 40px !important;
         max-height: 40px !important;
         font-size: 14px !important;
+    }
+
+    [class*="st-key-row_card_"] [class*="st-key-excluir_atividade_"] .stButton > button,
+    .row-card [class*="st-key-excluir_atividade_"] .stButton > button {
+        height: 40px !important;
+        min-height: 40px !important;
+        max-height: 40px !important;
+        font-size: 14px !important;
+        background: #fef2f2 !important;
+        color: #dc2626 !important;
+        border: 1px solid #fecaca !important;
+    }
+
+    [class*="st-key-row_card_"] [class*="st-key-confirmar_exclusao_"] .stButton > button,
+    .row-card [class*="st-key-confirmar_exclusao_"] .stButton > button {
+        height: 40px !important;
+        min-height: 40px !important;
+        max-height: 40px !important;
+        font-size: 14px !important;
+        background: #dc2626 !important;
+        color: #ffffff !important;
+        border: none !important;
     }
 
     div[data-testid="stSelectbox"] > div,
@@ -1903,6 +1927,60 @@ def salvar_atividade_planilha(worksheet, row_index, tema, valor_txt, pagamento, 
     )
     worksheet.update_cell(linha_planilha, 8, status_arte)
     return True, ""
+
+
+def salvar_status_arte_inline(row_index):
+    worksheet = connect_sheet()
+    novo_status = st.session_state.get(f"status_inline_{row_index}")
+    if novo_status:
+        worksheet.update_cell(row_index + 2, 8, novo_status)
+        st.cache_data.clear()
+
+
+def salvar_pagamento_inline(row_index):
+    worksheet = connect_sheet()
+    novo_pagamento = st.session_state.get(f"pagamento_inline_{row_index}")
+    if novo_pagamento:
+        worksheet.update_cell(
+            row_index + 2,
+            6,
+            STATUS_PAGAMENTO_SHEET_MAP.get(novo_pagamento, novo_pagamento),
+        )
+        st.cache_data.clear()
+
+
+def excluir_atividade_planilha(worksheet, row_index):
+    worksheet.delete_rows(row_index + 2)
+    return True, ""
+
+
+def format_status_pill_option(opcao):
+    icones = {
+        "Pronto": "🟢",
+        "Pendente": "🔵",
+        "Em andamento": "🟡",
+        "Pausado": "⏸️",
+    }
+    return f"{icones.get(opcao, '●')} {opcao}"
+
+
+def format_pagamento_pill_option(opcao):
+    return f"💳 {opcao}"
+
+
+def card_logo_html(path: Path):
+    if not path.exists():
+        return '<div class="pub-card-avatar pub-card-avatar-fallback">O</div>'
+
+    mime = "image/png"
+    if path.suffix.lower() in [".jpg", ".jpeg"]:
+        mime = "image/jpeg"
+    img_base64 = base64.b64encode(path.read_bytes()).decode()
+    return (
+        f'<div class="pub-card-avatar">'
+        f'<img src="data:{mime};base64,{img_base64}" alt="Logo">'
+        f'</div>'
+    )
 
 
 def metric_card(title, value, subtitle="", extra_class=""):
@@ -4331,7 +4409,7 @@ with st.container(border=True):
         unsafe_allow_html=True,
     )
     st.markdown(
-        '<div class="small-note">Clique no <b>✏️</b> para editar nome, valor, pagamento e status da atividade.</div>',
+        '<div class="small-note">Clique nos badges de <b>status</b> e <b>pagamento</b> para alterar. Use o <b>✏️</b> para editar nome, valor ou excluir.</div>',
         unsafe_allow_html=True,
     )
 
@@ -4364,138 +4442,145 @@ with st.container(border=True):
             data_txt = str(row.get("Data Publicação Raw", "")).strip() or "-"
 
         edit_key = f"pub_edit_{index}"
+        delete_confirm_key = f"pub_delete_confirm_{index}"
         edit_ativo = st.session_state.get(edit_key, False)
+        pagamento_atual = status_pagamento_para_edicao(status_pagamento_txt)
+        status_atual = status_arte_para_edicao(status_arte_txt)
+        empresa_exibicao = empresa_txt if empresa_txt != "-" else "Empresa não informada"
+        tema_exibicao = tema_txt if tema_txt != "-" else "Sem tema definido"
+        tipo_exibicao = tipo_txt if tipo_txt != "-" else "-"
 
         with st.container(border=True, key=f"row_card_{index}"):
             if edit_ativo:
-                titulo_col, lapis_col = st.columns([11, 1], vertical_alignment="top")
-                with titulo_col:
-                    form_field_label("Nome da atividade")
-                    novo_tema = st.text_input(
-                        "Nome da atividade",
-                        value=tema_txt if tema_txt != "-" else "",
-                        key=f"tema_input_{index}",
-                        label_visibility="collapsed",
+                st.markdown(
+                    f'<div class="row-empresa-title">Editando: {html.escape(empresa_exibicao)}</div>',
+                    unsafe_allow_html=True,
+                )
+                form_field_label("Nome da atividade")
+                novo_tema = st.text_input(
+                    "Nome da atividade",
+                    value=tema_txt if tema_txt != "-" else "",
+                    key=f"tema_input_{index}",
+                    label_visibility="collapsed",
+                )
+                form_field_label("Valor")
+                novo_valor = st.text_input(
+                    "Valor",
+                    value=format_valor_input(valor_num),
+                    placeholder="Ex.: 38,00",
+                    key=f"valor_input_{index}",
+                    label_visibility="collapsed",
+                )
+
+                if st.session_state.get(delete_confirm_key):
+                    st.warning("Tem certeza que deseja excluir esta atividade? Essa ação não pode ser desfeita.")
+                    conf1, conf2 = st.columns(2)
+                    with conf1:
+                        if st.button("Sim, excluir", key=f"confirmar_exclusao_{index}"):
+                            excluir_atividade_planilha(worksheet, index)
+                            st.session_state.pop(edit_key, None)
+                            st.session_state.pop(delete_confirm_key, None)
+                            st.cache_data.clear()
+                            st.rerun()
+                    with conf2:
+                        if st.button("Não excluir", key=f"cancelar_exclusao_{index}"):
+                            st.session_state.pop(delete_confirm_key, None)
+                            st.rerun()
+                else:
+                    ac1, ac2, ac3 = st.columns(3)
+                    with ac1:
+                        if st.button("Salvar alterações", key=f"salvar_alteracoes_{index}"):
+                            pagamento_salvar = st.session_state.get(
+                                f"pagamento_inline_{index}",
+                                pagamento_atual,
+                            )
+                            status_salvar = st.session_state.get(
+                                f"status_inline_{index}",
+                                status_atual,
+                            )
+                            ok, msg = salvar_atividade_planilha(
+                                worksheet,
+                                index,
+                                novo_tema,
+                                novo_valor,
+                                pagamento_salvar,
+                                status_salvar,
+                            )
+                            if ok:
+                                st.session_state[edit_key] = False
+                                st.cache_data.clear()
+                                st.rerun()
+                            else:
+                                st.warning(msg)
+                    with ac2:
+                        if st.button("Cancelar", key=f"cancelar_edicao_{index}"):
+                            st.session_state[edit_key] = False
+                            st.rerun()
+                    with ac3:
+                        if st.button("🗑️ Excluir", key=f"excluir_atividade_{index}"):
+                            st.session_state[delete_confirm_key] = True
+                            st.rerun()
+            else:
+                c_logo, c_info, c_status, c_pag, c_valor, c_edit = st.columns(
+                    [0.7, 3.6, 1.3, 1.3, 1.1, 0.5],
+                    vertical_alignment="center",
+                )
+
+                with c_logo:
+                    st.markdown(card_logo_html(LOGO_PATH), unsafe_allow_html=True)
+
+                with c_info:
+                    st.markdown(
+                        f'<div class="pub-activity-heading">'
+                        f'<div class="row-empresa-title">{html.escape(empresa_exibicao)}</div>'
+                        f'<div class="row-tema-subtitle">{html.escape(tema_exibicao)}</div>'
+                        f'<div class="pub-card-meta">'
+                        f'<span class="pub-card-meta-item">📅 {html.escape(mes_txt)}</span>'
+                        f'<span class="pub-card-meta-item">📅 {html.escape(data_txt)}</span>'
+                        f'<span class="pub-card-meta-item">🎬 {html.escape(tipo_exibicao)}</span>'
+                        f'</div>'
+                        f'</div>',
+                        unsafe_allow_html=True,
                     )
 
-                with lapis_col:
-                    if st.button(
-                        "✕",
-                        key=f"edit_atividade_{index}",
-                        help="Fechar edição",
-                    ):
-                        st.session_state[edit_key] = False
-                        st.rerun()
-
-                pagamento_atual = status_pagamento_para_edicao(status_pagamento_txt)
-                status_atual = status_arte_para_edicao(status_arte_txt)
-
-                c_valor, c_pagamento, c_status = st.columns(3)
-                with c_valor:
-                    form_field_label("Valor")
-                    novo_valor = st.text_input(
-                        "Valor",
-                        value=format_valor_input(valor_num),
-                        placeholder="Ex.: 38,00",
-                        key=f"valor_input_{index}",
-                        label_visibility="collapsed",
-                    )
-                with c_pagamento:
-                    form_field_label("Pagamento")
-                    novo_pagamento = st.selectbox(
-                        "Pagamento",
-                        STATUS_PAGAMENTO_FORM_OPTIONS,
-                        index=indice_select(STATUS_PAGAMENTO_FORM_OPTIONS, pagamento_atual),
-                        key=f"pagamento_select_{index}",
-                        label_visibility="collapsed",
-                    )
                 with c_status:
-                    form_field_label("Status da arte")
-                    novo_status = st.selectbox(
+                    st.selectbox(
                         "Status da arte",
                         STATUS_ARTE_EDIT_OPTIONS,
                         index=indice_select(STATUS_ARTE_EDIT_OPTIONS, status_atual),
-                        key=f"status_select_{index}",
+                        format_func=format_status_pill_option,
+                        key=f"status_inline_{index}",
                         label_visibility="collapsed",
+                        on_change=salvar_status_arte_inline,
+                        args=(index,),
                     )
 
-                ac1, ac2 = st.columns(2)
-                with ac1:
-                    if st.button("Salvar alterações", key=f"salvar_alteracoes_{index}"):
-                        ok, msg = salvar_atividade_planilha(
-                            worksheet,
-                            index,
-                            novo_tema,
-                            novo_valor,
-                            novo_pagamento,
-                            novo_status,
-                        )
-                        if ok:
-                            st.session_state[edit_key] = False
-                            st.cache_data.clear()
-                            st.rerun()
-                        else:
-                            st.warning(msg)
-                with ac2:
-                    if st.button("Cancelar", key=f"cancelar_edicao_{index}"):
-                        st.session_state[edit_key] = False
-                        st.rerun()
-            else:
-                if st.button(
-                    "✏️",
-                    key=f"edit_atividade_{index}",
-                    help="Editar atividade",
-                ):
-                    st.session_state[edit_key] = True
-                    st.rerun()
+                with c_pag:
+                    st.selectbox(
+                        "Pagamento",
+                        STATUS_PAGAMENTO_FORM_OPTIONS,
+                        index=indice_select(STATUS_PAGAMENTO_FORM_OPTIONS, pagamento_atual),
+                        format_func=format_pagamento_pill_option,
+                        key=f"pagamento_inline_{index}",
+                        label_visibility="collapsed",
+                        on_change=salvar_pagamento_inline,
+                        args=(index,),
+                    )
 
-                empresa_exibicao = empresa_txt if empresa_txt != "-" else "Empresa não informada"
-                tema_exibicao = tema_txt if tema_txt != "-" else "Sem tema definido"
-                st.markdown(
-                    f'<div class="pub-activity-card-view">'
-                    f'<div class="pub-activity-heading">'
-                    f'<div class="row-empresa-title">{html.escape(empresa_exibicao)}</div>'
-                    f'<div class="row-tema-subtitle">{html.escape(tema_exibicao)}</div>'
-                    f'</div>'
-                    f'<div class="pub-activity-rows">'
-                    f'<div class="pub-activity-row">'
-                    f'<div class="pub-activity-cell">'
-                    f'<div class="cell-label">Mês</div>'
-                    f'<div class="cell-value">{html.escape(mes_txt)}</div>'
-                    f'</div>'
-                    f'<div class="pub-activity-cell">'
-                    f'<div class="cell-label">Data</div>'
-                    f'<div class="cell-value">{html.escape(data_txt)}</div>'
-                    f'</div>'
-                    f'<div class="pub-activity-cell">'
-                    f'<div class="cell-label">Tipo</div>'
-                    f'<div class="cell-value">{html.escape(tipo_txt)}</div>'
-                    f'</div>'
-                    f'</div>'
-                    f'<div class="pub-activity-row">'
-                    f'<div class="pub-activity-cell">'
-                    f'<div class="cell-label">Serviço</div>'
-                    f'<div class="cell-value">{html.escape(servico_txt)}</div>'
-                    f'</div>'
-                    f'<div class="pub-activity-cell">'
-                    f'<div class="cell-label">Status</div>'
-                    f'<div class="cell-value">{status_arte_badge(status_arte_txt)}</div>'
-                    f'</div>'
-                    f'<div class="pub-activity-cell">'
-                    f'<div class="cell-label">Pagamento</div>'
-                    f'<div class="cell-value">{status_pagamento_badge(status_pagamento_txt)}</div>'
-                    f'</div>'
-                    f'</div>'
-                    f'<div class="pub-activity-row pub-activity-row-valor">'
-                    f'<div class="pub-activity-cell pub-activity-valor">'
-                    f'<div class="cell-label">Valor</div>'
-                    f'<div class="cell-value">{format_brl(valor_num)}</div>'
-                    f'</div>'
-                    f'</div>'
-                    f'</div>'
-                    f'</div>',
-                    unsafe_allow_html=True,
-                )
+                with c_valor:
+                    st.markdown(
+                        f'<div class="pub-card-valor">{format_brl(valor_num)}</div>',
+                        unsafe_allow_html=True,
+                    )
+
+                with c_edit:
+                    if st.button(
+                        "✏️",
+                        key=f"edit_atividade_{index}",
+                        help="Editar atividade",
+                    ):
+                        st.session_state[edit_key] = True
+                        st.rerun()
 
     if df_status.empty:
         st.info("Nenhum registro encontrado com esse filtro.")
