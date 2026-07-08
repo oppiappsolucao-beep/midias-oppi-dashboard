@@ -104,7 +104,7 @@ STATUS_PAGAMENTO_SHEET_MAP = {
     "A Pagar": "A pagar",
 }
 STATUS_ARTE_EDIT_OPTIONS = ["Pronto", "Em andamento", "Pausado", "Pendente"]
-APP_UI_VERSION = "2026-07-08-date-range"
+APP_UI_VERSION = "2026-07-08-inline-edit"
 
 if "traffic_form_reset_token" not in st.session_state:
     st.session_state.traffic_form_reset_token = 0
@@ -653,6 +653,46 @@ st.markdown("""
         font-weight: 800;
         color: #111827;
         margin-top: 4px;
+    }
+
+    .row-card [class*="st-key-edit_atividade_"] .stButton > button {
+        width: 44px !important;
+        min-width: 44px !important;
+        max-width: 44px !important;
+        height: 44px !important;
+        min-height: 44px !important;
+        max-height: 44px !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        font-size: 18px !important;
+        line-height: 1 !important;
+        background: #f5f3ff !important;
+        border: 1px solid #ddd6fe !important;
+        color: #7C3AED !important;
+        box-shadow: none !important;
+    }
+
+    .row-card [class*="st-key-edit_atividade_"] .stButton > button:hover {
+        background: #ede9fe !important;
+        border-color: #c4b5fd !important;
+        color: #6d28d9 !important;
+    }
+
+    .row-card [class*="st-key-salvar_alteracoes_"] .stButton > button {
+        height: 40px !important;
+        min-height: 40px !important;
+        max-height: 40px !important;
+        font-size: 14px !important;
+        background: linear-gradient(90deg, #7C3AED 0%, #C026D3 100%) !important;
+        color: #ffffff !important;
+        border: none !important;
+    }
+
+    .row-card [class*="st-key-cancelar_edicao_"] .stButton > button {
+        height: 40px !important;
+        min-height: 40px !important;
+        max-height: 40px !important;
+        font-size: 14px !important;
     }
 
     div[data-testid="stSelectbox"] > div,
@@ -1511,6 +1551,31 @@ def indice_select(opcoes, valor):
         return opcoes.index(valor)
     except ValueError:
         return 0
+
+
+def salvar_atividade_planilha(worksheet, row_index, tema, valor_txt, pagamento, status_arte):
+    valor_txt = str(valor_txt).strip()
+    if not valor_txt:
+        return False, "Informe um valor."
+
+    valor_parsed = pd.to_numeric(
+        normalizar_valor(pd.Series([valor_txt])),
+        errors="coerce",
+    )
+    if pd.isna(valor_parsed.iloc[0]) or float(valor_parsed.iloc[0]) < 0:
+        return False, "Informe um valor válido."
+
+    linha_planilha = row_index + 2
+    worksheet.update_cell(linha_planilha, 4, str(tema).strip())
+    worksheet.update_cell(linha_planilha, 5, float(valor_parsed.iloc[0]))
+    worksheet.update_cell(
+        linha_planilha,
+        6,
+        STATUS_PAGAMENTO_SHEET_MAP.get(pagamento, pagamento),
+    )
+    worksheet.update_cell(linha_planilha, 8, status_arte)
+    return True, ""
+
 
 def metric_card(title, value, subtitle="", extra_class=""):
     st.markdown(
@@ -3740,7 +3805,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 st.markdown(
-    '<div class="small-note">Selecione pagamento e status nos menus. Use <b>Salvar alterações</b> para gravar valor, pagamento e status da arte.</div>',
+    '<div class="small-note">Clique no <b>✏️</b> para editar nome, valor, pagamento e status da atividade.</div>',
     unsafe_allow_html=True,
 )
 
@@ -3773,20 +3838,100 @@ for index, row in df_status.iterrows():
     else:
         data_txt = str(row.get("Data Publicação Raw", "")).strip() or "-"
 
+    edit_key = f"pub_edit_{index}"
+    edit_ativo = st.session_state.get(edit_key, False)
+
     st.markdown('<div class="row-card">', unsafe_allow_html=True)
 
-    info_col, edit_col = st.columns([4.3, 5.7], gap="large")
+    titulo_col, lapis_col = st.columns([11, 1], vertical_alignment="center")
+    with titulo_col:
+        if edit_ativo:
+            form_field_label("Nome da atividade")
+            novo_tema = st.text_input(
+                "Nome da atividade",
+                value=tema_txt,
+                key=f"tema_input_{index}",
+                label_visibility="collapsed",
+            )
+        else:
+            st.markdown(f'<div class="row-main">{html.escape(tema_txt)}</div>', unsafe_allow_html=True)
 
-    with info_col:
-        st.markdown(f'<div class="row-main">{tema_txt}</div>', unsafe_allow_html=True)
-        st.markdown(
-            f'<div class="row-meta"><b>Empresa:</b> {empresa_txt} &nbsp;&nbsp; <b>Mês:</b> {mes_txt} &nbsp;&nbsp; <b>Semana:</b> {semana_txt}</div>',
-            unsafe_allow_html=True
-        )
-        st.markdown(
-            f'<div class="row-meta"><b>Tipo de arte:</b> {tipo_txt} &nbsp;&nbsp; <b>Serviço:</b> {servico_txt} &nbsp;&nbsp; <b>Data:</b> {data_txt}</div>',
-            unsafe_allow_html=True
-        )
+    with lapis_col:
+        icone = "✕" if edit_ativo else "✏️"
+        if st.button(
+            icone,
+            key=f"edit_atividade_{index}",
+            help="Fechar edição" if edit_ativo else "Editar atividade",
+        ):
+            st.session_state[edit_key] = not edit_ativo
+            st.rerun()
+
+    st.markdown(
+        f'<div class="row-meta"><b>Empresa:</b> {html.escape(empresa_txt)} &nbsp;&nbsp; '
+        f'<b>Mês:</b> {html.escape(mes_txt)} &nbsp;&nbsp; <b>Semana:</b> {html.escape(semana_txt)}</div>',
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        f'<div class="row-meta"><b>Tipo de arte:</b> {html.escape(tipo_txt)} &nbsp;&nbsp; '
+        f'<b>Serviço:</b> {html.escape(servico_txt)} &nbsp;&nbsp; <b>Data:</b> {html.escape(data_txt)}</div>',
+        unsafe_allow_html=True,
+    )
+
+    if edit_ativo:
+        pagamento_atual = status_pagamento_para_edicao(status_pagamento_txt)
+        status_atual = status_arte_para_edicao(status_arte_txt)
+
+        c_valor, c_pagamento, c_status = st.columns(3)
+        with c_valor:
+            form_field_label("Valor")
+            novo_valor = st.text_input(
+                "Valor",
+                value=format_valor_input(valor_num),
+                placeholder="Ex.: 38,00",
+                key=f"valor_input_{index}",
+                label_visibility="collapsed",
+            )
+        with c_pagamento:
+            form_field_label("Pagamento")
+            novo_pagamento = st.selectbox(
+                "Pagamento",
+                STATUS_PAGAMENTO_FORM_OPTIONS,
+                index=indice_select(STATUS_PAGAMENTO_FORM_OPTIONS, pagamento_atual),
+                key=f"pagamento_select_{index}",
+                label_visibility="collapsed",
+            )
+        with c_status:
+            form_field_label("Status da arte")
+            novo_status = st.selectbox(
+                "Status da arte",
+                STATUS_ARTE_EDIT_OPTIONS,
+                index=indice_select(STATUS_ARTE_EDIT_OPTIONS, status_atual),
+                key=f"status_select_{index}",
+                label_visibility="collapsed",
+            )
+
+        ac1, ac2 = st.columns(2)
+        with ac1:
+            if st.button("Salvar alterações", key=f"salvar_alteracoes_{index}"):
+                ok, msg = salvar_atividade_planilha(
+                    worksheet,
+                    index,
+                    novo_tema,
+                    novo_valor,
+                    novo_pagamento,
+                    novo_status,
+                )
+                if ok:
+                    st.session_state[edit_key] = False
+                    st.cache_data.clear()
+                    st.rerun()
+                else:
+                    st.warning(msg)
+        with ac2:
+            if st.button("Cancelar", key=f"cancelar_edicao_{index}"):
+                st.session_state[edit_key] = False
+                st.rerun()
+    else:
         st.markdown(
             f'<div class="row-meta" style="margin-top:8px;">'
             f'<b>Status da arte:</b> {status_arte_badge(status_arte_txt)} &nbsp;&nbsp; '
@@ -3794,66 +3939,10 @@ for index, row in df_status.iterrows():
             f'</div>',
             unsafe_allow_html=True,
         )
-
-        novo_tema = st.text_input(
-            "Editar nome da atividade",
-            value=tema_txt,
-            key=f"tema_input_{index}",
+        st.markdown(
+            f'<div class="row-valor">{format_brl(valor_num)}</div>',
+            unsafe_allow_html=True,
         )
-
-        if st.button("Salvar nome", key=f"salvar_tema_{index}"):
-            worksheet.update_cell(index + 2, 4, novo_tema)
-            st.cache_data.clear()
-            st.rerun()
-
-    with edit_col:
-        with st.container(border=True):
-            st.markdown("**Editar valor e status**")
-
-            novo_valor = st.text_input(
-                "Valor",
-                value=format_valor_input(valor_num),
-                placeholder="Ex.: 38,00",
-                key=f"valor_input_{index}",
-            )
-
-            pagamento_atual = status_pagamento_para_edicao(status_pagamento_txt)
-            novo_pagamento = st.selectbox(
-                "Pagamento",
-                STATUS_PAGAMENTO_FORM_OPTIONS,
-                index=indice_select(STATUS_PAGAMENTO_FORM_OPTIONS, pagamento_atual),
-                key=f"pagamento_select_{index}",
-            )
-
-            status_atual = status_arte_para_edicao(status_arte_txt)
-            novo_status = st.selectbox(
-                "Status da arte",
-                STATUS_ARTE_EDIT_OPTIONS,
-                index=indice_select(STATUS_ARTE_EDIT_OPTIONS, status_atual),
-                key=f"status_select_{index}",
-            )
-
-            if st.button("Salvar alterações", key=f"salvar_alteracoes_{index}", width="stretch"):
-                valor_txt = str(novo_valor).strip()
-                if not valor_txt:
-                    st.warning("Informe um valor.")
-                else:
-                    valor_parsed = pd.to_numeric(
-                        normalizar_valor(pd.Series([valor_txt])),
-                        errors="coerce",
-                    )
-                    if pd.isna(valor_parsed.iloc[0]) or float(valor_parsed.iloc[0]) < 0:
-                        st.warning("Informe um valor válido.")
-                    else:
-                        worksheet.update_cell(index + 2, 5, float(valor_parsed.iloc[0]))
-                        worksheet.update_cell(
-                            index + 2,
-                            6,
-                            STATUS_PAGAMENTO_SHEET_MAP.get(novo_pagamento, novo_pagamento),
-                        )
-                        worksheet.update_cell(index + 2, 8, novo_status)
-                        st.cache_data.clear()
-                        st.rerun()
 
     st.markdown('</div>', unsafe_allow_html=True)
 
