@@ -509,6 +509,8 @@ st.markdown("""
     .stApp:has(#nova-arte-page) section.main .st-key-nova_arte_mes [data-baseweb="select"] > div,
     .stApp:has(#nova-arte-page) section.main .st-key-nova_arte_recorrencia [data-baseweb="select"] > div,
     .stApp:has(#nova-arte-page) section.main .st-key-nova_arte_padrao_recorrencia [data-baseweb="select"] > div,
+    .stApp:has(#nova-arte-page) section.main .st-key-nova_arte_padrao_recorrencia_Janeiro [data-baseweb="select"] > div,
+    .stApp:has(#nova-arte-page) section.main [class*="st-key-nova_arte_padrao_recorrencia_"] [data-baseweb="select"] > div,
     .stApp:has(#nova-arte-page) section.main .st-key-nova_arte_semana [data-baseweb="select"] > div,
     .stApp:has(#nova-arte-page) section.main .st-key-nova_arte_tipo [data-baseweb="select"] > div,
     .stApp:has(#nova-arte-page) section.main .st-key-nova_arte_status [data-baseweb="select"] > div,
@@ -553,6 +555,14 @@ st.markdown("""
     .stApp:has(#nova-arte-page) section.main div[data-testid="stRadio"] label[data-baseweb="radio"] > div:first-child {
         background-color: #ffffff !important;
         border-color: #d9e0eb !important;
+    }
+
+    .stApp:has(#nova-arte-page) section.main [data-testid="stFormSubmitButton"] > button,
+    .stApp:has(#nova-arte-page) section.main .st-key-nova_arte_cadastrar .stButton > button {
+        background: linear-gradient(90deg, #7C3AED 0%, #C026D3 100%) !important;
+        color: #ffffff !important;
+        border: none !important;
+        margin-top: 8px !important;
     }
 
     .stApp:has(#nova-arte-page) section.main [data-testid="stForm"] {
@@ -2940,73 +2950,73 @@ def render_midias_nova_arte(df):
             else:
                 form_field_label("Padrão de recorrência")
                 opcoes_padrao = opcoes_padrao_recorrencia(mes)
-                padrao_recorrencia = st.radio(
+                padrao_recorrencia = st.selectbox(
                     "Padrão de recorrência",
                     options=opcoes_padrao,
                     index=None,
+                    placeholder="Selecione o dia da semana",
                     key=f"nova_arte_padrao_recorrencia_{mes}",
                     label_visibility="collapsed",
                 )
 
-        with st.form("nova_arte_form", clear_on_submit=True):
-            c1, c2 = st.columns(2)
+        c1, c2 = st.columns(2)
 
-            with c1:
-                form_field_label("Tema")
-                tema = st.text_input(
-                    "Tema",
-                    placeholder="Descrição da publicação",
-                    key="nova_arte_tema",
+        with c1:
+            form_field_label("Tema")
+            tema = st.text_input(
+                "Tema",
+                placeholder="Descrição da publicação",
+                key="nova_arte_tema",
+                label_visibility="collapsed",
+            )
+            form_field_label("Tipo")
+            tipo_arte = st.selectbox(
+                "Tipo",
+                TIPO_ARTE_OPTIONS,
+                index=None,
+                placeholder="Selecione o tipo",
+                key="nova_arte_tipo",
+                label_visibility="collapsed",
+            )
+            if recorrencia != "Sim":
+                form_field_label("Dia")
+                dia = st.text_input(
+                    "Dia",
+                    placeholder="Ex.: 15",
+                    key="nova_arte_dia",
                     label_visibility="collapsed",
                 )
-                form_field_label("Tipo")
-                tipo_arte = st.selectbox(
-                    "Tipo",
-                    TIPO_ARTE_OPTIONS,
-                    index=None,
-                    placeholder="Selecione o tipo",
-                    key="nova_arte_tipo",
-                    label_visibility="collapsed",
-                )
-                if recorrencia != "Sim":
-                    form_field_label("Dia")
-                    dia = st.text_input(
-                        "Dia",
-                        placeholder="Ex.: 15",
-                        key="nova_arte_dia",
-                        label_visibility="collapsed",
-                    )
-                else:
-                    dia = ""
+            else:
+                dia = ""
 
-            with c2:
-                form_field_label("Status")
-                status_arte = st.selectbox(
-                    "Status",
-                    STATUS_ARTE_FORM_OPTIONS,
-                    index=None,
-                    placeholder="Selecione o status",
-                    key="nova_arte_status",
-                    label_visibility="collapsed",
-                )
-                form_field_label("Status pagamento")
-                status_pagamento = st.selectbox(
-                    "Status pagamento",
-                    STATUS_PAGAMENTO_FORM_OPTIONS,
-                    index=None,
-                    placeholder="Pago ou A Pagar",
-                    key="nova_arte_status_pagamento",
-                    label_visibility="collapsed",
-                )
-                form_field_label("Valor da arte")
-                valor_arte = st.text_input(
-                    "Valor da arte",
-                    placeholder="Ex.: 38,00",
-                    key="nova_arte_valor",
-                    label_visibility="collapsed",
-                )
+        with c2:
+            form_field_label("Status")
+            status_arte = st.selectbox(
+                "Status",
+                STATUS_ARTE_FORM_OPTIONS,
+                index=None,
+                placeholder="Selecione o status",
+                key="nova_arte_status",
+                label_visibility="collapsed",
+            )
+            form_field_label("Status pagamento")
+            status_pagamento = st.selectbox(
+                "Status pagamento",
+                STATUS_PAGAMENTO_FORM_OPTIONS,
+                index=None,
+                placeholder="Pago ou A Pagar",
+                key="nova_arte_status_pagamento",
+                label_visibility="collapsed",
+            )
+            form_field_label("Valor da arte")
+            valor_arte = st.text_input(
+                "Valor da arte",
+                placeholder="Ex.: 38,00",
+                key="nova_arte_valor",
+                label_visibility="collapsed",
+            )
 
-            cadastrar = st.form_submit_button("Cadastrar nova arte", width="stretch")
+        cadastrar = st.button("Cadastrar nova arte", width="stretch", key="nova_arte_cadastrar")
 
     if cadastrar:
         if not empresa_opcao:
@@ -3114,10 +3124,22 @@ def render_midias_nova_arte(df):
             worksheet.append_row(montar_linha_planilha(semana, data_publicacao, "Não"))
 
         st.cache_data.clear()
-        st.session_state.pop("nova_arte_empresa_opcao", None)
-        st.session_state.pop("nova_arte_servico", None)
-        st.session_state.pop("nova_arte_recorrencia", None)
-        st.session_state.pop("nova_arte_padrao_recorrencia", None)
+        for key in [
+            "nova_arte_empresa_opcao",
+            "nova_arte_empresa_outra",
+            "nova_arte_servico",
+            "nova_arte_mes",
+            "nova_arte_recorrencia",
+            "nova_arte_tema",
+            "nova_arte_tipo",
+            "nova_arte_dia",
+            "nova_arte_status",
+            "nova_arte_status_pagamento",
+            "nova_arte_valor",
+        ]:
+            st.session_state.pop(key, None)
+        if mes:
+            st.session_state.pop(f"nova_arte_padrao_recorrencia_{mes}", None)
         if recorrencia == "Sim":
             st.success(
                 f"Nova arte cadastrada com sucesso! "
