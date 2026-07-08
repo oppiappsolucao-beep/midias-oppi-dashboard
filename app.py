@@ -199,7 +199,18 @@ SCOPES = [
 ]
 
 USERS_SHEET_NAME = os.getenv("USERS_SHEET_NAME", "Acessos")
-USERS_HEADERS = ["Usuário", "Senha", "Perfil", "Ativo"]
+USERS_HEADERS = [
+    "Usuário",
+    "Senha",
+    "Perfil",
+    "Ativo",
+    "Empresas",
+    "Publicações",
+    "Nova Arte",
+    "Gestão de Tráfego",
+    NAV_ACESSOS,
+]
+PERMISSION_OPTIONS = ["Sim", "Não"]
 ROLE_FORM_OPTIONS = ["geral", "gestor", "designer"]
 CONTENT_AREAS = ["Empresas", "Publicações", "Nova Arte", "Gestão de Tráfego", NAV_ACESSOS]
 
@@ -1484,9 +1495,11 @@ def login_logo_html(path: Path):
 
 def authenticate_user(usuario, senha):
     user_key = normalize_username(usuario)
-    creds = get_all_users().get(user_key)
-    if creds and creds["password"] == senha:
-        return creds["role"]
+    for user in load_users_sheet_rows():
+        if user["username"] == user_key and user["password"] == senha:
+            if not user["active"]:
+                return "blocked"
+            return user
     return None
 
 
@@ -1494,19 +1507,30 @@ def get_user_role():
     return st.session_state.get("user_role", "geral")
 
 
+def get_user_permissions():
+    permissions = st.session_state.get("user_permissions")
+    if permissions:
+        return permissions
+    return nav_options_for_role(get_user_role())
+
+
 def nav_options_for_role(role):
     return ROLE_NAV_ACCESS.get(role, ROLE_NAV_ACCESS["geral"])
 
 
+def default_area_for_permissions(permissions):
+    return permissions[0] if permissions else "Publicações"
+
+
 def default_area_for_role(role):
-    return nav_options_for_role(role)[0]
+    return default_area_for_permissions(nav_options_for_role(role))
 
 
-def enforce_area_access(area, role):
-    allowed = nav_options_for_role(role)
+def enforce_area_access(area):
+    allowed = get_user_permissions()
     if area in allowed:
         return area
-    return default_area_for_role(role)
+    return default_area_for_permissions(allowed)
 
 
 def show_login():
@@ -1531,11 +1555,17 @@ def show_login():
         entrar = st.form_submit_button("Entrar", width="stretch")
 
     if entrar:
-        role = authenticate_user(usuario, senha)
-        if role:
+        auth_result = authenticate_user(usuario, senha)
+        if auth_result == "blocked":
+            st.error("Usuário bloqueado. Fale com o administrador do painel.")
+        elif auth_result:
             st.session_state.logged_in = True
-            st.session_state.user_role = role
-            st.session_state.area_dashboard = default_area_for_role(role)
+            st.session_state.user_role = auth_result["role"]
+            st.session_state.logged_username = auth_result["username"]
+            st.session_state.user_permissions = permissions_to_nav_list(auth_result["permissions"])
+            st.session_state.area_dashboard = default_area_for_permissions(
+                st.session_state.user_permissions
+            )
             st.rerun()
         else:
             st.error("Usuário ou senha incorretos.")
@@ -1604,11 +1634,36 @@ def connect_media_worksheet():
 def connect_users_worksheet():
     sheet = connect_spreadsheet()
     try:
-        return sheet.worksheet(USERS_SHEET_NAME)
+        worksheet = sheet.worksheet(USERS_SHEET_NAME)
     except gspread.exceptions.WorksheetNotFound:
         worksheet = sheet.add_worksheet(title=USERS_SHEET_NAME, rows=200, cols=len(USERS_HEADERS))
         worksheet.append_row(USERS_HEADERS)
         return worksheet
+    ensure_users_headers(worksheet)
+    return worksheet
+
+
+def ensure_users_headers(worksheet):
+    current = [str(item).strip() for item in worksheet.row_values(1) if str(item).strip()]
+    if not current:
+        worksheet.update("A1", [USERS_HEADERS])
+        return
+
+    updated = list(current)
+    changed = False
+    for header in USERS_HEADERS:
+        if header not in updated:
+            updated.append(header)
+            changed = True
+
+    if changed:
+        worksheet.update("A1", [updated])
+
+
+def get_users_header_map(worksheet):
+    ensure_users_headers(worksheet)
+    headers = worksheet.row_values(1)
+    return {str(name).strip(): idx + 1 for idx, name in enumerate(headers) if str(name).strip()}
 
 
 def normalize_username(value):
@@ -1625,43 +1680,117 @@ def normalize_role(value):
     return ""
 
 
+def sim_nao_value(value, default="Não"):
+    texto = str(value).strip().lower()
+    if texto in ("sim", "s", "yes", "1", "true"):
+        return "Sim"
+    if texto in ("não", "nao", "n", "0", "false"):
+        return "Não"
+    return default
+
+
 def is_user_active(value):
-    ativo = str(value).strip().lower()
-    return ativo not in ("não", "nao", "n", "0", "false", "inativo")
+    return sim_nao_value(value, "Sim") == "Sim"
+
+
+def default_permissions_for_role(role):
+    allowed = nav_options_for_role(role)
+    return {area: ("Sim" if area in allowed else "Não") for area in CONTENT_AREAS}
+
+
+def permissions_to_nav_list(permissions):
+    return [area for area in CONTENT_AREAS if permissions.get(area) == "Sim"]
+
+
+def parse_user_row(row, row_number):
+    username = normalize_username(row.get("Usuário", ""))
+    password = str(row.get("Senha", "")).strip()
+    role = normalize_role(row.get("Perfil", ""))
+    if not username or not password or not role:
+        return None
+
+    defaults = default_permissions_for_role(role)
+    permissions = {
+        area: sim_nao_value(row.get(area, ""), defaults.get(area, "Não"))
+        for area in CONTENT_AREAS
+    }
+
+    return {
+        "row_number": row_number,
+        "username": username,
+        "password": password,
+        "role": role,
+        "active": is_user_active(row.get("Ativo", "Sim")),
+        "permissions": permissions,
+        "source": "planilha",
+    }
+
+
+def ensure_default_users_in_sheet():
+    worksheet = connect_users_worksheet()
+    existing = {
+        normalize_username(row.get("Usuário", ""))
+        for row in worksheet.get_all_records()
+    }
+
+    for username, data in APP_USERS.items():
+        username = normalize_username(username)
+        if username in existing:
+            continue
+        permissions = default_permissions_for_role(data["role"])
+        worksheet.append_row([
+            username,
+            data["password"],
+            data["role"],
+            "Sim",
+            permissions["Empresas"],
+            permissions["Publicações"],
+            permissions["Nova Arte"],
+            permissions["Gestão de Tráfego"],
+            permissions[NAV_ACESSOS],
+        ])
+
+
+def load_users_sheet_rows_impl():
+    ensure_default_users_in_sheet()
+    worksheet = connect_users_worksheet()
+    records = worksheet.get_all_records()
+    users = []
+    for index, row in enumerate(records, start=2):
+        parsed = parse_user_row(row, index)
+        if parsed:
+            users.append(parsed)
+    return users
+
+
+def load_users_sheet_rows_fallback():
+    users = []
+    for username, data in APP_USERS.items():
+        username = normalize_username(username)
+        users.append(
+            {
+                "row_number": None,
+                "username": username,
+                "password": data["password"],
+                "role": data["role"],
+                "active": True,
+                "permissions": default_permissions_for_role(data["role"]),
+                "source": "padrão",
+            }
+        )
+    return users
 
 
 @st.cache_data(ttl=30)
-def load_registered_users():
+def load_users_sheet_rows():
     try:
-        worksheet = connect_users_worksheet()
-        records = worksheet.get_all_records()
+        return load_users_sheet_rows_impl()
     except Exception:
-        return {}
-
-    users = {}
-    for row in records:
-        username = normalize_username(row.get("Usuário", ""))
-        password = str(row.get("Senha", "")).strip()
-        role = normalize_role(row.get("Perfil", ""))
-        if not username or not password or not role:
-            continue
-        if not is_user_active(row.get("Ativo", "Sim")):
-            continue
-        users[username] = {"password": password, "role": role, "source": "planilha"}
-    return users
+        return load_users_sheet_rows_fallback()
 
 
 def clear_users_cache():
-    load_registered_users.clear()
-
-
-def get_all_users():
-    users = {
-        username: {**data, "source": "padrão"}
-        for username, data in APP_USERS.items()
-    }
-    users.update(load_registered_users())
-    return users
+    load_users_sheet_rows.clear()
 
 
 def roles_criaveis_por(perfil_atual):
@@ -1672,31 +1801,27 @@ def roles_criaveis_por(perfil_atual):
     return []
 
 
-def build_permissions_matrix():
-    rows = []
+def can_manage_user(manager_role, target_user):
+    if manager_role == "geral":
+        return True
+    if manager_role == "gestor":
+        return target_user["role"] in ("gestor", "designer")
+    return False
+
+
+def update_user_permissions(row_number, permissions):
+    worksheet = connect_users_worksheet()
+    header_map = get_users_header_map(worksheet)
     for area in CONTENT_AREAS:
-        row = {"Conteúdo": area}
-        for role in ROLE_FORM_OPTIONS:
-            row[ROLE_LABELS[role]] = (
-                "Sim" if area in nav_options_for_role(role) else "Não"
-            )
-        rows.append(row)
-    return pd.DataFrame(rows)
+        worksheet.update_cell(row_number, header_map[area], permissions[area])
+    clear_users_cache()
 
 
-def build_users_access_table():
-    rows = []
-    for username, data in sorted(get_all_users().items()):
-        role = data["role"]
-        row = {
-            "Usuário": username,
-            "Perfil": ROLE_LABELS.get(role, role.title()),
-            "Origem": "Planilha" if data.get("source") == "planilha" else "Padrão",
-        }
-        for area in CONTENT_AREAS:
-            row[area] = "Sim" if area in nav_options_for_role(role) else "Não"
-        rows.append(row)
-    return pd.DataFrame(rows)
+def set_user_active(row_number, active):
+    worksheet = connect_users_worksheet()
+    header_map = get_users_header_map(worksheet)
+    worksheet.update_cell(row_number, header_map["Ativo"], "Sim" if active else "Não")
+    clear_users_cache()
 
 
 def username_is_valid(username):
@@ -1722,11 +1847,22 @@ def register_user(username, password, role, creator_role):
     if len(password.strip()) < 4:
         return False, "A senha precisa ter pelo menos 4 caracteres."
 
-    if username in get_all_users():
+    if any(user["username"] == username for user in load_users_sheet_rows()):
         return False, "Esse usuário já está cadastrado."
 
+    permissions = default_permissions_for_role(role)
     worksheet = connect_users_worksheet()
-    worksheet.append_row([username, password.strip(), role, "Sim"])
+    worksheet.append_row([
+        username,
+        password.strip(),
+        role,
+        "Sim",
+        permissions["Empresas"],
+        permissions["Publicações"],
+        permissions["Nova Arte"],
+        permissions["Gestão de Tráfego"],
+        permissions[NAV_ACESSOS],
+    ])
     clear_users_cache()
     return True, "Usuário cadastrado com sucesso!"
 
@@ -1773,11 +1909,14 @@ def reset_sidebar_toggle_state():
 def render_sidebar_navigation():
     logo_html = sidebar_logo_html(LOGO_PATH)
     role = get_user_role()
-    nav_options = nav_options_for_role(role)
+    nav_options = get_user_permissions()
     role_label = ROLE_LABELS.get(role, role.title())
 
+    if not nav_options:
+        nav_options = [default_area_for_role(role)]
+
     if st.session_state.get("area_dashboard") not in nav_options:
-        st.session_state.area_dashboard = default_area_for_role(role)
+        st.session_state.area_dashboard = default_area_for_permissions(nav_options)
 
     with st.sidebar:
         st.markdown(
@@ -1810,6 +1949,8 @@ def render_sidebar_navigation():
         if sair:
             st.session_state.logged_in = False
             st.session_state.pop("user_role", None)
+            st.session_state.pop("logged_username", None)
+            st.session_state.pop("user_permissions", None)
             reset_sidebar_toggle_state()
             st.rerun()
 
@@ -2792,30 +2933,93 @@ def render_acessos():
     )
     st.markdown('<div id="acessos-page"></div>', unsafe_allow_html=True)
     st.markdown(
-        '<div class="small-note">Veja quem pode acessar cada conteúdo e cadastre novos usuários para o painel.</div>',
+        '<div class="small-note">Marque <b>Sim</b> ou <b>Não</b> para liberar cada conteúdo. '
+        "Use <b>Bloquear</b> ou <b>Desbloquear</b> para impedir ou permitir o login do usuário.</div>",
         unsafe_allow_html=True,
     )
 
-    st.markdown('<div class="section-card">', unsafe_allow_html=True)
-    st.markdown("**Quem pode acessar cada conteúdo**")
-    st.dataframe(
-        build_permissions_matrix(),
-        width="stretch",
-        hide_index=True,
-    )
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown('<div class="section-card">', unsafe_allow_html=True)
-    st.markdown("**Usuários cadastrados e permissões**")
-    usuarios_df = build_users_access_table()
-    if usuarios_df.empty:
-        st.info("Nenhum usuário cadastrado.")
-    else:
-        st.dataframe(usuarios_df, width="stretch", hide_index=True)
-    st.markdown('</div>', unsafe_allow_html=True)
-
     perfil_atual = get_user_role()
+    usuarios = load_users_sheet_rows()
+    usuario_logado = st.session_state.get("logged_username", "")
+
+    if not usuarios:
+        st.info("Não foi possível carregar os usuários da planilha.")
+        return
+
+    st.markdown('<div class="section-card">', unsafe_allow_html=True)
+    st.markdown("**Permissões por usuário**")
+
+    for user in usuarios:
+        if not can_manage_user(perfil_atual, user):
+            continue
+
+        if user["row_number"] is None:
+            continue
+
+        status_txt = "Ativo" if user["active"] else "Bloqueado"
+        status_class = "status-pronto" if user["active"] else "status-pausado"
+        st.markdown(
+            f'<div class="row-main">{html.escape(user["username"])}</div>'
+            f'<div class="row-meta"><b>Perfil:</b> {html.escape(ROLE_LABELS.get(user["role"], user["role"]))} '
+            f'&nbsp;&nbsp; <b>Status:</b> <span class="status-pill {status_class}">{status_txt}</span></div>',
+            unsafe_allow_html=True,
+        )
+
+        perm_cols = st.columns(len(CONTENT_AREAS))
+        novas_permissoes = {}
+        for idx, area in enumerate(CONTENT_AREAS):
+            with perm_cols[idx]:
+                form_field_label(area)
+                valor_atual = user["permissions"].get(area, "Não")
+                if valor_atual not in PERMISSION_OPTIONS:
+                    valor_atual = "Não"
+                novas_permissoes[area] = st.selectbox(
+                    area,
+                    PERMISSION_OPTIONS,
+                    index=PERMISSION_OPTIONS.index(valor_atual),
+                    key=f"perm_{user['row_number']}_{area}",
+                    label_visibility="collapsed",
+                )
+
+        action1, action2 = st.columns([1.2, 1])
+        with action1:
+            if st.button(
+                "Salvar permissões",
+                key=f"salvar_perm_{user['row_number']}",
+                width="stretch",
+            ):
+                update_user_permissions(user["row_number"], novas_permissoes)
+                if user["username"] == usuario_logado:
+                    st.session_state.user_permissions = permissions_to_nav_list(novas_permissoes)
+                st.success("Permissões atualizadas.")
+                st.rerun()
+
+        with action2:
+            if user["active"]:
+                if st.button(
+                    "Bloquear usuário",
+                    key=f"bloquear_{user['row_number']}",
+                    width="stretch",
+                ):
+                    if user["username"] == usuario_logado:
+                        st.warning("Você não pode bloquear seu próprio acesso.")
+                    else:
+                        set_user_active(user["row_number"], False)
+                        st.success("Usuário bloqueado.")
+                        st.rerun()
+            elif st.button(
+                "Desbloquear usuário",
+                key=f"desbloquear_{user['row_number']}",
+                width="stretch",
+            ):
+                set_user_active(user["row_number"], True)
+                st.success("Usuário desbloqueado.")
+                st.rerun()
+
+        st.markdown('<div style="height: 14px;"></div>', unsafe_allow_html=True)
+
+    st.markdown('</div>', unsafe_allow_html=True)
+
     roles_permitidos = roles_criaveis_por(perfil_atual)
     if not roles_permitidos:
         return
@@ -2894,7 +3098,6 @@ if not st.session_state.logged_in:
 user_role = get_user_role()
 area_dashboard = enforce_area_access(
     st.session_state.get("area_dashboard", default_area_for_role(user_role)),
-    user_role,
 )
 st.session_state.area_dashboard = area_dashboard
 area_dashboard = render_sidebar_navigation()
