@@ -293,11 +293,32 @@ st.markdown("""
         text-align: center;
     }
 
-    .filter-card .form-field-label {
+    .filter-card .form-field-label,
+    .form-field-label {
         color: #0f172a !important;
         font-size: 14px !important;
         font-weight: 800 !important;
         margin: 0 0 6px 2px !important;
+    }
+
+    .stApp:has(#empresas-page) section.main [data-testid="stVerticalBlockBorderWrapper"],
+    .stApp:has(#publicacoes-page) section.main [data-testid="stVerticalBlockBorderWrapper"],
+    .stApp:has(#acessos-page) section.main [data-testid="stVerticalBlockBorderWrapper"] {
+        background: #ffffff !important;
+        border: 1px solid #e7ebf3 !important;
+        border-radius: 24px !important;
+        padding: 18px 18px 16px 18px !important;
+        box-shadow: 0 6px 20px rgba(15, 23, 42, 0.04) !important;
+    }
+
+    .stApp:has(#trafego-page) section.main [data-testid="stVerticalBlockBorderWrapper"] {
+        background: #ffffff !important;
+        border: 1px solid #e7ebf3 !important;
+        border-radius: 26px !important;
+        padding: 28px 30px 30px 30px !important;
+        box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06) !important;
+        max-width: 1180px !important;
+        margin: 0 auto !important;
     }
 
     .filter-card,
@@ -628,8 +649,19 @@ st.markdown("""
         margin: 0 0 6px 2px;
     }
 
+    .stApp:has(#publicacoes-page) [class*="st-key-row_card_"] {
+        background: #fbfcfe !important;
+        border: 1px solid #e8edf5 !important;
+        border-radius: 18px !important;
+        padding: 14px 16px !important;
+        margin-bottom: 12px !important;
+        box-shadow: none !important;
+    }
+
     .row-card div[data-testid="stSelectbox"] label p,
-    .row-card div[data-testid="stTextInput"] label p {
+    .row-card div[data-testid="stTextInput"] label p,
+    [class*="st-key-row_card_"] div[data-testid="stSelectbox"] label p,
+    [class*="st-key-row_card_"] div[data-testid="stTextInput"] label p {
         color: #334155 !important;
         font-size: 13px !important;
         font-weight: 800 !important;
@@ -655,6 +687,7 @@ st.markdown("""
         margin-top: 4px;
     }
 
+    [class*="st-key-row_card_"] [class*="st-key-edit_atividade_"] .stButton > button,
     .row-card [class*="st-key-edit_atividade_"] .stButton > button {
         width: 44px !important;
         min-width: 44px !important;
@@ -672,12 +705,14 @@ st.markdown("""
         box-shadow: none !important;
     }
 
+    [class*="st-key-row_card_"] [class*="st-key-edit_atividade_"] .stButton > button:hover,
     .row-card [class*="st-key-edit_atividade_"] .stButton > button:hover {
         background: #ede9fe !important;
         border-color: #c4b5fd !important;
         color: #6d28d9 !important;
     }
 
+    [class*="st-key-row_card_"] [class*="st-key-salvar_alteracoes_"] .stButton > button,
     .row-card [class*="st-key-salvar_alteracoes_"] .stButton > button {
         height: 40px !important;
         min-height: 40px !important;
@@ -688,6 +723,7 @@ st.markdown("""
         border: none !important;
     }
 
+    [class*="st-key-row_card_"] [class*="st-key-cancelar_edicao_"] .stButton > button,
     .row-card [class*="st-key-cancelar_edicao_"] .stButton > button {
         height: 40px !important;
         min-height: 40px !important;
@@ -922,16 +958,6 @@ st.markdown("""
         margin-bottom: 18px;
     }
 
-    .traffic-card {
-        background: #ffffff;
-        border: 1px solid #e7ebf3;
-        border-radius: 26px;
-        padding: 28px 30px 30px 30px;
-        box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
-        max-width: 1180px;
-        margin: 0 auto;
-    }
-
     .traffic-greeting {
         color: #16233b;
         font-size: 28px;
@@ -959,7 +985,7 @@ st.markdown("""
         height: 8px;
     }
 
-    .traffic-card div[data-testid="stTextInput"] input {
+    .stApp:has(#trafego-page) section.main [data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stTextInput"] input {
         background: #fbfcff !important;
         border: 1px solid #d9e0eb !important;
         border-radius: 12px !important;
@@ -970,7 +996,7 @@ st.markdown("""
         padding: 0 12px !important;
     }
 
-    .traffic-card div[data-testid="stTextInput"] input:focus {
+    .stApp:has(#trafego-page) section.main [data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stTextInput"] input:focus {
         border-color: #0f2d63 !important;
         box-shadow: 0 0 0 2px rgba(15, 45, 99, 0.10) !important;
     }
@@ -1061,13 +1087,7 @@ st.markdown("""
         font-weight: 900;
     }
 
-    .traffic-action-wrap {
-        margin-top: 22px;
-        padding-top: 18px;
-        border-top: 1px solid #e7ebf3;
-    }
-
-    .traffic-action-wrap .stButton > button {
+    .stApp:has(#trafego-page) [class*="st-key-btn_abrir_apresentacao"] .stButton > button {
         background: linear-gradient(90deg, #7C3AED 0%, #C026D3 100%) !important;
         color: #ffffff !important;
         border: none !important;
@@ -1079,7 +1099,7 @@ st.markdown("""
         box-shadow: 0 10px 22px rgba(124, 58, 237, 0.20) !important;
     }
 
-    .traffic-action-wrap .stButton > button:hover {
+    .stApp:has(#trafego-page) [class*="st-key-btn_abrir_apresentacao"] .stButton > button:hover {
         transform: translateY(-1px);
         box-shadow: 0 14px 26px rgba(124, 58, 237, 0.26) !important;
     }
@@ -1127,7 +1147,7 @@ st.markdown("""
         margin-bottom: 6px;
     }
 
-    .traffic-card div[data-testid="stDateInput"] input {
+    .stApp:has(#trafego-page) section.main [data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stDateInput"] input {
         background: #ffffff !important;
         border: 1px solid #d9e0eb !important;
         border-radius: 12px !important;
@@ -1138,17 +1158,13 @@ st.markdown("""
         padding: 0 12px !important;
     }
 
-    .traffic-card div[data-testid="stDateInput"] input:focus {
+    .stApp:has(#trafego-page) section.main [data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stDateInput"] input:focus {
         border-color: #7C3AED !important;
         box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.10) !important;
     }
 
-    .traffic-card div[data-testid="stTextInput"] input {
-        background: #ffffff !important;
-    }
-
     @media (max-width: 768px) {
-        .traffic-card {
+        .stApp:has(#trafego-page) section.main [data-testid="stVerticalBlockBorderWrapper"] {
             padding: 20px 16px 22px 16px !important;
         }
 
@@ -1452,7 +1468,7 @@ st.markdown("""
             font-size: 17px;
         }
 
-        .traffic-card {
+        .stApp:has(#trafego-page) section.main [data-testid="stVerticalBlockBorderWrapper"] {
             padding: 20px 16px 22px 16px;
         }
 
@@ -2553,6 +2569,7 @@ def render_midias_empresas(df):
         '<div class="section-title">🏢 Empresas</div>',
         unsafe_allow_html=True
     )
+    st.markdown('<div id="empresas-page"></div>', unsafe_allow_html=True)
 
     df_empresas = df[df["Empresa"].astype(str).str.strip().ne("")].copy()
 
@@ -2562,13 +2579,12 @@ def render_midias_empresas(df):
 
     empresas_disponiveis = sorted(df_empresas["Empresa"].astype(str).str.strip().unique())
 
-    st.markdown('<div class="filter-card">', unsafe_allow_html=True)
-    empresa_selecionada = st.selectbox(
-        "Empresa",
-        options=empresas_disponiveis,
-        key="empresa_selecionada_midias",
-    )
-    st.markdown('</div>', unsafe_allow_html=True)
+    with st.container(border=True):
+        empresa_selecionada = st.selectbox(
+            "Empresa",
+            options=empresas_disponiveis,
+            key="empresa_selecionada_midias",
+        )
 
     df_selecionado = df_empresas[
         df_empresas["Empresa"].astype(str).str.strip() == empresa_selecionada
@@ -2910,9 +2926,7 @@ def render_midias_nova_arte(df):
         st.rerun()
 
 
-def render_gestao_trafego():
-    st.markdown('<div class="traffic-card">', unsafe_allow_html=True)
-
+def _render_gestao_trafego_form():
     st.markdown(
         '<div class="traffic-greeting">Apresentação de resultados</div>',
         unsafe_allow_html=True
@@ -2925,9 +2939,6 @@ def render_gestao_trafego():
 
     st.markdown('<div class="traffic-divider"></div>', unsafe_allow_html=True)
 
-    # ---------------------------------------------------
-    # IDENTIFICAÇÃO
-    # ---------------------------------------------------
     st.markdown(
         """
         <div class="traffic-section">
@@ -2952,9 +2963,6 @@ def render_gestao_trafego():
         st.markdown('<div class="traffic-field-label">Plataforma</div>', unsafe_allow_html=True)
         traffic_input("trafego_plataforma", "Ex.: Meta Ads")
 
-    # ---------------------------------------------------
-    # PERÍODO
-    # ---------------------------------------------------
     st.markdown(
         """
         <div class="traffic-section">
@@ -2975,9 +2983,6 @@ def render_gestao_trafego():
         st.markdown('<div class="traffic-field-label">Data final</div>', unsafe_allow_html=True)
         traffic_date_input("trafego_periodo_fim")
 
-    # ---------------------------------------------------
-    # INVESTIMENTO
-    # ---------------------------------------------------
     st.markdown(
         """
         <div class="traffic-section">
@@ -2998,9 +3003,6 @@ def render_gestao_trafego():
         st.markdown('<div class="traffic-field-label">Custo médio por dia</div>', unsafe_allow_html=True)
         traffic_input("trafego_custo_dia", "Ex.: 100,00")
 
-    # ---------------------------------------------------
-    # RESULTADOS
-    # ---------------------------------------------------
     st.markdown(
         """
         <div class="traffic-section">
@@ -3029,15 +3031,13 @@ def render_gestao_trafego():
         st.markdown('<div class="traffic-field-label">Custo médio por contato</div>', unsafe_allow_html=True)
         traffic_input("trafego_custo_contato", "Ex.: 12,50")
 
-    st.markdown('<div class="traffic-action-wrap">', unsafe_allow_html=True)
+    st.divider()
 
     abrir_apresentacao = st.button(
         "Abrir apresentação",
         width="stretch",
         key="btn_abrir_apresentacao"
     )
-
-    st.markdown('</div>', unsafe_allow_html=True)
 
     if abrir_apresentacao:
         values = get_traffic_form_values()
@@ -3056,7 +3056,12 @@ def render_gestao_trafego():
         else:
             show_traffic_presentation(values)
 
-    st.markdown('</div>', unsafe_allow_html=True)
+
+def render_gestao_trafego():
+    st.markdown('<div id="trafego-page"></div>', unsafe_allow_html=True)
+
+    with st.container(border=True):
+        _render_gestao_trafego_form()
 
 
 def render_user_access_detail(user, usuario_logado):
@@ -3167,104 +3172,99 @@ def render_acessos():
         if user["row_number"] is not None and can_manage_user(perfil_atual, user)
     ]
 
-    st.markdown('<div class="section-card">', unsafe_allow_html=True)
-    st.markdown("**Usuários**")
+    with st.container(border=True):
+        st.markdown("**Usuários**")
 
-    if not usuarios_gerenciaveis:
-        st.info("Nenhum usuário disponível para gerenciar.")
-    else:
-        opcoes_usuarios = {
-            user["username"]: user for user in sorted(usuarios_gerenciaveis, key=lambda item: item["username"])
-        }
+        if not usuarios_gerenciaveis:
+            st.info("Nenhum usuário disponível para gerenciar.")
+        else:
+            opcoes_usuarios = {
+                user["username"]: user for user in sorted(usuarios_gerenciaveis, key=lambda item: item["username"])
+            }
 
-        def formatar_usuario_lista(username):
-            user = opcoes_usuarios[username]
-            status = "Ativo" if user["active"] else "Bloqueado"
-            perfil = ROLE_LABELS.get(user["role"], user["role"])
-            return f"{username} — {perfil} — {status}"
+            def formatar_usuario_lista(username):
+                user = opcoes_usuarios[username]
+                status = "Ativo" if user["active"] else "Bloqueado"
+                perfil = ROLE_LABELS.get(user["role"], user["role"])
+                return f"{username} — {perfil} — {status}"
 
-        st.markdown('<div class="acessos-user-list">', unsafe_allow_html=True)
-        form_field_label("Selecione o usuário")
-        usuario_selecionado = st.selectbox(
-            "Selecione o usuário",
-            options=list(opcoes_usuarios.keys()),
-            format_func=formatar_usuario_lista,
-            key="acesso_usuario_selecionado",
-            label_visibility="collapsed",
-        )
-        st.markdown("</div>", unsafe_allow_html=True)
+            form_field_label("Selecione o usuário")
+            usuario_selecionado = st.selectbox(
+                "Selecione o usuário",
+                options=list(opcoes_usuarios.keys()),
+                format_func=formatar_usuario_lista,
+                key="acesso_usuario_selecionado",
+                label_visibility="collapsed",
+            )
 
-        with st.container(border=True):
-            st.markdown("**Acessos do usuário selecionado**")
-            render_user_access_detail(opcoes_usuarios[usuario_selecionado], usuario_logado)
-
-    st.markdown('</div>', unsafe_allow_html=True)
+            with st.container(border=True):
+                st.markdown("**Acessos do usuário selecionado**")
+                render_user_access_detail(opcoes_usuarios[usuario_selecionado], usuario_logado)
 
     roles_permitidos = roles_criaveis_por(perfil_atual)
     if not roles_permitidos:
         return
 
     st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown('<div class="section-card">', unsafe_allow_html=True)
-    st.markdown("**Cadastrar novo usuário**")
 
-    with st.form("cadastro_acesso_form", clear_on_submit=True):
-        c1, c2 = st.columns(2)
+    with st.container(border=True):
+        st.markdown("**Cadastrar novo usuário**")
 
-        with c1:
-            form_field_label("Usuário")
-            novo_usuario = st.text_input(
-                "Usuário",
-                placeholder="Ex.: maria.designer",
-                key="acesso_novo_usuario",
-                label_visibility="collapsed",
-            )
-            form_field_label("Perfil de acesso")
-            perfil_novo = st.selectbox(
-                "Perfil de acesso",
-                options=roles_permitidos,
-                format_func=lambda role: ROLE_LABELS.get(role, role.title()),
-                key="acesso_novo_perfil",
-                label_visibility="collapsed",
-            )
+        with st.form("cadastro_acesso_form", clear_on_submit=True):
+            c1, c2 = st.columns(2)
 
-        with c2:
-            form_field_label("Senha")
-            nova_senha = st.text_input(
-                "Senha",
-                placeholder="Digite a senha",
-                type="password",
-                key="acesso_nova_senha",
-                label_visibility="collapsed",
-            )
-            form_field_label("Confirmar senha")
-            confirmar_senha = st.text_input(
-                "Confirmar senha",
-                placeholder="Repita a senha",
-                type="password",
-                key="acesso_confirmar_senha",
-                label_visibility="collapsed",
-            )
+            with c1:
+                form_field_label("Usuário")
+                novo_usuario = st.text_input(
+                    "Usuário",
+                    placeholder="Ex.: maria.designer",
+                    key="acesso_novo_usuario",
+                    label_visibility="collapsed",
+                )
+                form_field_label("Perfil de acesso")
+                perfil_novo = st.selectbox(
+                    "Perfil de acesso",
+                    options=roles_permitidos,
+                    format_func=lambda role: ROLE_LABELS.get(role, role.title()),
+                    key="acesso_novo_perfil",
+                    label_visibility="collapsed",
+                )
 
-        cadastrar = st.form_submit_button("Cadastrar usuário", width="stretch")
+            with c2:
+                form_field_label("Senha")
+                nova_senha = st.text_input(
+                    "Senha",
+                    placeholder="Digite a senha",
+                    type="password",
+                    key="acesso_nova_senha",
+                    label_visibility="collapsed",
+                )
+                form_field_label("Confirmar senha")
+                confirmar_senha = st.text_input(
+                    "Confirmar senha",
+                    placeholder="Repita a senha",
+                    type="password",
+                    key="acesso_confirmar_senha",
+                    label_visibility="collapsed",
+                )
 
-    if cadastrar:
-        if nova_senha.strip() != confirmar_senha.strip():
-            st.warning("As senhas informadas não conferem.")
-        else:
-            ok, mensagem = register_user(
-                novo_usuario,
-                nova_senha,
-                perfil_novo,
-                perfil_atual,
-            )
-            if ok:
-                st.success(mensagem)
-                st.rerun()
+            cadastrar = st.form_submit_button("Cadastrar usuário", width="stretch")
+
+        if cadastrar:
+            if nova_senha.strip() != confirmar_senha.strip():
+                st.warning("As senhas informadas não conferem.")
             else:
-                st.warning(mensagem)
-
-    st.markdown('</div>', unsafe_allow_html=True)
+                ok, mensagem = register_user(
+                    novo_usuario,
+                    nova_senha,
+                    perfil_novo,
+                    perfil_atual,
+                )
+                if ok:
+                    st.success(mensagem)
+                    st.rerun()
+                else:
+                    st.warning(mensagem)
 
 
 # ---------------------------------------------------
@@ -3590,6 +3590,7 @@ st.markdown(
     '<div class="section-title">📱 Gestão de publicações e pagamentos</div>',
     unsafe_allow_html=True
 )
+st.markdown('<div id="publicacoes-page"></div>', unsafe_allow_html=True)
 
 hoje = date.today()
 mes_corrente = mes_atual_nome()
@@ -3724,72 +3725,70 @@ st.markdown("<br>", unsafe_allow_html=True)
 g1, g2 = st.columns(2)
 
 with g1:
-    st.markdown('<div class="section-card">', unsafe_allow_html=True)
-    st.markdown('<div class="section-title">📊 Publicações por empresa</div>', unsafe_allow_html=True)
+    with st.container(border=True):
+        st.markdown('<div class="section-title">📊 Publicações por empresa</div>', unsafe_allow_html=True)
 
-    graf_empresa = (
-        df_filtrado.groupby("Empresa", dropna=False)
-        .size()
-        .reset_index(name="Total")
-    )
-
-    if not graf_empresa.empty:
-        fig_empresa = px.bar(graf_empresa, x="Empresa", y="Total", text="Total")
-        fig_empresa.update_layout(
-            margin=dict(l=10, r=10, t=10, b=10),
-            height=380,
-            paper_bgcolor="white",
-            plot_bgcolor="white",
-            xaxis_title="",
-            yaxis_title="Quantidade"
+        graf_empresa = (
+            df_filtrado.groupby("Empresa", dropna=False)
+            .size()
+            .reset_index(name="Total")
         )
-        fig_empresa.update_traces(textposition="outside")
-        st.plotly_chart(fig_empresa, width="stretch")
-    else:
-        st.info("Sem dados para esse filtro.")
-    st.markdown('</div>', unsafe_allow_html=True)
+
+        if not graf_empresa.empty:
+            fig_empresa = px.bar(graf_empresa, x="Empresa", y="Total", text="Total")
+            fig_empresa.update_layout(
+                margin=dict(l=10, r=10, t=10, b=10),
+                height=380,
+                paper_bgcolor="white",
+                plot_bgcolor="white",
+                xaxis_title="",
+                yaxis_title="Quantidade"
+            )
+            fig_empresa.update_traces(textposition="outside")
+            st.plotly_chart(fig_empresa, width="stretch")
+        else:
+            st.info("Sem dados para esse filtro.")
 
 with g2:
-    st.markdown('<div class="section-card">', unsafe_allow_html=True)
-    st.markdown('<div class="section-title">💳 Valor por status pagamento</div>', unsafe_allow_html=True)
+    with st.container(border=True):
+        st.markdown('<div class="section-title">💳 Valor por status pagamento</div>', unsafe_allow_html=True)
 
-    graf_status = (
-        df_filtrado.groupby("Status Pagamento", dropna=False)["Valor"]
-        .sum()
-        .reset_index()
-    )
-
-    graf_status["Status Pagamento"] = graf_status["Status Pagamento"].astype(str).str.strip()
-    graf_status = graf_status[
-        (graf_status["Status Pagamento"] != "") &
-        (graf_status["Valor"] > 0)
-    ]
-
-    if not graf_status.empty and graf_status["Valor"].sum() > 0:
-        fig_status = px.pie(
-            graf_status,
-            values="Valor",
-            names="Status Pagamento",
-            hole=0.58
+        graf_status = (
+            df_filtrado.groupby("Status Pagamento", dropna=False)["Valor"]
+            .sum()
+            .reset_index()
         )
 
-        fig_status.update_traces(
-            texttemplate="R$ %{value:,.2f}",
-            textposition="inside",
-            hovertemplate="<b>%{label}</b><br>Valor: R$ %{value:,.2f}<extra></extra>"
-        )
+        graf_status["Status Pagamento"] = graf_status["Status Pagamento"].astype(str).str.strip()
+        graf_status = graf_status[
+            (graf_status["Status Pagamento"] != "") &
+            (graf_status["Valor"] > 0)
+        ]
 
-        fig_status.update_layout(
-            margin=dict(l=10, r=10, t=10, b=10),
-            height=380,
-            paper_bgcolor="white",
-            showlegend=True
-        )
+        if not graf_status.empty and graf_status["Valor"].sum() > 0:
+            fig_status = px.pie(
+                graf_status,
+                values="Valor",
+                names="Status Pagamento",
+                hole=0.58
+            )
 
-        st.plotly_chart(fig_status, width="stretch")
-    else:
-        st.info("Sem valores para esse filtro.")
-    st.markdown('</div>', unsafe_allow_html=True)
+            fig_status.update_traces(
+                texttemplate="R$ %{value:,.2f}",
+                textposition="inside",
+                hovertemplate="<b>%{label}</b><br>Valor: R$ %{value:,.2f}<extra></extra>"
+            )
+
+            fig_status.update_layout(
+                margin=dict(l=10, r=10, t=10, b=10),
+                height=380,
+                paper_bgcolor="white",
+                showlegend=True
+            )
+
+            st.plotly_chart(fig_status, width="stretch")
+        else:
+            st.info("Sem valores para esse filtro.")
 
 st.markdown("<br>", unsafe_allow_html=True)
 
@@ -3797,154 +3796,149 @@ st.markdown("<br>", unsafe_allow_html=True)
 # ATUALIZAR STATUS DA ARTE
 # ---------------------------------------------------
 
-st.markdown('<div class="table-card">', unsafe_allow_html=True)
-st.markdown(
-    f'<div class="section-title">✏️ Atualizar status da arte <span style="font-size:12px;color:#64748b;font-weight:600;">({APP_UI_VERSION})</span></div>',
-    unsafe_allow_html=True,
-)
-st.markdown(
-    '<div class="small-note">Clique no <b>✏️</b> para editar nome, valor, pagamento e status da atividade.</div>',
-    unsafe_allow_html=True,
-)
+with st.container(border=True):
+    st.markdown(
+        f'<div class="section-title">✏️ Atualizar status da arte <span style="font-size:12px;color:#64748b;font-weight:600;">({APP_UI_VERSION})</span></div>',
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        '<div class="small-note">Clique no <b>✏️</b> para editar nome, valor, pagamento e status da atividade.</div>',
+        unsafe_allow_html=True,
+    )
 
-busca = st.text_input("Buscar por empresa ou tema", placeholder="Ex.: Faiser, mulheres, internet...")
+    busca = st.text_input("Buscar por empresa ou tema", placeholder="Ex.: Faiser, mulheres, internet...")
 
-df_status = df_filtrado.copy()
+    df_status = df_filtrado.copy()
 
-if busca.strip():
-    termo = busca.strip().lower()
-    df_status = df_status[
-        df_status["Empresa"].astype(str).str.lower().str.contains(termo, na=False)
-        | df_status["Tema"].astype(str).str.lower().str.contains(termo, na=False)
-    ]
+    if busca.strip():
+        termo = busca.strip().lower()
+        df_status = df_status[
+            df_status["Empresa"].astype(str).str.lower().str.contains(termo, na=False)
+            | df_status["Tema"].astype(str).str.lower().str.contains(termo, na=False)
+        ]
 
-worksheet = connect_sheet()
+    worksheet = connect_sheet()
 
-for index, row in df_status.iterrows():
-    empresa_txt = str(row.get("Empresa", "")).strip() or "-"
-    semana_txt = str(row.get("Semana", "")).strip() or "-"
-    tema_txt = str(row.get("Tema", "")).strip() or "-"
-    mes_txt = str(row.get("Mês", "")).strip() or "-"
-    tipo_txt = str(row.get("Tipo de arte", "")).strip() or "-"
-    servico_txt = str(row.get("Serviços", "")).strip() or "-"
-    status_arte_txt = str(row.get("Status da arte", "")).strip() or "-"
-    status_pagamento_txt = str(row.get("Status Pagamento", "")).strip() or "A pagar"
-    valor_num = float(row.get("Valor", 0) or 0)
+    for index, row in df_status.iterrows():
+        empresa_txt = str(row.get("Empresa", "")).strip() or "-"
+        semana_txt = str(row.get("Semana", "")).strip() or "-"
+        tema_txt = str(row.get("Tema", "")).strip() or "-"
+        mes_txt = str(row.get("Mês", "")).strip() or "-"
+        tipo_txt = str(row.get("Tipo de arte", "")).strip() or "-"
+        servico_txt = str(row.get("Serviços", "")).strip() or "-"
+        status_arte_txt = str(row.get("Status da arte", "")).strip() or "-"
+        status_pagamento_txt = str(row.get("Status Pagamento", "")).strip() or "A pagar"
+        valor_num = float(row.get("Valor", 0) or 0)
 
-    if pd.notnull(row.get("Data Publicação")):
-        data_txt = row["Data Publicação"].strftime("%d/%m/%Y")
-    else:
-        data_txt = str(row.get("Data Publicação Raw", "")).strip() or "-"
-
-    edit_key = f"pub_edit_{index}"
-    edit_ativo = st.session_state.get(edit_key, False)
-
-    st.markdown('<div class="row-card">', unsafe_allow_html=True)
-
-    titulo_col, lapis_col = st.columns([11, 1], vertical_alignment="center")
-    with titulo_col:
-        if edit_ativo:
-            form_field_label("Nome da atividade")
-            novo_tema = st.text_input(
-                "Nome da atividade",
-                value=tema_txt,
-                key=f"tema_input_{index}",
-                label_visibility="collapsed",
-            )
+        if pd.notnull(row.get("Data Publicação")):
+            data_txt = row["Data Publicação"].strftime("%d/%m/%Y")
         else:
-            st.markdown(f'<div class="row-main">{html.escape(tema_txt)}</div>', unsafe_allow_html=True)
+            data_txt = str(row.get("Data Publicação Raw", "")).strip() or "-"
 
-    with lapis_col:
-        icone = "✕" if edit_ativo else "✏️"
-        if st.button(
-            icone,
-            key=f"edit_atividade_{index}",
-            help="Fechar edição" if edit_ativo else "Editar atividade",
-        ):
-            st.session_state[edit_key] = not edit_ativo
-            st.rerun()
+        edit_key = f"pub_edit_{index}"
+        edit_ativo = st.session_state.get(edit_key, False)
 
-    st.markdown(
-        f'<div class="row-meta"><b>Empresa:</b> {html.escape(empresa_txt)} &nbsp;&nbsp; '
-        f'<b>Mês:</b> {html.escape(mes_txt)} &nbsp;&nbsp; <b>Semana:</b> {html.escape(semana_txt)}</div>',
-        unsafe_allow_html=True,
-    )
-    st.markdown(
-        f'<div class="row-meta"><b>Tipo de arte:</b> {html.escape(tipo_txt)} &nbsp;&nbsp; '
-        f'<b>Serviço:</b> {html.escape(servico_txt)} &nbsp;&nbsp; <b>Data:</b> {html.escape(data_txt)}</div>',
-        unsafe_allow_html=True,
-    )
-
-    if edit_ativo:
-        pagamento_atual = status_pagamento_para_edicao(status_pagamento_txt)
-        status_atual = status_arte_para_edicao(status_arte_txt)
-
-        c_valor, c_pagamento, c_status = st.columns(3)
-        with c_valor:
-            form_field_label("Valor")
-            novo_valor = st.text_input(
-                "Valor",
-                value=format_valor_input(valor_num),
-                placeholder="Ex.: 38,00",
-                key=f"valor_input_{index}",
-                label_visibility="collapsed",
-            )
-        with c_pagamento:
-            form_field_label("Pagamento")
-            novo_pagamento = st.selectbox(
-                "Pagamento",
-                STATUS_PAGAMENTO_FORM_OPTIONS,
-                index=indice_select(STATUS_PAGAMENTO_FORM_OPTIONS, pagamento_atual),
-                key=f"pagamento_select_{index}",
-                label_visibility="collapsed",
-            )
-        with c_status:
-            form_field_label("Status da arte")
-            novo_status = st.selectbox(
-                "Status da arte",
-                STATUS_ARTE_EDIT_OPTIONS,
-                index=indice_select(STATUS_ARTE_EDIT_OPTIONS, status_atual),
-                key=f"status_select_{index}",
-                label_visibility="collapsed",
-            )
-
-        ac1, ac2 = st.columns(2)
-        with ac1:
-            if st.button("Salvar alterações", key=f"salvar_alteracoes_{index}"):
-                ok, msg = salvar_atividade_planilha(
-                    worksheet,
-                    index,
-                    novo_tema,
-                    novo_valor,
-                    novo_pagamento,
-                    novo_status,
-                )
-                if ok:
-                    st.session_state[edit_key] = False
-                    st.cache_data.clear()
-                    st.rerun()
+        with st.container(border=True, key=f"row_card_{index}"):
+            titulo_col, lapis_col = st.columns([11, 1], vertical_alignment="center")
+            with titulo_col:
+                if edit_ativo:
+                    form_field_label("Nome da atividade")
+                    novo_tema = st.text_input(
+                        "Nome da atividade",
+                        value=tema_txt,
+                        key=f"tema_input_{index}",
+                        label_visibility="collapsed",
+                    )
                 else:
-                    st.warning(msg)
-        with ac2:
-            if st.button("Cancelar", key=f"cancelar_edicao_{index}"):
-                st.session_state[edit_key] = False
-                st.rerun()
-    else:
-        st.markdown(
-            f'<div class="row-meta" style="margin-top:8px;">'
-            f'<b>Status da arte:</b> {status_arte_badge(status_arte_txt)} &nbsp;&nbsp; '
-            f'<b>Pagamento:</b> {status_pagamento_badge(status_pagamento_txt)}'
-            f'</div>',
-            unsafe_allow_html=True,
-        )
-        st.markdown(
-            f'<div class="row-valor">{format_brl(valor_num)}</div>',
-            unsafe_allow_html=True,
-        )
+                    st.markdown(f'<div class="row-main">{html.escape(tema_txt)}</div>', unsafe_allow_html=True)
 
-    st.markdown('</div>', unsafe_allow_html=True)
+            with lapis_col:
+                icone = "✕" if edit_ativo else "✏️"
+                if st.button(
+                    icone,
+                    key=f"edit_atividade_{index}",
+                    help="Fechar edição" if edit_ativo else "Editar atividade",
+                ):
+                    st.session_state[edit_key] = not edit_ativo
+                    st.rerun()
 
-if df_status.empty:
-    st.info("Nenhum registro encontrado com esse filtro.")
+            st.markdown(
+                f'<div class="row-meta"><b>Empresa:</b> {html.escape(empresa_txt)} &nbsp;&nbsp; '
+                f'<b>Mês:</b> {html.escape(mes_txt)} &nbsp;&nbsp; <b>Semana:</b> {html.escape(semana_txt)}</div>',
+                unsafe_allow_html=True,
+            )
+            st.markdown(
+                f'<div class="row-meta"><b>Tipo de arte:</b> {html.escape(tipo_txt)} &nbsp;&nbsp; '
+                f'<b>Serviço:</b> {html.escape(servico_txt)} &nbsp;&nbsp; <b>Data:</b> {html.escape(data_txt)}</div>',
+                unsafe_allow_html=True,
+            )
 
-st.markdown('</div>', unsafe_allow_html=True)
+            if edit_ativo:
+                pagamento_atual = status_pagamento_para_edicao(status_pagamento_txt)
+                status_atual = status_arte_para_edicao(status_arte_txt)
+
+                c_valor, c_pagamento, c_status = st.columns(3)
+                with c_valor:
+                    form_field_label("Valor")
+                    novo_valor = st.text_input(
+                        "Valor",
+                        value=format_valor_input(valor_num),
+                        placeholder="Ex.: 38,00",
+                        key=f"valor_input_{index}",
+                        label_visibility="collapsed",
+                    )
+                with c_pagamento:
+                    form_field_label("Pagamento")
+                    novo_pagamento = st.selectbox(
+                        "Pagamento",
+                        STATUS_PAGAMENTO_FORM_OPTIONS,
+                        index=indice_select(STATUS_PAGAMENTO_FORM_OPTIONS, pagamento_atual),
+                        key=f"pagamento_select_{index}",
+                        label_visibility="collapsed",
+                    )
+                with c_status:
+                    form_field_label("Status da arte")
+                    novo_status = st.selectbox(
+                        "Status da arte",
+                        STATUS_ARTE_EDIT_OPTIONS,
+                        index=indice_select(STATUS_ARTE_EDIT_OPTIONS, status_atual),
+                        key=f"status_select_{index}",
+                        label_visibility="collapsed",
+                    )
+
+                ac1, ac2 = st.columns(2)
+                with ac1:
+                    if st.button("Salvar alterações", key=f"salvar_alteracoes_{index}"):
+                        ok, msg = salvar_atividade_planilha(
+                            worksheet,
+                            index,
+                            novo_tema,
+                            novo_valor,
+                            novo_pagamento,
+                            novo_status,
+                        )
+                        if ok:
+                            st.session_state[edit_key] = False
+                            st.cache_data.clear()
+                            st.rerun()
+                        else:
+                            st.warning(msg)
+                with ac2:
+                    if st.button("Cancelar", key=f"cancelar_edicao_{index}"):
+                        st.session_state[edit_key] = False
+                        st.rerun()
+            else:
+                st.markdown(
+                    f'<div class="row-meta" style="margin-top:8px;">'
+                    f'<b>Status da arte:</b> {status_arte_badge(status_arte_txt)} &nbsp;&nbsp; '
+                    f'<b>Pagamento:</b> {status_pagamento_badge(status_pagamento_txt)}'
+                    f'</div>',
+                    unsafe_allow_html=True,
+                )
+                st.markdown(
+                    f'<div class="row-valor">{format_brl(valor_num)}</div>',
+                    unsafe_allow_html=True,
+                )
+
+    if df_status.empty:
+        st.info("Nenhum registro encontrado com esse filtro.")
