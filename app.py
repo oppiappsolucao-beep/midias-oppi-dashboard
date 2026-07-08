@@ -293,6 +293,13 @@ st.markdown("""
         text-align: center;
     }
 
+    .filter-card .form-field-label {
+        color: #0f172a !important;
+        font-size: 14px !important;
+        font-weight: 800 !important;
+        margin: 0 0 6px 2px !important;
+    }
+
     .filter-card,
     .section-card,
     .table-card,
@@ -3530,38 +3537,51 @@ data_inicio_default, data_fim_default = intervalo_semana_atual(hoje)
 st.markdown('<div id="publicacoes-filtros"></div>', unsafe_allow_html=True)
 st.markdown('<div class="filter-card">', unsafe_allow_html=True)
 
+meses_disponiveis = [x for x in df["Mês"].dropna().astype(str).unique().tolist() if x.strip()]
+mes_opcoes = ["Todos"] + ordenar_meses(meses_disponiveis)
+if mes_corrente not in mes_opcoes:
+    mes_opcoes.insert(1, mes_corrente)
+
+empresas_disponiveis = [x for x in df["Empresa"].dropna().astype(str).unique().tolist() if str(x).strip()]
+
 f1, f2, f3, f4 = st.columns(4)
 
 with f1:
-    meses_disponiveis = [x for x in df["Mês"].dropna().astype(str).unique().tolist() if x.strip()]
-    mes_opcoes = ["Todos"] + ordenar_meses(meses_disponiveis)
-    if mes_corrente not in mes_opcoes:
-        mes_opcoes.insert(1, mes_corrente)
+    form_field_label("Mês")
     mes = st.selectbox(
         "Mês",
         mes_opcoes,
         index=mes_opcoes.index(mes_corrente),
+        label_visibility="collapsed",
     )
 
 with f2:
+    form_field_label("De")
     data_inicio = st.date_input(
         "De",
         value=data_inicio_default,
         format="DD/MM/YYYY",
         key="pub_data_inicio",
+        label_visibility="collapsed",
     )
 
 with f3:
+    form_field_label("Até")
     data_fim = st.date_input(
         "Até",
         value=data_fim_default,
         format="DD/MM/YYYY",
         key="pub_data_fim",
+        label_visibility="collapsed",
     )
 
 with f4:
-    empresas_disponiveis = [x for x in df["Empresa"].dropna().astype(str).unique().tolist() if str(x).strip()]
-    empresa = st.selectbox("Empresa", ["Todas"] + sorted(empresas_disponiveis))
+    form_field_label("Empresa")
+    empresa = st.selectbox(
+        "Empresa",
+        ["Todas"] + sorted(empresas_disponiveis),
+        label_visibility="collapsed",
+    )
 
 st.markdown('</div>', unsafe_allow_html=True)
 
