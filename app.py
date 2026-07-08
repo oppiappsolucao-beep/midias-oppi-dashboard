@@ -35,11 +35,29 @@ st.set_page_config(
 # LOGIN CONFIG
 # ---------------------------------------------------
 
-APP_USER = "operacao"
-APP_PASS = "100316"
+APP_USERS = {
+    "operacao": {"password": "100316", "role": "geral"},
+    "geral": {"password": os.getenv("APP_PASS_GERAL", "100316"), "role": "geral"},
+    "gestor": {"password": os.getenv("APP_PASS_GESTOR", "gestor@oppi"), "role": "gestor"},
+    "designer": {"password": os.getenv("APP_PASS_DESIGNER", "designer@oppi"), "role": "designer"},
+}
+ROLE_LABELS = {
+    "geral": "Geral",
+    "gestor": "Gestor",
+    "designer": "Designer",
+}
+NAV_MIDIAS = ["Empresas", "Publicações", "Nova Arte"]
+ROLE_NAV_ACCESS = {
+    "geral": ["Empresas", "Publicações", "Nova Arte", "Gestão de Tráfego"],
+    "gestor": ["Gestão de Tráfego"],
+    "designer": NAV_MIDIAS,
+}
 
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
+
+if "user_role" not in st.session_state:
+    st.session_state.user_role = "geral"
 
 if "area_dashboard" not in st.session_state:
     st.session_state.area_dashboard = "Publicações"
@@ -1075,6 +1093,14 @@ st.markdown("""
         text-transform: uppercase;
     }
 
+    .sidebar-role {
+        color: #C4B5FD;
+        font-size: 11px;
+        font-weight: 700;
+        margin: -4px 0 12px 4px;
+        letter-spacing: 0.3px;
+    }
+
     .sidebar-help {
         color: #9F94C9;
         font-size: 11px;
@@ -1421,6 +1447,34 @@ def login_logo_html(path: Path):
     img_base64 = base64.b64encode(path.read_bytes()).decode()
     return f'<img class="login-logo" src="data:{mime};base64,{img_base64}">'
 
+
+def authenticate_user(usuario, senha):
+    user_key = str(usuario).strip().lower()
+    creds = APP_USERS.get(user_key)
+    if creds and creds["password"] == senha:
+        return creds["role"]
+    return None
+
+
+def get_user_role():
+    return st.session_state.get("user_role", "geral")
+
+
+def nav_options_for_role(role):
+    return ROLE_NAV_ACCESS.get(role, ROLE_NAV_ACCESS["geral"])
+
+
+def default_area_for_role(role):
+    return nav_options_for_role(role)[0]
+
+
+def enforce_area_access(area, role):
+    allowed = nav_options_for_role(role)
+    if area in allowed:
+        return area
+    return default_area_for_role(role)
+
+
 def show_login():
     st.markdown('<div id="login-page"></div>', unsafe_allow_html=True)
 
@@ -1443,9 +1497,11 @@ def show_login():
         entrar = st.form_submit_button("Entrar", width="stretch")
 
     if entrar:
-        if usuario == APP_USER and senha == APP_PASS:
+        role = authenticate_user(usuario, senha)
+        if role:
             st.session_state.logged_in = True
-            st.session_state.area_dashboard = "Publicações"
+            st.session_state.user_role = role
+            st.session_state.area_dashboard = default_area_for_role(role)
             st.rerun()
         else:
             st.error("Usuário ou senha incorretos.")
@@ -1535,6 +1591,12 @@ def reset_sidebar_toggle_state():
 
 def render_sidebar_navigation():
     logo_html = sidebar_logo_html(LOGO_PATH)
+    role = get_user_role()
+    nav_options = nav_options_for_role(role)
+    role_label = ROLE_LABELS.get(role, role.title())
+
+    if st.session_state.get("area_dashboard") not in nav_options:
+        st.session_state.area_dashboard = default_area_for_role(role)
 
     with st.sidebar:
         st.markdown(
@@ -1550,13 +1612,14 @@ def render_sidebar_navigation():
                 </div>
             </div>
             <div class="sidebar-nav-label">Navegação</div>
+            <div class="sidebar-role">Perfil: {html.escape(role_label)}</div>
             """,
             unsafe_allow_html=True
         )
 
         area = st.radio(
             "Navegação",
-            options=NAV_OPTIONS,
+            options=nav_options,
             format_func=lambda opcao: {
                 "Empresas": "🏢  Empresas",
                 "Publicações": "📄  Publicações",
@@ -1570,6 +1633,7 @@ def render_sidebar_navigation():
         sair = st.button("SAIR DA CONTA", key="btn_logout_sidebar")
         if sair:
             st.session_state.logged_in = False
+            st.session_state.pop("user_role", None)
             reset_sidebar_toggle_state()
             st.rerun()
 
@@ -2552,6 +2616,12 @@ if not st.session_state.logged_in:
     show_login()
     st.stop()
 
+user_role = get_user_role()
+area_dashboard = enforce_area_access(
+    st.session_state.get("area_dashboard", default_area_for_role(user_role)),
+    user_role,
+)
+st.session_state.area_dashboard = area_dashboard
 area_dashboard = render_sidebar_navigation()
 render_sidebar_show_button()
 sync_sidebar_toggle_state()
