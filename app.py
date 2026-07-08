@@ -8,6 +8,7 @@ from pathlib import Path
 from datetime import date
 
 import gspread
+import gspread.exceptions
 import pandas as pd
 import plotly.express as px
 import streamlit as st
@@ -47,10 +48,18 @@ ROLE_LABELS = {
     "designer": "Designer",
 }
 NAV_MIDIAS = ["Empresas", "Publicações", "Nova Arte"]
+NAV_ACESSOS = "Acessos"
 ROLE_NAV_ACCESS = {
-    "geral": ["Empresas", "Publicações", "Nova Arte", "Gestão de Tráfego"],
-    "gestor": ["Gestão de Tráfego"],
+    "geral": ["Empresas", "Publicações", "Nova Arte", "Gestão de Tráfego", NAV_ACESSOS],
+    "gestor": ["Gestão de Tráfego", NAV_ACESSOS],
     "designer": NAV_MIDIAS,
+}
+NAV_LABELS = {
+    "Empresas": "🏢  Empresas",
+    "Publicações": "📄  Publicações",
+    "Nova Arte": "🎨  Nova Arte",
+    "Gestão de Tráfego": "📊  Gestão de Tráfego",
+    NAV_ACESSOS: "🔐  Acessos",
 }
 
 if "logged_in" not in st.session_state:
@@ -62,7 +71,7 @@ if "user_role" not in st.session_state:
 if "area_dashboard" not in st.session_state:
     st.session_state.area_dashboard = "Publicações"
 
-NAV_OPTIONS = ["Empresas", "Publicações", "Nova Arte", "Gestão de Tráfego"]
+NAV_OPTIONS = ["Empresas", "Publicações", "Nova Arte", "Gestão de Tráfego", NAV_ACESSOS]
 TIPO_ARTE_OPTIONS = ["Vídeo", "Arte", "Carrossel"]
 STATUS_ARTE_FORM_OPTIONS = ["Andamento", "Finalizado", "Pausado", "Pendente"]
 SEMANA_OPTIONS = [
@@ -188,6 +197,11 @@ SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
     "https://www.googleapis.com/auth/drive"
 ]
+
+USERS_SHEET_NAME = os.getenv("USERS_SHEET_NAME", "Acessos")
+USERS_HEADERS = ["Usuário", "Senha", "Perfil", "Ativo"]
+ROLE_FORM_OPTIONS = ["geral", "gestor", "designer"]
+CONTENT_AREAS = ["Empresas", "Publicações", "Nova Arte", "Gestão de Tráfego", NAV_ACESSOS]
 
 MESES_ORDEM = [
     "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
@@ -345,6 +359,26 @@ st.markdown("""
     .stApp:has(#publicacoes-filtros) section.main div[data-testid="stSelectbox"] svg,
     .stApp:has(#publicacoes-filtros) section.main div[data-testid="stMultiSelect"] svg {
         fill: #0f172a !important;
+    }
+
+    .stApp:has(#acessos-page) section.main div[data-testid="stTextInput"] input,
+    .stApp:has(#acessos-page) section.main div[data-testid="stTextInput"] [data-baseweb="input"],
+    .stApp:has(#acessos-page) section.main div[data-testid="stTextInput"] [data-baseweb="input"] > div,
+    .stApp:has(#acessos-page) section.main div[data-testid="stSelectbox"] div[data-baseweb="select"] > div {
+        background: #ffffff !important;
+        background-color: #ffffff !important;
+        border: 1px solid #d9e0eb !important;
+        border-radius: 12px !important;
+        color: #0f172a !important;
+        min-height: 44px !important;
+    }
+
+    .stApp:has(#acessos-page) section.main div[data-testid="stSelectbox"] div[data-baseweb="select"] span,
+    .stApp:has(#acessos-page) section.main div[data-testid="stSelectbox"] div[data-baseweb="select"] input {
+        color: #0f172a !important;
+        -webkit-text-fill-color: #0f172a !important;
+        font-size: 15px !important;
+        font-weight: 600 !important;
     }
 
     .stApp:has(#nova-arte-page) section.main [data-testid="stFormSubmitButton"] > button,
@@ -1449,8 +1483,8 @@ def login_logo_html(path: Path):
 
 
 def authenticate_user(usuario, senha):
-    user_key = str(usuario).strip().lower()
-    creds = APP_USERS.get(user_key)
+    user_key = normalize_username(usuario)
+    creds = get_all_users().get(user_key)
     if creds and creds["password"] == senha:
         return creds["role"]
     return None
@@ -1550,6 +1584,153 @@ def get_google_creds_dict():
 
     return env_creds
 
+
+@st.cache_resource
+def connect_gspread_client():
+    creds_dict = get_google_creds_dict()
+    creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
+    return gspread.authorize(creds)
+
+
+@st.cache_resource
+def connect_spreadsheet():
+    return connect_gspread_client().open_by_key(SHEET_ID)
+
+
+def connect_media_worksheet():
+    return connect_spreadsheet().get_worksheet(0)
+
+
+def connect_users_worksheet():
+    sheet = connect_spreadsheet()
+    try:
+        return sheet.worksheet(USERS_SHEET_NAME)
+    except gspread.exceptions.WorksheetNotFound:
+        worksheet = sheet.add_worksheet(title=USERS_SHEET_NAME, rows=200, cols=len(USERS_HEADERS))
+        worksheet.append_row(USERS_HEADERS)
+        return worksheet
+
+
+def normalize_username(value):
+    return str(value).strip().lower()
+
+
+def normalize_role(value):
+    role = str(value).strip().lower()
+    if role in ROLE_LABELS:
+        return role
+    for key, label in ROLE_LABELS.items():
+        if str(label).strip().lower() == role:
+            return key
+    return ""
+
+
+def is_user_active(value):
+    ativo = str(value).strip().lower()
+    return ativo not in ("não", "nao", "n", "0", "false", "inativo")
+
+
+@st.cache_data(ttl=30)
+def load_registered_users():
+    try:
+        worksheet = connect_users_worksheet()
+        records = worksheet.get_all_records()
+    except Exception:
+        return {}
+
+    users = {}
+    for row in records:
+        username = normalize_username(row.get("Usuário", ""))
+        password = str(row.get("Senha", "")).strip()
+        role = normalize_role(row.get("Perfil", ""))
+        if not username or not password or not role:
+            continue
+        if not is_user_active(row.get("Ativo", "Sim")):
+            continue
+        users[username] = {"password": password, "role": role, "source": "planilha"}
+    return users
+
+
+def clear_users_cache():
+    load_registered_users.clear()
+
+
+def get_all_users():
+    users = {
+        username: {**data, "source": "padrão"}
+        for username, data in APP_USERS.items()
+    }
+    users.update(load_registered_users())
+    return users
+
+
+def roles_criaveis_por(perfil_atual):
+    if perfil_atual == "geral":
+        return ROLE_FORM_OPTIONS
+    if perfil_atual == "gestor":
+        return ["gestor", "designer"]
+    return []
+
+
+def build_permissions_matrix():
+    rows = []
+    for area in CONTENT_AREAS:
+        row = {"Conteúdo": area}
+        for role in ROLE_FORM_OPTIONS:
+            row[ROLE_LABELS[role]] = (
+                "Sim" if area in nav_options_for_role(role) else "Não"
+            )
+        rows.append(row)
+    return pd.DataFrame(rows)
+
+
+def build_users_access_table():
+    rows = []
+    for username, data in sorted(get_all_users().items()):
+        role = data["role"]
+        row = {
+            "Usuário": username,
+            "Perfil": ROLE_LABELS.get(role, role.title()),
+            "Origem": "Planilha" if data.get("source") == "planilha" else "Padrão",
+        }
+        for area in CONTENT_AREAS:
+            row[area] = "Sim" if area in nav_options_for_role(role) else "Não"
+        rows.append(row)
+    return pd.DataFrame(rows)
+
+
+def username_is_valid(username):
+    username = normalize_username(username)
+    if len(username) < 3:
+        return False
+    return re.fullmatch(r"[a-z0-9_.-]+", username) is not None
+
+
+def register_user(username, password, role, creator_role):
+    username = normalize_username(username)
+    role = normalize_role(role)
+
+    if creator_role not in ("geral", "gestor"):
+        return False, "Seu perfil não pode cadastrar usuários."
+
+    if role not in roles_criaveis_por(creator_role):
+        return False, "Seu perfil não pode criar esse tipo de acesso."
+
+    if not username_is_valid(username):
+        return False, "Use um usuário válido com pelo menos 3 caracteres."
+
+    if len(password.strip()) < 4:
+        return False, "A senha precisa ter pelo menos 4 caracteres."
+
+    if username in get_all_users():
+        return False, "Esse usuário já está cadastrado."
+
+    worksheet = connect_users_worksheet()
+    worksheet.append_row([username, password.strip(), role, "Sim"])
+    clear_users_cache()
+    return True, "Usuário cadastrado com sucesso!"
+
+
 # ---------------------------------------------------
 # TOPO E NAVEGAÇÃO
 # ---------------------------------------------------
@@ -1620,12 +1801,7 @@ def render_sidebar_navigation():
         area = st.radio(
             "Navegação",
             options=nav_options,
-            format_func=lambda opcao: {
-                "Empresas": "🏢  Empresas",
-                "Publicações": "📄  Publicações",
-                "Nova Arte": "🎨  Nova Arte",
-                "Gestão de Tráfego": "📊  Gestão de Tráfego",
-            }[opcao],
+            format_func=lambda opcao: NAV_LABELS[opcao],
             key="area_dashboard",
             label_visibility="collapsed",
         )
@@ -1653,6 +1829,7 @@ def render_dashboard_top(area):
         "Empresas": "Visão por empresa",
         "Publicações": "Gestão de publicações e pagamentos",
         "Nova Arte": "Cadastro de nova arte",
+        NAV_ACESSOS: "Perfis e permissões do painel",
     }
     subtitulo = subtitulos.get(area, "Gestão de publicações e pagamentos")
 
@@ -2608,6 +2785,104 @@ def render_gestao_trafego():
     st.markdown('</div>', unsafe_allow_html=True)
 
 
+def render_acessos():
+    st.markdown(
+        '<div class="section-title">🔐 Acessos do painel</div>',
+        unsafe_allow_html=True,
+    )
+    st.markdown('<div id="acessos-page"></div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="small-note">Veja quem pode acessar cada conteúdo e cadastre novos usuários para o painel.</div>',
+        unsafe_allow_html=True,
+    )
+
+    st.markdown('<div class="section-card">', unsafe_allow_html=True)
+    st.markdown("**Quem pode acessar cada conteúdo**")
+    st.dataframe(
+        build_permissions_matrix(),
+        width="stretch",
+        hide_index=True,
+    )
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown('<div class="section-card">', unsafe_allow_html=True)
+    st.markdown("**Usuários cadastrados e permissões**")
+    usuarios_df = build_users_access_table()
+    if usuarios_df.empty:
+        st.info("Nenhum usuário cadastrado.")
+    else:
+        st.dataframe(usuarios_df, width="stretch", hide_index=True)
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    perfil_atual = get_user_role()
+    roles_permitidos = roles_criaveis_por(perfil_atual)
+    if not roles_permitidos:
+        return
+
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown('<div class="section-card">', unsafe_allow_html=True)
+    st.markdown("**Cadastrar novo usuário**")
+
+    with st.form("cadastro_acesso_form", clear_on_submit=True):
+        c1, c2 = st.columns(2)
+
+        with c1:
+            form_field_label("Usuário")
+            novo_usuario = st.text_input(
+                "Usuário",
+                placeholder="Ex.: maria.designer",
+                key="acesso_novo_usuario",
+                label_visibility="collapsed",
+            )
+            form_field_label("Perfil de acesso")
+            perfil_novo = st.selectbox(
+                "Perfil de acesso",
+                options=roles_permitidos,
+                format_func=lambda role: ROLE_LABELS.get(role, role.title()),
+                key="acesso_novo_perfil",
+                label_visibility="collapsed",
+            )
+
+        with c2:
+            form_field_label("Senha")
+            nova_senha = st.text_input(
+                "Senha",
+                placeholder="Digite a senha",
+                type="password",
+                key="acesso_nova_senha",
+                label_visibility="collapsed",
+            )
+            form_field_label("Confirmar senha")
+            confirmar_senha = st.text_input(
+                "Confirmar senha",
+                placeholder="Repita a senha",
+                type="password",
+                key="acesso_confirmar_senha",
+                label_visibility="collapsed",
+            )
+
+        cadastrar = st.form_submit_button("Cadastrar usuário", width="stretch")
+
+    if cadastrar:
+        if nova_senha.strip() != confirmar_senha.strip():
+            st.warning("As senhas informadas não conferem.")
+        else:
+            ok, mensagem = register_user(
+                novo_usuario,
+                nova_senha,
+                perfil_novo,
+                perfil_atual,
+            )
+            if ok:
+                st.success(mensagem)
+                st.rerun()
+            else:
+                st.warning(mensagem)
+
+    st.markdown('</div>', unsafe_allow_html=True)
+
+
 # ---------------------------------------------------
 # LOGIN
 # ---------------------------------------------------
@@ -2631,6 +2906,10 @@ if area_dashboard == "Gestão de Tráfego":
     render_gestao_trafego()
     st.stop()
 
+if area_dashboard == NAV_ACESSOS:
+    render_acessos()
+    st.stop()
+
 # ---------------------------------------------------
 # CONEXÃO GOOGLE
 # ---------------------------------------------------
@@ -2638,12 +2917,7 @@ if area_dashboard == "Gestão de Tráfego":
 @st.cache_resource
 def connect_sheet():
     try:
-        creds_dict = get_google_creds_dict()
-        creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
-        client = gspread.authorize(creds)
-        sheet = client.open_by_key(SHEET_ID)
-        worksheet = sheet.get_worksheet(0)
-        return worksheet
+        return connect_media_worksheet()
     except Exception as e:
         st.error("❌ Erro ao conectar com Google Sheets")
         st.write("Verifique:")
