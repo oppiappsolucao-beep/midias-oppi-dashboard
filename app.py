@@ -3600,7 +3600,6 @@ data_inicio_default, data_fim_default = intervalo_semana_atual(hoje)
 # ---------------------------------------------------
 
 st.markdown('<div id="publicacoes-filtros"></div>', unsafe_allow_html=True)
-st.markdown('<div class="filter-card">', unsafe_allow_html=True)
 
 meses_disponiveis = [x for x in df["Mês"].dropna().astype(str).unique().tolist() if x.strip()]
 mes_opcoes = ["Todos"] + ordenar_meses(meses_disponiveis)
@@ -3609,46 +3608,45 @@ if mes_corrente not in mes_opcoes:
 
 empresas_disponiveis = [x for x in df["Empresa"].dropna().astype(str).unique().tolist() if str(x).strip()]
 
-f1, f2, f3, f4 = st.columns(4)
+with st.container(border=True):
+    f1, f2, f3, f4 = st.columns(4)
 
-with f1:
-    form_field_label("Mês")
-    mes = st.selectbox(
-        "Mês",
-        mes_opcoes,
-        index=mes_opcoes.index(mes_corrente),
-        label_visibility="collapsed",
-    )
+    with f1:
+        form_field_label("Mês")
+        mes = st.selectbox(
+            "Mês",
+            mes_opcoes,
+            index=mes_opcoes.index(mes_corrente),
+            label_visibility="collapsed",
+        )
 
-with f2:
-    form_field_label("De")
-    data_inicio = st.date_input(
-        "De",
-        value=data_inicio_default,
-        format="DD/MM/YYYY",
-        key="pub_data_inicio",
-        label_visibility="collapsed",
-    )
+    with f2:
+        form_field_label("De")
+        data_inicio = st.date_input(
+            "De",
+            value=data_inicio_default,
+            format="DD/MM/YYYY",
+            key="pub_data_inicio",
+            label_visibility="collapsed",
+        )
 
-with f3:
-    form_field_label("Até")
-    data_fim = st.date_input(
-        "Até",
-        value=data_fim_default,
-        format="DD/MM/YYYY",
-        key="pub_data_fim",
-        label_visibility="collapsed",
-    )
+    with f3:
+        form_field_label("Até")
+        data_fim = st.date_input(
+            "Até",
+            value=data_fim_default,
+            format="DD/MM/YYYY",
+            key="pub_data_fim",
+            label_visibility="collapsed",
+        )
 
-with f4:
-    form_field_label("Empresa")
-    empresa = st.selectbox(
-        "Empresa",
-        ["Todas"] + sorted(empresas_disponiveis),
-        label_visibility="collapsed",
-    )
-
-st.markdown('</div>', unsafe_allow_html=True)
+    with f4:
+        form_field_label("Empresa")
+        empresa = st.selectbox(
+            "Empresa",
+            ["Todas"] + sorted(empresas_disponiveis),
+            label_visibility="collapsed",
+        )
 
 periodo_txt = f"{format_date_br(data_inicio)} até {format_date_br(data_fim)}"
 if mes != "Todos":
