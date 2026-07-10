@@ -132,7 +132,7 @@ DIA_SEMANA_FORM_NOME = {
     "Sex": "sexta-feira",
 }
 STATUS_ARTE_EDIT_OPTIONS = ["Pronto", "Em andamento", "Pausado", "Pendente"]
-APP_UI_VERSION = "2026-07-10-salvar-atividade"
+APP_UI_VERSION = "2026-07-10-salvar-fix-v2"
 
 if "traffic_form_reset_token" not in st.session_state:
     st.session_state.traffic_form_reset_token = 0
@@ -2302,9 +2302,18 @@ def connect_media_worksheet():
     return connect_spreadsheet().get_worksheet(0)
 
 
+@st.cache_resource(show_spinner=False)
+def connect_sheet():
+    try:
+        return connect_media_worksheet()
+    except Exception as e:
+        raise ConnectionError(f"Erro ao conectar com Google Sheets: {e}") from e
+
+
 def invalidar_conexao_planilha():
     connect_sheet.clear()
     connect_gspread_client.clear()
+    connect_spreadsheet.clear()
 
 
 def erro_planilha_recuperavel(exc):
@@ -2339,14 +2348,18 @@ def executar_operacao_planilha(operacao, *args, **kwargs):
     raise ultimo_erro
 
 
-def append_linhas_midia(worksheet, linhas):
+def append_linhas_midia(linhas):
     if not linhas:
         return
-    executar_operacao_planilha(
-        worksheet.append_rows,
-        linhas,
-        value_input_option="USER_ENTERED",
-    )
+
+    def gravar():
+        worksheet = connect_sheet()
+        if len(linhas) == 1:
+            worksheet.append_row(linhas[0], value_input_option="USER_ENTERED")
+        else:
+            worksheet.append_rows(linhas, value_input_option="USER_ENTERED")
+
+    executar_operacao_planilha(gravar)
 
 
 def mensagem_erro_planilha(exc):
@@ -3414,6 +3427,51 @@ def datas_dia_semana_form_mes(mes_nome, dia_abrev, ano=None):
     ]
 
 
+def data_publicacao_por_dia_form(mes_nome, dia_abrev, ano=None):
+    datas = datas_dia_semana_form_mes(mes_nome, dia_abrev, ano)
+    if not datas:
+        return None
+
+    hoje = date.today()
+    ano_ref = ano or hoje.year
+    mes_int = MESES_ORDEM.index(mes_nome) + 1
+
+    if hoje.year == ano_ref and hoje.month == mes_int:
+        proximas = [item for item in datas if item >= hoje]
+        if proximas:
+            return proximas[0]
+
+    return datas[0]
+
+
+def montar_linha_nova_arte(
+    mes,
+    semana_linha,
+    empresa_final,
+    tema,
+    valor_num_val,
+    status_pagamento_planilha,
+    tipo_arte,
+    status_arte_planilha,
+    data_linha,
+    servico,
+    recorrencia_linha,
+):
+    return [
+        mes,
+        semana_linha,
+        empresa_final,
+        tema.strip(),
+        float(valor_num_val),
+        status_pagamento_planilha,
+        tipo_arte,
+        status_arte_planilha,
+        data_linha,
+        servico,
+        recorrencia_linha,
+    ]
+
+
 def weekday_do_padrao_recorrencia(padrao):
     texto = str(padrao).strip().lower()
     for idx, dia in enumerate(DIAS_SEMANA_RECORRENCIA):
@@ -3551,6 +3609,9 @@ def render_midias_nova_arte(df):
         unsafe_allow_html=True
     )
     st.markdown('<div id="nova-arte-page"></div>', unsafe_allow_html=True)
+
+    if st.session_state.get("nova_arte_msg_sucesso"):
+        st.success(st.session_state.pop("nova_arte_msg_sucesso"))
 
     empresas_planilha = sorted(
         {
@@ -3720,8 +3781,8 @@ def render_midias_nova_arte(df):
             if not dia:
                 st.warning("Selecione o dia da semana.")
                 return
-            datas_dia = datas_dia_semana_form_mes(mes, dia)
-            if not datas_dia:
+            data_ref = data_publicacao_por_dia_form(mes, dia)
+            if not data_ref:
                 st.warning("Não foi possível encontrar essa data no mês selecionado.")
                 return
 
@@ -3762,22 +3823,20 @@ def render_midias_nova_arte(df):
             status_pagamento,
         )
 
-        worksheet = connect_sheet()
-
         def montar_linha_planilha(semana_linha, data_linha, recorrencia_linha):
-            return [
+            return montar_linha_nova_arte(
                 mes,
                 semana_linha,
                 empresa_final,
-                tema.strip(),
-                float(valor_num_val),
+                tema,
+                valor_num_val,
                 status_pagamento_planilha,
                 tipo_arte,
                 status_arte_planilha,
                 data_linha,
                 servico,
                 recorrencia_linha,
-            ]
+            )
 
         linhas_novas = []
         if recorrencia == "Sim":
@@ -3786,26 +3845,30 @@ def render_midias_nova_arte(df):
                 st.warning("Não foi possível gerar as datas para o padrão selecionado.")
                 return
 
-            for data_ref in datas_recorrencia:
-                semana_linha = SEMANA_OPTIONS[indice_semana_por_dia(data_ref.day)]
-                data_linha = data_ref.strftime("%d/%m/%Y")
+            for data_item in datas_recorrencia:
+                semana_linha = SEMANA_OPTIONS[indice_semana_por_dia(data_item.day)]
+                data_linha = data_item.strftime("%d/%m/%Y")
                 linhas_novas.append(
                     montar_linha_planilha(semana_linha, data_linha, padrao_recorrencia)
                 )
         else:
-            data_ref = datas_dia[0]
             semana = SEMANA_OPTIONS[indice_semana_por_dia(data_ref.day)]
             data_publicacao = data_ref.strftime("%d/%m/%Y")
             linhas_novas.append(montar_linha_planilha(semana, data_publicacao, "Não"))
 
         try:
             with st.spinner("Salvando atividade na planilha..."):
-                append_linhas_midia(worksheet, linhas_novas)
+                append_linhas_midia(linhas_novas)
+        except ConnectionError as exc:
+            st.error("❌ Não foi possível conectar com a planilha Google.")
+            st.caption(f"Detalhe técnico: {exc}")
+            return
         except Exception as exc:
             st.error(mensagem_erro_planilha(exc))
             st.caption(f"Detalhe técnico: {exc}")
             return
 
+        invalidar_cache_midias()
         for key in [
             "nova_arte_empresa_opcao",
             "nova_arte_empresa_outra",
@@ -3822,12 +3885,14 @@ def render_midias_nova_arte(df):
         ]:
             st.session_state.pop(key, None)
         if recorrencia == "Sim":
-            st.success(
+            st.session_state["nova_arte_msg_sucesso"] = (
                 f"Nova arte cadastrada com sucesso! "
                 f"{len(linhas_novas)} publicação(ões) recorrente(s) criada(s)."
             )
         else:
-            st.success("Nova arte cadastrada com sucesso!")
+            st.session_state["nova_arte_msg_sucesso"] = (
+                f"Nova arte cadastrada com sucesso para {data_publicacao}!"
+            )
         st.rerun()
 
 
@@ -4202,19 +4267,7 @@ if area_dashboard == NAV_ACESSOS:
 # CONEXÃO GOOGLE
 # ---------------------------------------------------
 
-@st.cache_resource(show_spinner=False)
-def connect_sheet():
-    try:
-        return connect_media_worksheet()
-    except Exception as e:
-        st.error("❌ Erro ao conectar com Google Sheets")
-        st.write("Verifique:")
-        st.write("- Se o SHEET_ID está correto")
-        st.write("- Se a planilha foi compartilhada com a conta de serviço")
-        st.write("- Se a Google Sheets API e a Google Drive API estão ativadas")
-        st.write("- Se as credenciais foram cadastradas no EasyPanel > Ambiente")
-        st.write(f"Erro técnico: {e}")
-        st.stop()
+# connect_sheet() definido junto de connect_media_worksheet()
 
 # ---------------------------------------------------
 # CARREGAR DADOS
@@ -4501,7 +4554,17 @@ def build_media_dataframe(rows):
 
 @st.cache_data(ttl=60, show_spinner=False)
 def load_data():
-    worksheet = connect_sheet()
+    try:
+        worksheet = connect_sheet()
+    except ConnectionError as e:
+        st.error("❌ Erro ao conectar com Google Sheets")
+        st.write("Verifique:")
+        st.write("- Se o SHEET_ID está correto")
+        st.write("- Se a planilha foi compartilhada com a conta de serviço")
+        st.write("- Se a Google Sheets API e a Google Drive API estão ativadas")
+        st.write("- Se as credenciais foram cadastradas no EasyPanel > Ambiente")
+        st.write(f"Erro técnico: {e}")
+        st.stop()
 
     try:
         rows = worksheet.get_all_values()
