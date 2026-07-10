@@ -133,7 +133,7 @@ DIA_SEMANA_FORM_NOME = {
     "Sex": "sexta-feira",
 }
 STATUS_ARTE_EDIT_OPTIONS = ["Pronto", "Em andamento", "Pausado", "Pendente"]
-APP_UI_VERSION = "2026-07-10-sessao-login"
+APP_UI_VERSION = "2026-07-10-load-chunks"
 
 if "traffic_form_reset_token" not in st.session_state:
     st.session_state.traffic_form_reset_token = 0
@@ -2368,9 +2368,9 @@ def append_linhas_midia(linhas):
     executar_operacao_planilha(gravar)
 
 
-def get_all_values_com_timeout(worksheet, timeout_segundos=60):
+def executar_com_timeout(operacao, timeout_segundos=25):
     with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-        future = executor.submit(worksheet.get_all_values)
+        future = executor.submit(operacao)
         try:
             return future.result(timeout=timeout_segundos)
         except concurrent.futures.TimeoutError as exc:
@@ -2378,6 +2378,41 @@ def get_all_values_com_timeout(worksheet, timeout_segundos=60):
                 "A planilha Google demorou demais para responder. "
                 "Tente novamente em cerca de 1 minuto."
             ) from exc
+
+
+def carregar_linhas_planilha(worksheet, progress_callback=None, chunk_size=80):
+    row_count = max(int(getattr(worksheet, "row_count", 0) or 0), 1)
+    todas_linhas = []
+
+    for inicio in range(1, row_count + 1, chunk_size):
+        fim = min(inicio + chunk_size - 1, row_count)
+        intervalo = f"A{inicio}:K{fim}"
+
+        if progress_callback:
+            progress_callback(fim, row_count)
+
+        parte = executar_operacao_planilha(
+            lambda intervalo=intervalo: worksheet.get_values(intervalo)
+        )
+        if not parte:
+            if inicio == 1:
+                return []
+            break
+
+        todas_linhas.extend(parte)
+
+        if fim >= row_count:
+            break
+
+        ultima = parte[-1]
+        if inicio > 1 and not any(str(celula).strip() for celula in ultima):
+            break
+
+    return todas_linhas
+
+
+def get_all_values_com_timeout(worksheet, timeout_segundos=60):
+    return executar_com_timeout(worksheet.get_all_values, timeout_segundos)
 
 
 def mensagem_erro_carregamento_midias(exc):
@@ -4651,7 +4686,7 @@ def build_media_dataframe(rows):
     return pd.DataFrame(records, columns=EXPECTED_MEDIA_HEADERS)
 
 
-@st.cache_data(ttl=120, show_spinner=False)
+@st.cache_data(ttl=300, show_spinner=False)
 def load_data():
     try:
         worksheet = connect_sheet()
@@ -4659,7 +4694,21 @@ def load_data():
         raise ConnectionError(str(e)) from e
 
     try:
-        rows = get_all_values_com_timeout(worksheet)
+        rows = carregar_linhas_planilha(worksheet)
+    except Exception as e:
+        raise RuntimeError(str(e)) from e
+
+    return build_media_dataframe(rows)
+
+
+def load_data_com_progresso(progress_callback):
+    try:
+        worksheet = connect_sheet()
+    except ConnectionError as e:
+        raise ConnectionError(str(e)) from e
+
+    try:
+        rows = carregar_linhas_planilha(worksheet, progress_callback)
     except Exception as e:
         raise RuntimeError(str(e)) from e
 
@@ -4745,7 +4794,14 @@ def carregar_dataframe_midias():
 
     try:
         with st.status("Carregando dados da planilha...", expanded=True) as load_status:
-            df_bruto = load_data()
+
+            def atualizar_progresso(atual, total):
+                load_status.update(
+                    label=f"Carregando planilha... {atual} de {total} linhas",
+                    state="running",
+                )
+
+            df_bruto = load_data_com_progresso(atualizar_progresso)
             df_processado = processar_dataframe_midias(df_bruto)
             load_status.update(
                 label="Dados carregados",
@@ -4755,8 +4811,13 @@ def carregar_dataframe_midias():
     except Exception as exc:
         st.error(f"❌ {mensagem_erro_carregamento_midias(exc)}")
         st.caption(f"Detalhe técnico: {exc}")
+        st.info(
+            "Você continua logado. Aguarde 1 minuto e clique em **Tentar novamente**, "
+            "ou peça para o administrador verificar a planilha Google."
+        )
         if st.button("🔄 Tentar novamente", key="retry_carregar_planilha"):
             invalidar_cache_midias()
+            load_data.clear()
             st.rerun()
         st.stop()
 
