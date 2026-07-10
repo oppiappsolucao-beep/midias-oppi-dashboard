@@ -3402,6 +3402,21 @@ def intervalo_semana_atual(ref=None):
     return date(ref.year, ref.month, inicio_dia), date(ref.year, ref.month, fim_dia)
 
 
+def intervalo_mes(mes_nome, ref_year=None):
+    ref_year = ref_year or date.today().year
+    mes_int = MESES_ORDEM.index(mes_nome) + 1
+    ultimo_dia = calendar.monthrange(ref_year, mes_int)[1]
+    return date(ref_year, mes_int, 1), date(ref_year, mes_int, ultimo_dia)
+
+
+def atualizar_datas_por_mes_selecionado():
+    mes_sel = st.session_state.get("pub_mes_select", "Todos")
+    if mes_sel and mes_sel != "Todos":
+        data_ini, data_fim_mes = intervalo_mes(mes_sel)
+        st.session_state["pub_data_inicio"] = data_ini
+        st.session_state["pub_data_fim"] = data_fim_mes
+
+
 def semana_atual_em_opcoes(semanas_disponiveis):
     idx_atual = indice_semana_por_dia(date.today().day)
     for semana in semanas_disponiveis:
@@ -4478,6 +4493,8 @@ with st.container(border=True):
             "Mês",
             mes_opcoes,
             index=mes_opcoes.index(mes_corrente),
+            key="pub_mes_select",
+            on_change=atualizar_datas_por_mes_selecionado,
             label_visibility="collapsed",
         )
 
@@ -4519,9 +4536,6 @@ st.markdown(
 )
 
 df_filtrado = df.copy()
-
-if mes != "Todos":
-    df_filtrado = df_filtrado[df_filtrado["Mês"].astype(str) == mes]
 
 if empresa != "Todas":
     df_filtrado = df_filtrado[df_filtrado["Empresa"].astype(str) == empresa]
