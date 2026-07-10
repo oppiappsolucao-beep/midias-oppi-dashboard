@@ -2105,18 +2105,36 @@ def authenticate_user(usuario, senha):
     user_key = normalize_username(usuario)
     senha_informada = str(senha).strip()
 
-    for user in load_users_sheet_rows():
-        if user["username"] != user_key:
-            continue
-        if user["password"] == senha_informada:
-            if not user["active"]:
-                return "blocked"
-            return user
-        if user_key == "operacao" and senha_informada == OPERACAO_PASSWORD:
+    if user_key == "operacao":
+        if senha_informada != OPERACAO_PASSWORD:
+            return None
+
+        sync_operacao_password_in_sheet()
+        clear_users_cache()
+
+        for user in load_users_sheet_rows():
+            if user["username"] != "operacao":
+                continue
             if not user["active"]:
                 return "blocked"
             user = dict(user)
             user["password"] = OPERACAO_PASSWORD
+            return user
+
+        return {
+            "row_number": None,
+            "username": "operacao",
+            "password": OPERACAO_PASSWORD,
+            "role": "geral",
+            "active": True,
+            "permissions": default_permissions_for_role("geral"),
+            "source": "padrão",
+        }
+
+    for user in load_users_sheet_rows():
+        if user["username"] == user_key and user["password"] == senha_informada:
+            if not user["active"]:
+                return "blocked"
             return user
 
     return None
@@ -3088,6 +3106,31 @@ def calcular_metricas_empresa(df_empresa):
     return postagens_feitas, postagens_a_fazer, valor_pago, valor_a_pagar
 
 
+def aplicar_estilo_grafico_legivel(fig):
+    cor_texto = "#1e293b"
+    cor_grade = "#e2e8f0"
+
+    fig.update_layout(
+        font=dict(color=cor_texto, size=13),
+        xaxis=dict(
+            tickfont=dict(color=cor_texto, size=12),
+            title_font=dict(color=cor_texto, size=13),
+            linecolor=cor_grade,
+            gridcolor=cor_grade,
+        ),
+        yaxis=dict(
+            tickfont=dict(color=cor_texto, size=12),
+            title_font=dict(color=cor_texto, size=13),
+            linecolor=cor_grade,
+            gridcolor=cor_grade,
+        ),
+    )
+    fig.update_traces(
+        textfont=dict(color=cor_texto, size=13),
+        selector=dict(type="bar"),
+    )
+
+
 def render_grafico_valores_pagamento(valor_pago, valor_a_pagar):
     graf_pagamento = pd.DataFrame(
         {
@@ -3114,6 +3157,7 @@ def render_grafico_valores_pagamento(valor_pago, valor_a_pagar):
         yaxis_title="Valor (R$)",
         showlegend=False,
     )
+    aplicar_estilo_grafico_legivel(fig_pagamento)
     fig_pagamento.update_traces(textposition="outside")
     fig_pagamento.update_yaxes(tickformat=",.2f")
 
@@ -4524,8 +4568,9 @@ with g1:
                 paper_bgcolor="white",
                 plot_bgcolor="white",
                 xaxis_title="",
-                yaxis_title="Quantidade"
+                yaxis_title="Quantidade",
             )
+            aplicar_estilo_grafico_legivel(fig_empresa)
             fig_empresa.update_traces(textposition="outside")
             st.plotly_chart(fig_empresa, width="stretch")
         else:
