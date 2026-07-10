@@ -1,5 +1,6 @@
 import base64
 import calendar
+import concurrent.futures
 import html
 import io
 import textwrap
@@ -132,7 +133,7 @@ DIA_SEMANA_FORM_NOME = {
     "Sex": "sexta-feira",
 }
 STATUS_ARTE_EDIT_OPTIONS = ["Pronto", "Em andamento", "Pausado", "Pendente"]
-APP_UI_VERSION = "2026-07-10-salvar-fix-v2"
+APP_UI_VERSION = "2026-07-10-login-502"
 
 if "traffic_form_reset_token" not in st.session_state:
     st.session_state.traffic_form_reset_token = 0
@@ -2362,6 +2363,38 @@ def append_linhas_midia(linhas):
     executar_operacao_planilha(gravar)
 
 
+def get_all_values_com_timeout(worksheet, timeout_segundos=60):
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+        future = executor.submit(worksheet.get_all_values)
+        try:
+            return future.result(timeout=timeout_segundos)
+        except concurrent.futures.TimeoutError as exc:
+            raise TimeoutError(
+                "A planilha Google demorou demais para responder. "
+                "Tente novamente em cerca de 1 minuto."
+            ) from exc
+
+
+def mensagem_erro_carregamento_midias(exc):
+    if isinstance(exc, TimeoutError):
+        return str(exc)
+    if isinstance(exc, ConnectionError):
+        return (
+            "Não foi possível conectar com a planilha Google. "
+            "Verifique as credenciais no EasyPanel e tente novamente."
+        )
+    texto = str(exc).lower()
+    if "429" in texto or "quota" in texto or "rate limit" in texto:
+        return (
+            "A planilha está temporariamente sobrecarregada. "
+            "Aguarde cerca de 1 minuto e atualize a página."
+        )
+    return (
+        "Não foi possível carregar os dados da planilha agora. "
+        "Tente atualizar a página em alguns segundos."
+    )
+
+
 def mensagem_erro_planilha(exc):
     texto = str(exc).lower()
     if "429" in texto or "quota" in texto or "rate limit" in texto:
@@ -2556,7 +2589,6 @@ def ensure_default_users_in_sheet():
 
 
 def load_users_sheet_rows_impl():
-    ensure_default_users_in_sheet()
     worksheet = connect_users_worksheet()
     records = worksheet.get_all_records()
     users = []
@@ -4117,6 +4149,7 @@ def render_user_access_detail(user, usuario_logado):
 
 
 def render_acessos():
+    ensure_default_users_in_sheet()
     st.markdown(
         '<div class="section-title">🔐 Acessos do painel</div>',
         unsafe_allow_html=True,
@@ -4552,27 +4585,17 @@ def build_media_dataframe(rows):
     return pd.DataFrame(records, columns=EXPECTED_MEDIA_HEADERS)
 
 
-@st.cache_data(ttl=60, show_spinner=False)
+@st.cache_data(ttl=120, show_spinner=False)
 def load_data():
     try:
         worksheet = connect_sheet()
     except ConnectionError as e:
-        st.error("❌ Erro ao conectar com Google Sheets")
-        st.write("Verifique:")
-        st.write("- Se o SHEET_ID está correto")
-        st.write("- Se a planilha foi compartilhada com a conta de serviço")
-        st.write("- Se a Google Sheets API e a Google Drive API estão ativadas")
-        st.write("- Se as credenciais foram cadastradas no EasyPanel > Ambiente")
-        st.write(f"Erro técnico: {e}")
-        st.stop()
+        raise ConnectionError(str(e)) from e
 
     try:
-        rows = worksheet.get_all_values()
+        rows = get_all_values_com_timeout(worksheet)
     except Exception as e:
-        st.error("❌ Não foi possível carregar os dados da planilha de Mídias.")
-        st.write("Verifique se a planilha continua compartilhada com a conta de serviço.")
-        st.write(f"Erro técnico: {e}")
-        st.stop()
+        raise RuntimeError(str(e)) from e
 
     return build_media_dataframe(rows)
 
@@ -4581,7 +4604,15 @@ def invalidar_cache_midias():
     load_data.clear()
 
 
-df = load_data()
+try:
+    with st.status("Carregando dados da planilha...", expanded=True) as load_status:
+        df = load_data()
+        load_status.update(label="Dados carregados", state="complete", expanded=False)
+except Exception as exc:
+    st.error(f"❌ {mensagem_erro_carregamento_midias(exc)}")
+    st.caption(f"Detalhe técnico: {exc}")
+    st.info("Se o erro continuar, aguarde 1 minuto e pressione **Ctrl+F5**.")
+    st.stop()
 
 # ---------------------------------------------------
 # TRATAMENTO
