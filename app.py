@@ -155,7 +155,7 @@ DIA_SEMANA_FORM_NOME = {
     "Sex": "sexta-feira",
 }
 STATUS_ARTE_EDIT_OPTIONS = ["Pronto", "Em andamento", "Pausado", "Pendente"]
-APP_UI_VERSION = "2026-07-10-estavel"
+APP_UI_VERSION = "2026-07-10-menu"
 
 if "traffic_form_reset_token" not in st.session_state:
     st.session_state.traffic_form_reset_token = 0
@@ -173,45 +173,24 @@ SIDEBAR_TOGGLE_SCRIPT = """
         doc.querySelector(".stApp")?.classList.toggle("sidebar-collapsed", collapsed);
     }
 
-    function bindSidebarButtons() {
-        doc.querySelectorAll(".oppi-sidebar-hide").forEach(function (btn) {
-            if (btn.dataset.oppiBound === "1") {
-                return;
-            }
-            btn.dataset.oppiBound = "1";
-            btn.addEventListener("click", function (event) {
+    if (!win.__oppiSidebarToggleBound) {
+        win.__oppiSidebarToggleBound = true;
+        doc.addEventListener("click", function (event) {
+            if (event.target.closest(".oppi-sidebar-hide")) {
                 event.preventDefault();
+                event.stopPropagation();
                 setCollapsed(true);
-            });
-        });
-
-        doc.querySelectorAll(".oppi-sidebar-show").forEach(function (btn) {
-            if (btn.dataset.oppiBound === "1") {
                 return;
             }
-            btn.dataset.oppiBound = "1";
-            btn.addEventListener("click", function (event) {
+            if (event.target.closest(".oppi-sidebar-show")) {
                 event.preventDefault();
+                event.stopPropagation();
                 setCollapsed(false);
-            });
-        });
-
-        setCollapsed(storage.getItem(KEY) === "1");
+            }
+        }, true);
     }
 
-    bindSidebarButtons();
-
-    let scheduled = false;
-    new MutationObserver(function () {
-        if (scheduled) {
-            return;
-        }
-        scheduled = true;
-        win.requestAnimationFrame(function () {
-            scheduled = false;
-            bindSidebarButtons();
-        });
-    }).observe(doc.body, { childList: true, subtree: true });
+    setCollapsed(storage.getItem(KEY) === "1");
 })();
 </script>
 """
@@ -1780,6 +1759,8 @@ st.markdown("""
         margin: 0 !important;
         padding: 0 !important;
         cursor: pointer !important;
+        pointer-events: auto !important;
+        z-index: 20 !important;
     }
 
     section[data-testid="stSidebar"] .oppi-sidebar-hide:hover {
@@ -2765,9 +2746,6 @@ def render_sidebar_show_button():
 
 
 def sync_sidebar_toggle_state():
-    if st.session_state.get("_sidebar_toggle_ready"):
-        return
-    st.session_state["_sidebar_toggle_ready"] = True
     components.html(SIDEBAR_TOGGLE_SCRIPT, height=0)
 
 
@@ -2829,7 +2807,6 @@ def render_sidebar_navigation():
             st.session_state.pop("logged_username", None)
             st.session_state.pop("user_permissions", None)
             st.session_state.pop("df_midias_processado", None)
-            st.session_state.pop("_sidebar_toggle_ready", None)
             st.session_state.pop("_sessao_keepalive", None)
             reset_sidebar_toggle_state()
             st.rerun()
