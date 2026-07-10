@@ -8,7 +8,7 @@ import os
 import re
 import time
 from pathlib import Path
-from datetime import date
+from datetime import date, timedelta
 
 import gspread
 import gspread.exceptions
@@ -93,6 +93,11 @@ def ensure_auth_session():
         st.session_state.logged_username = role
 
 
+@st.fragment(run_every=timedelta(seconds=25))
+def manter_conexao_viva():
+    st.session_state["_sessao_keepalive"] = time.time()
+
+
 NAV_OPTIONS = ["Empresas", "Publicações", "Nova Arte", "Gestão de Tráfego", NAV_ACESSOS]
 TIPO_ARTE_OPTIONS = ["Vídeo", "Arte", "Carrossel"]
 STATUS_ARTE_FORM_OPTIONS = ["Andamento", "Finalizado", "Pausado", "Pendente"]
@@ -150,7 +155,7 @@ DIA_SEMANA_FORM_NOME = {
     "Sex": "sexta-feira",
 }
 STATUS_ARTE_EDIT_OPTIONS = ["Pronto", "Em andamento", "Pausado", "Pendente"]
-APP_UI_VERSION = "2026-07-10-simples"
+APP_UI_VERSION = "2026-07-10-estavel"
 
 if "traffic_form_reset_token" not in st.session_state:
     st.session_state.traffic_form_reset_token = 0
@@ -2108,13 +2113,25 @@ def metric_card(title, value, subtitle="", extra_class=""):
         unsafe_allow_html=True
     )
 
-def render_logo(path: Path):
+def imagem_base64_cached(path_str):
+    path = Path(path_str)
     if not path.exists():
-        return
+        return "", ""
+
     mime = "image/png"
     if path.suffix.lower() in [".jpg", ".jpeg"]:
         mime = "image/jpeg"
-    img_base64 = base64.b64encode(path.read_bytes()).decode()
+
+    return mime, base64.b64encode(path.read_bytes()).decode()
+
+
+imagem_base64_cached = st.cache_data(show_spinner=False)(imagem_base64_cached)
+
+
+def render_logo(path: Path):
+    mime, img_base64 = imagem_base64_cached(str(path))
+    if not img_base64:
+        return
     st.markdown(
         f'''
         <div class="logo-wrap">
@@ -2127,12 +2144,9 @@ def render_logo(path: Path):
     )
 
 def login_logo_html(path: Path):
-    if not path.exists():
+    mime, img_base64 = imagem_base64_cached(str(path))
+    if not img_base64:
         return ""
-    mime = "image/png"
-    if path.suffix.lower() in [".jpg", ".jpeg"]:
-        mime = "image/jpeg"
-    img_base64 = base64.b64encode(path.read_bytes()).decode()
     return f'<img class="login-logo" src="data:{mime};base64,{img_base64}">'
 
 
@@ -2737,14 +2751,9 @@ def register_user(username, password, role, creator_role):
 # ---------------------------------------------------
 
 def sidebar_logo_html(path: Path):
-    if not path.exists():
+    mime, img_base64 = imagem_base64_cached(str(path))
+    if not img_base64:
         return ""
-
-    mime = "image/png"
-    if path.suffix.lower() in [".jpg", ".jpeg"]:
-        mime = "image/jpeg"
-
-    img_base64 = base64.b64encode(path.read_bytes()).decode()
     return f'<img class="sidebar-brand-logo" src="data:{mime};base64,{img_base64}">'
 
 
@@ -2756,6 +2765,9 @@ def render_sidebar_show_button():
 
 
 def sync_sidebar_toggle_state():
+    if st.session_state.get("_sidebar_toggle_ready"):
+        return
+    st.session_state["_sidebar_toggle_ready"] = True
     components.html(SIDEBAR_TOGGLE_SCRIPT, height=0)
 
 
@@ -2817,7 +2829,8 @@ def render_sidebar_navigation():
             st.session_state.pop("logged_username", None)
             st.session_state.pop("user_permissions", None)
             st.session_state.pop("df_midias_processado", None)
-            st.session_state.pop("_fase_carregamento_planilha", None)
+            st.session_state.pop("_sidebar_toggle_ready", None)
+            st.session_state.pop("_sessao_keepalive", None)
             reset_sidebar_toggle_state()
             st.rerun()
 
@@ -4333,6 +4346,7 @@ if not st.session_state.logged_in:
     st.stop()
 
 ensure_auth_session()
+manter_conexao_viva()
 
 user_role = get_user_role()
 area_dashboard = enforce_area_access(
@@ -4675,7 +4689,7 @@ def build_media_dataframe(rows):
     return pd.DataFrame(records, columns=EXPECTED_MEDIA_HEADERS)
 
 
-@st.cache_data(ttl=300, show_spinner=False)
+@st.cache_data(ttl=3600, show_spinner=False)
 def load_data():
     worksheet = connect_sheet()
     rows = executar_operacao_planilha(

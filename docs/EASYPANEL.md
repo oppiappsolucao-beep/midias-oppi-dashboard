@@ -42,6 +42,20 @@ Isso é **esperado** — versões recentes do Streamlit usam Uvicorn internament
 4. Acompanhe os **Logs** até aparecer "running on 0.0.0.0:8501"
 5. Abra `midias.oppitech.com.br` com **Ctrl+F5**
 
+## Se aparecer erro 502 depois de usar o painel
+
+O EasyPanel (proxy/nginx) pode cortar conexões ociosas do Streamlit. No serviço **midias**, aumente o timeout do proxy se houver opção, ou adicione no nginx:
+
+```
+proxy_http_version 1.1;
+proxy_set_header Upgrade $http_upgrade;
+proxy_set_header Connection "upgrade";
+proxy_read_timeout 3600s;
+proxy_send_timeout 3600s;
+```
+
+Depois **Implantar** de novo e testar com **Ctrl+F5**.
+
 ## Se aparecer "Stopping..." nos logs
 
 - Normal durante redeploy (para e sobe de novo)
