@@ -133,7 +133,7 @@ DIA_SEMANA_FORM_NOME = {
     "Sex": "sexta-feira",
 }
 STATUS_ARTE_EDIT_OPTIONS = ["Pronto", "Em andamento", "Pausado", "Pendente"]
-APP_UI_VERSION = "2026-07-10-load-chunks"
+APP_UI_VERSION = "2026-07-10-fix-auth"
 
 if "traffic_form_reset_token" not in st.session_state:
     st.session_state.traffic_form_reset_token = 0
@@ -2193,6 +2193,20 @@ def enforce_area_access(area):
     if area in allowed:
         return area
     return default_area_for_permissions(allowed)
+
+
+def ensure_auth_session():
+    if not st.session_state.get("logged_in"):
+        return
+
+    role = st.session_state.get("user_role") or "geral"
+    st.session_state.user_role = role
+
+    if not st.session_state.get("user_permissions"):
+        st.session_state.user_permissions = nav_options_for_role(role)
+
+    if not st.session_state.get("logged_username"):
+        st.session_state.logged_username = role
 
 
 def show_login():
@@ -4713,20 +4727,6 @@ def load_data_com_progresso(progress_callback):
         raise RuntimeError(str(e)) from e
 
     return build_media_dataframe(rows)
-
-
-def ensure_auth_session():
-    if not st.session_state.get("logged_in"):
-        return
-
-    role = st.session_state.get("user_role") or "geral"
-    st.session_state.user_role = role
-
-    if not st.session_state.get("user_permissions"):
-        st.session_state.user_permissions = nav_options_for_role(role)
-
-    if not st.session_state.get("logged_username"):
-        st.session_state.logged_username = role
 
 
 def invalidar_cache_midias():
