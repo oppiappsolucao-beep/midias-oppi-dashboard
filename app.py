@@ -500,6 +500,28 @@ st.markdown("""
         padding: 16px !important;
     }
 
+    .stApp:has(#acessos-page) section.main div[data-testid="stMarkdownContainer"] p,
+    .stApp:has(#acessos-page) section.main div[data-testid="stMarkdownContainer"] strong {
+        color: #0f172a !important;
+    }
+
+    .stApp:has(#acessos-page) section.main .acessos-block-title {
+        color: #0f172a !important;
+        font-size: 15px !important;
+        font-weight: 800 !important;
+        margin: 0 0 12px 2px !important;
+    }
+
+    .stApp:has(#acessos-page) section.main [data-testid="stFormSubmitButton"] > button {
+        background: linear-gradient(90deg, #7C3AED 0%, #C026D3 100%) !important;
+        color: #ffffff !important;
+        border: none !important;
+    }
+
+    .stApp:has(#acessos-page) section.main [data-testid="stFormSubmitButton"] > button p {
+        color: #ffffff !important;
+    }
+
     .acessos-user-list {
         background: #f8fafc;
         border: 1px solid #e7ebf3;
@@ -1087,6 +1109,14 @@ st.markdown("""
     .login-wrap {
         width: min(1200px, 96vw);
         margin: 0 auto;
+    }
+
+    .stApp:has(#login-page) [data-testid="stStatusWidget"],
+    .stApp:has(#login-page) [data-testid="stElementToolbar"] {
+        display: none !important;
+        visibility: hidden !important;
+        height: 0 !important;
+        overflow: hidden !important;
     }
 
     .stApp:has(#login-page) section[data-testid="stSidebar"],
@@ -2191,14 +2221,14 @@ def get_google_creds_dict():
     return env_creds
 
 
-@st.cache_resource
+@st.cache_resource(show_spinner=False)
 def connect_gspread_client():
     creds_dict = get_google_creds_dict()
     creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
     return gspread.authorize(creds)
 
 
-@st.cache_resource
+@st.cache_resource(show_spinner=False)
 def connect_spreadsheet():
     return connect_gspread_client().open_by_key(SHEET_ID)
 
@@ -2357,7 +2387,7 @@ def load_users_sheet_rows_fallback():
     return users
 
 
-@st.cache_data(ttl=30)
+@st.cache_data(ttl=30, show_spinner=False)
 def load_users_sheet_rows():
     try:
         return load_users_sheet_rows_impl()
@@ -3104,6 +3134,13 @@ def form_field_label(text):
     )
 
 
+def acessos_block_title(text):
+    st.markdown(
+        f'<div class="form-field-label acessos-block-title">{html.escape(text)}</div>',
+        unsafe_allow_html=True,
+    )
+
+
 def montar_data_publicacao(mes_nome, dia_txt):
     dia = str(dia_txt).strip()
     if not dia or not mes_nome:
@@ -3798,7 +3835,7 @@ def render_acessos():
     ]
 
     with st.container(border=True):
-        st.markdown("**Usuários**")
+        acessos_block_title("Usuários")
 
         if not usuarios_gerenciaveis:
             st.info("Nenhum usuário disponível para gerenciar.")
@@ -3823,7 +3860,7 @@ def render_acessos():
             )
 
             with st.container(border=True):
-                st.markdown("**Acessos do usuário selecionado**")
+                acessos_block_title("Acessos do usuário selecionado")
                 render_user_access_detail(opcoes_usuarios[usuario_selecionado], usuario_logado)
 
     roles_permitidos = roles_criaveis_por(perfil_atual)
@@ -3833,7 +3870,7 @@ def render_acessos():
     st.markdown("<br>", unsafe_allow_html=True)
 
     with st.container(border=True):
-        st.markdown("**Cadastrar novo usuário**")
+        acessos_block_title("Cadastrar novo usuário")
 
         with st.form("cadastro_acesso_form", clear_on_submit=True):
             c1, c2 = st.columns(2)
@@ -3922,7 +3959,7 @@ if area_dashboard == NAV_ACESSOS:
 # CONEXÃO GOOGLE
 # ---------------------------------------------------
 
-@st.cache_resource
+@st.cache_resource(show_spinner=False)
 def connect_sheet():
     try:
         return connect_media_worksheet()
@@ -4219,7 +4256,7 @@ def build_media_dataframe(rows):
     return pd.DataFrame(records, columns=EXPECTED_MEDIA_HEADERS)
 
 
-@st.cache_data(ttl=60)
+@st.cache_data(ttl=60, show_spinner=False)
 def load_data():
     worksheet = connect_sheet()
 
