@@ -2101,6 +2101,18 @@ def login_logo_html(path: Path):
     return f'<img class="login-logo" src="data:{mime};base64,{img_base64}">'
 
 
+def operacao_user_fallback():
+    return {
+        "row_number": None,
+        "username": "operacao",
+        "password": OPERACAO_PASSWORD,
+        "role": "geral",
+        "active": True,
+        "permissions": default_permissions_for_role("geral"),
+        "source": "padrão",
+    }
+
+
 def authenticate_user(usuario, senha):
     user_key = normalize_username(usuario)
     senha_informada = str(senha).strip()
@@ -2109,33 +2121,28 @@ def authenticate_user(usuario, senha):
         if senha_informada != OPERACAO_PASSWORD:
             return None
 
-        sync_operacao_password_in_sheet()
-        clear_users_cache()
+        try:
+            for user in load_users_sheet_rows():
+                if user["username"] != "operacao":
+                    continue
+                if not user["active"]:
+                    return "blocked"
+                user = dict(user)
+                user["password"] = OPERACAO_PASSWORD
+                return user
+        except Exception:
+            pass
 
+        return operacao_user_fallback()
+
+    try:
         for user in load_users_sheet_rows():
-            if user["username"] != "operacao":
-                continue
-            if not user["active"]:
-                return "blocked"
-            user = dict(user)
-            user["password"] = OPERACAO_PASSWORD
-            return user
-
-        return {
-            "row_number": None,
-            "username": "operacao",
-            "password": OPERACAO_PASSWORD,
-            "role": "geral",
-            "active": True,
-            "permissions": default_permissions_for_role("geral"),
-            "source": "padrão",
-        }
-
-    for user in load_users_sheet_rows():
-        if user["username"] == user_key and user["password"] == senha_informada:
-            if not user["active"]:
-                return "blocked"
-            return user
+            if user["username"] == user_key and user["password"] == senha_informada:
+                if not user["active"]:
+                    return "blocked"
+                return user
+    except Exception:
+        return None
 
     return None
 
@@ -2192,7 +2199,17 @@ def show_login():
         entrar = st.form_submit_button("Entrar", width="stretch")
 
     if entrar:
-        auth_result = authenticate_user(usuario, senha)
+        erro_planilha = False
+        try:
+            auth_result = authenticate_user(usuario, senha)
+        except Exception:
+            erro_planilha = True
+            auth_result = None
+            st.error(
+                "Não foi possível validar o login agora. "
+                "A planilha está temporariamente sobrecarregada — tente novamente em 1 minuto."
+            )
+
         if auth_result == "blocked":
             st.error("Usuário bloqueado. Fale com o administrador do painel.")
         elif auth_result:
@@ -2204,7 +2221,7 @@ def show_login():
                 st.session_state.user_permissions
             )
             st.rerun()
-        else:
+        elif not erro_planilha:
             st.error("Usuário ou senha incorretos.")
 
     st.markdown('<div class="login-footer">Acesso restrito</div>', unsafe_allow_html=True)
@@ -2372,26 +2389,37 @@ def parse_user_row(row, row_number):
 
 
 def sync_operacao_password_in_sheet():
-    worksheet = connect_users_worksheet()
-    header_map = get_users_header_map(worksheet)
-    senha_col = header_map.get("Senha", 2)
-    records = worksheet.get_all_records()
-    atualizou = False
+    try:
+        worksheet = connect_users_worksheet()
+        header_map = get_users_header_map(worksheet)
+        senha_col = header_map.get("Senha", 2)
+        records = worksheet.get_all_records()
+        atualizou = False
 
-    for index, row in enumerate(records, start=2):
-        username = normalize_username(row.get("Usuário", ""))
-        if username != "operacao":
-            continue
+        for index, row in enumerate(records, start=2):
+            username = normalize_username(row.get("Usuário", ""))
+            if username != "operacao":
+                continue
 
-        senha_atual = str(row.get("Senha", "")).strip()
-        if senha_atual != OPERACAO_PASSWORD:
-            worksheet.update_cell(index, senha_col, OPERACAO_PASSWORD)
-            atualizou = True
+            senha_atual = str(row.get("Senha", "")).strip()
+            if senha_atual != OPERACAO_PASSWORD:
+                worksheet.update_cell(index, senha_col, OPERACAO_PASSWORD)
+                atualizou = True
 
-    if atualizou:
-        clear_users_cache()
+        if atualizou:
+            clear_users_cache()
 
-    return atualizou
+        return atualizou
+    except Exception:
+        return False
+
+
+def sync_operacao_password_once():
+    if st.session_state.get("_operacao_password_synced"):
+        return
+
+    sync_operacao_password_in_sheet()
+    st.session_state["_operacao_password_synced"] = True
 
 
 def apply_operacao_password_override(users):
@@ -2402,33 +2430,39 @@ def apply_operacao_password_override(users):
 
 
 def ensure_default_users_in_sheet():
-    worksheet = connect_users_worksheet()
-    header_map = get_users_header_map(worksheet)
-    records = worksheet.get_all_records()
-    existing = {
-        normalize_username(row.get("Usuário", "")): (index + 2, row)
-        for index, row in enumerate(records)
-    }
+    if st.session_state.get("users_sheet_initialized"):
+        return
 
-    for username, data in APP_USERS.items():
-        username = normalize_username(username)
-        if username in existing:
-            continue
+    try:
+        worksheet = connect_users_worksheet()
+        records = worksheet.get_all_records()
+        existing = {
+            normalize_username(row.get("Usuário", ""))
+            for row in records
+        }
 
-        permissions = default_permissions_for_role(data["role"])
-        worksheet.append_row([
-            username,
-            data["password"],
-            data["role"],
-            "Sim",
-            permissions["Empresas"],
-            permissions["Publicações"],
-            permissions["Nova Arte"],
-            permissions["Gestão de Tráfego"],
-            permissions[NAV_ACESSOS],
-        ])
+        for username, data in APP_USERS.items():
+            username = normalize_username(username)
+            if username in existing:
+                continue
 
-    sync_operacao_password_in_sheet()
+            permissions = default_permissions_for_role(data["role"])
+            worksheet.append_row([
+                username,
+                data["password"],
+                data["role"],
+                "Sim",
+                permissions["Empresas"],
+                permissions["Publicações"],
+                permissions["Nova Arte"],
+                permissions["Gestão de Tráfego"],
+                permissions[NAV_ACESSOS],
+            ])
+
+        sync_operacao_password_once()
+        st.session_state["users_sheet_initialized"] = True
+    except Exception:
+        return
 
 
 def load_users_sheet_rows_impl():
@@ -2461,7 +2495,7 @@ def load_users_sheet_rows_fallback():
     return apply_operacao_password_override(users)
 
 
-@st.cache_data(ttl=30, show_spinner=False)
+@st.cache_data(ttl=300, show_spinner=False)
 def load_users_sheet_rows():
     try:
         return load_users_sheet_rows_impl()
