@@ -37,8 +37,10 @@ st.set_page_config(
 # LOGIN CONFIG
 # ---------------------------------------------------
 
+OPERACAO_PASSWORD = "100316*"
+
 APP_USERS = {
-    "operacao": {"password": os.getenv("APP_PASS", "100316*"), "role": "geral"},
+    "operacao": {"password": OPERACAO_PASSWORD, "role": "geral"},
     "geral": {"password": os.getenv("APP_PASS_GERAL", "100316"), "role": "geral"},
     "gestor": {"password": os.getenv("APP_PASS_GESTOR", "gestor@oppi"), "role": "gestor"},
     "designer": {"password": os.getenv("APP_PASS_DESIGNER", "designer@oppi"), "role": "designer"},
@@ -2101,11 +2103,22 @@ def login_logo_html(path: Path):
 
 def authenticate_user(usuario, senha):
     user_key = normalize_username(usuario)
+    senha_informada = str(senha).strip()
+
     for user in load_users_sheet_rows():
-        if user["username"] == user_key and user["password"] == senha:
+        if user["username"] != user_key:
+            continue
+        if user["password"] == senha_informada:
             if not user["active"]:
                 return "blocked"
             return user
+        if user_key == "operacao" and senha_informada == OPERACAO_PASSWORD:
+            if not user["active"]:
+                return "blocked"
+            user = dict(user)
+            user["password"] = OPERACAO_PASSWORD
+            return user
+
     return None
 
 
@@ -2273,7 +2286,15 @@ def get_users_header_map(worksheet):
 
 
 def normalize_username(value):
-    return str(value).strip().lower()
+    texto = str(value).strip().lower()
+    substituicoes = {
+        "á": "a", "à": "a", "ã": "a", "â": "a",
+        "é": "e", "ê": "e", "í": "i",
+        "ó": "o", "ô": "o", "õ": "o", "ú": "u", "ç": "c",
+    }
+    for antigo, novo in substituicoes.items():
+        texto = texto.replace(antigo, novo)
+    return texto
 
 
 def normalize_role(value):
@@ -2332,6 +2353,36 @@ def parse_user_row(row, row_number):
     }
 
 
+def sync_operacao_password_in_sheet():
+    worksheet = connect_users_worksheet()
+    header_map = get_users_header_map(worksheet)
+    senha_col = header_map.get("Senha", 2)
+    records = worksheet.get_all_records()
+    atualizou = False
+
+    for index, row in enumerate(records, start=2):
+        username = normalize_username(row.get("Usuário", ""))
+        if username != "operacao":
+            continue
+
+        senha_atual = str(row.get("Senha", "")).strip()
+        if senha_atual != OPERACAO_PASSWORD:
+            worksheet.update_cell(index, senha_col, OPERACAO_PASSWORD)
+            atualizou = True
+
+    if atualizou:
+        clear_users_cache()
+
+    return atualizou
+
+
+def apply_operacao_password_override(users):
+    for user in users:
+        if user["username"] == "operacao":
+            user["password"] = OPERACAO_PASSWORD
+    return users
+
+
 def ensure_default_users_in_sheet():
     worksheet = connect_users_worksheet()
     header_map = get_users_header_map(worksheet)
@@ -2344,12 +2395,6 @@ def ensure_default_users_in_sheet():
     for username, data in APP_USERS.items():
         username = normalize_username(username)
         if username in existing:
-            if username == "operacao" and "Senha" in header_map:
-                row_number, row = existing[username]
-                senha_atual = str(row.get("Senha", "")).strip()
-                senha_esperada = str(data["password"]).strip()
-                if senha_atual != senha_esperada:
-                    worksheet.update_cell(row_number, header_map["Senha"], senha_esperada)
             continue
 
         permissions = default_permissions_for_role(data["role"])
@@ -2365,6 +2410,8 @@ def ensure_default_users_in_sheet():
             permissions[NAV_ACESSOS],
         ])
 
+    sync_operacao_password_in_sheet()
+
 
 def load_users_sheet_rows_impl():
     ensure_default_users_in_sheet()
@@ -2375,7 +2422,7 @@ def load_users_sheet_rows_impl():
         parsed = parse_user_row(row, index)
         if parsed:
             users.append(parsed)
-    return users
+    return apply_operacao_password_override(users)
 
 
 def load_users_sheet_rows_fallback():
@@ -2393,7 +2440,7 @@ def load_users_sheet_rows_fallback():
                 "source": "padrão",
             }
         )
-    return users
+    return apply_operacao_password_override(users)
 
 
 @st.cache_data(ttl=30, show_spinner=False)
