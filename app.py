@@ -76,6 +76,23 @@ if "user_role" not in st.session_state:
 if "area_dashboard" not in st.session_state:
     st.session_state.area_dashboard = "Publicações"
 
+
+def ensure_auth_session():
+    if not st.session_state.get("logged_in"):
+        return
+
+    role = st.session_state.get("user_role") or "geral"
+    st.session_state.user_role = role
+
+    if not st.session_state.get("user_permissions"):
+        st.session_state.user_permissions = ROLE_NAV_ACCESS.get(
+            role, ROLE_NAV_ACCESS["geral"]
+        )
+
+    if not st.session_state.get("logged_username"):
+        st.session_state.logged_username = role
+
+
 NAV_OPTIONS = ["Empresas", "Publicações", "Nova Arte", "Gestão de Tráfego", NAV_ACESSOS]
 TIPO_ARTE_OPTIONS = ["Vídeo", "Arte", "Carrossel"]
 STATUS_ARTE_FORM_OPTIONS = ["Andamento", "Finalizado", "Pausado", "Pendente"]
@@ -133,7 +150,7 @@ DIA_SEMANA_FORM_NOME = {
     "Sex": "sexta-feira",
 }
 STATUS_ARTE_EDIT_OPTIONS = ["Pronto", "Em andamento", "Pausado", "Pendente"]
-APP_UI_VERSION = "2026-07-10-fix-auth"
+APP_UI_VERSION = "2026-07-10-fix-auth-v2"
 
 if "traffic_form_reset_token" not in st.session_state:
     st.session_state.traffic_form_reset_token = 0
@@ -2195,20 +2212,6 @@ def enforce_area_access(area):
     return default_area_for_permissions(allowed)
 
 
-def ensure_auth_session():
-    if not st.session_state.get("logged_in"):
-        return
-
-    role = st.session_state.get("user_role") or "geral"
-    st.session_state.user_role = role
-
-    if not st.session_state.get("user_permissions"):
-        st.session_state.user_permissions = nav_options_for_role(role)
-
-    if not st.session_state.get("logged_username"):
-        st.session_state.logged_username = role
-
-
 def show_login():
     st.markdown('<div id="login-page"></div>', unsafe_allow_html=True)
 
@@ -2256,7 +2259,10 @@ def show_login():
         elif not erro_planilha:
             st.error("Usuário ou senha incorretos.")
 
-    st.markdown('<div class="login-footer">Acesso restrito</div>', unsafe_allow_html=True)
+    st.markdown(
+        f'<div class="login-footer">Acesso restrito · v{APP_UI_VERSION}</div>',
+        unsafe_allow_html=True,
+    )
 
 def get_google_creds_dict():
     try:
