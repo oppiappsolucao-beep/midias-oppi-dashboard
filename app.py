@@ -133,7 +133,7 @@ DIA_SEMANA_FORM_NOME = {
     "Sex": "sexta-feira",
 }
 STATUS_ARTE_EDIT_OPTIONS = ["Pronto", "Em andamento", "Pausado", "Pendente"]
-APP_UI_VERSION = "2026-07-10-login-502-v2"
+APP_UI_VERSION = "2026-07-10-lista-pendentes"
 
 if "traffic_form_reset_token" not in st.session_state:
     st.session_state.traffic_form_reset_token = 0
@@ -2355,10 +2355,15 @@ def append_linhas_midia(linhas):
 
     def gravar():
         worksheet = connect_sheet()
-        if len(linhas) == 1:
-            worksheet.append_row(linhas[0], value_input_option="USER_ENTERED")
+        headers = worksheet.row_values(1)
+        linhas_planilha = [
+            converter_linha_midia_para_planilha(headers, linha)
+            for linha in linhas
+        ]
+        if len(linhas_planilha) == 1:
+            worksheet.append_row(linhas_planilha[0], value_input_option="USER_ENTERED")
         else:
-            worksheet.append_rows(linhas, value_input_option="USER_ENTERED")
+            worksheet.append_rows(linhas_planilha, value_input_option="USER_ENTERED")
 
     executar_operacao_planilha(gravar)
 
@@ -3587,6 +3592,18 @@ def intervalo_mes(mes_nome, ref_year=None):
     return date(ref_year, mes_int, 1), date(ref_year, mes_int, ultimo_dia)
 
 
+def alinhar_filtro_publicacoes_apos_cadastro(data_ref, mes_nome):
+    if not data_ref:
+        return
+
+    inicio, fim = intervalo_semana_atual(data_ref)
+    st.session_state["pub_data_inicio"] = inicio
+    st.session_state["pub_data_fim"] = fim
+    if mes_nome and mes_nome in MESES_ORDEM:
+        st.session_state["pub_mes_select"] = mes_nome
+    st.session_state["pub_destaque_tema"] = ""
+
+
 def atualizar_datas_por_mes_selecionado():
     mes_sel = st.session_state.get("pub_mes_select", "Todos")
     if mes_sel and mes_sel != "Todos":
@@ -3903,6 +3920,16 @@ def render_midias_nova_arte(df):
             return
 
         invalidar_cache_midias()
+        if recorrencia == "Sim" and datas_recorrencia:
+            data_ini, data_fim_mes = intervalo_mes(mes)
+            st.session_state["pub_data_inicio"] = data_ini
+            st.session_state["pub_data_fim"] = data_fim_mes
+            if mes in MESES_ORDEM:
+                st.session_state["pub_mes_select"] = mes
+        else:
+            alinhar_filtro_publicacoes_apos_cadastro(data_ref, mes)
+            st.session_state["pub_destaque_tema"] = tema.strip().lower()
+
         for key in [
             "nova_arte_empresa_opcao",
             "nova_arte_empresa_outra",
@@ -3925,7 +3952,8 @@ def render_midias_nova_arte(df):
             )
         else:
             st.session_state["nova_arte_msg_sucesso"] = (
-                f"Nova arte cadastrada com sucesso para {data_publicacao}!"
+                f"Nova arte cadastrada para {data_publicacao}! "
+                f"Vá em **Publicações** — o filtro já foi ajustado para essa data."
             )
         st.rerun()
 
@@ -4485,6 +4513,40 @@ def find_header_candidates(raw_headers, expected_header):
     ]
 
 
+def converter_linha_midia_para_planilha(headers, linha_valores):
+    campos = [
+        "Mês",
+        "Semana",
+        "Empresa",
+        "Tema",
+        "Valor",
+        "Status Pagamento",
+        "Tipo de arte",
+        "Status da arte",
+        "Data Publicação",
+        "Serviços",
+        "Recorrência",
+    ]
+    valores = dict(zip(campos, linha_valores))
+    largura = max(len(headers), 11)
+    linha_planilha = [""] * largura
+
+    for campo, valor in valores.items():
+        candidatos = find_header_candidates(headers, campo)
+        if not candidatos:
+            indice_fallback = campos.index(campo)
+            if indice_fallback < largura:
+                linha_planilha[indice_fallback] = valor
+            continue
+
+        indice = candidatos[0]
+        if indice >= len(linha_planilha):
+            linha_planilha.extend([""] * (indice - len(linha_planilha) + 1))
+        linha_planilha[indice] = valor
+
+    return linha_planilha
+
+
 def detect_date_column(raw_headers, data_rows, already_selected):
     candidates = find_header_candidates(raw_headers, "Data Publicação")
 
@@ -4605,7 +4667,7 @@ def load_data():
 def invalidar_cache_midias():
     load_data.clear()
     st.session_state.pop("df_midias_processado", None)
-    st.session_state.pop("_fase_carregamento_planilha", None)
+    st.session_state["_fase_carregamento_planilha"] = "preparando"
 
 
 def processar_dataframe_midias(df):
@@ -4921,6 +4983,13 @@ with st.container(border=True):
     busca = st.text_input("Buscar por empresa ou tema", placeholder="Ex.: Faiser, mulheres, internet...")
 
     df_status = df_filtrado.copy()
+    df_status = df_status.sort_values(
+        by="Data Publicação",
+        ascending=False,
+        na_position="last",
+    )
+
+    destaque_tema = str(st.session_state.get("pub_destaque_tema", "")).strip().lower()
 
     if busca.strip():
         termo = busca.strip().lower()
@@ -5088,4 +5157,7 @@ with st.container(border=True):
                         st.rerun()
 
     if df_status.empty:
-        st.info("Nenhum registro encontrado com esse filtro.")
+        st.info(
+            "Nenhum registro encontrado com esse filtro. "
+            "Confira o período **De/Até** acima — a atividade pode estar em outra data."
+        )
