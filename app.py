@@ -131,7 +131,7 @@ DIA_SEMANA_FORM_NOME = {
     "Sex": "sexta-feira",
 }
 STATUS_ARTE_EDIT_OPTIONS = ["Pronto", "Em andamento", "Pausado", "Pendente"]
-APP_UI_VERSION = "2026-07-08-logos-v12"
+APP_UI_VERSION = "2026-07-10-graficos-periodo"
 
 if "traffic_form_reset_token" not in st.session_state:
     st.session_state.traffic_form_reset_token = 0
@@ -3115,6 +3115,21 @@ def show_traffic_presentation(values):
             st.rerun()
 
 
+def linhas_com_conteudo_mask(df_frame):
+    return (
+        df_frame["Empresa"].astype(str).str.strip().ne("")
+        | df_frame["Tema"].astype(str).str.strip().ne("")
+        | df_frame["Tipo de arte"].astype(str).str.strip().ne("")
+        | df_frame["Valor"].fillna(0).gt(0)
+        | df_frame["Data Publicação"].notna()
+    )
+
+
+def chave_filtros_publicacoes(mes, data_inicio, data_fim, empresa):
+    empresa_slug = re.sub(r"[^a-zA-Z0-9]+", "_", str(empresa)).strip("_")
+    return f"{mes}_{data_inicio.isoformat()}_{data_fim.isoformat()}_{empresa_slug}"
+
+
 def calcular_metricas_empresa(df_empresa):
     status_pagamento_normalizado = normalizar_status_pagamento_coluna(
         df_empresa["Status Pagamento"]
@@ -3124,13 +3139,7 @@ def calcular_metricas_empresa(df_empresa):
     pagos = df_empresa[status_pagamento_normalizado == "pago"]
     a_pagar = df_empresa[status_pagamento_normalizado == "a pagar"]
 
-    linhas_com_conteudo = (
-        df_empresa["Empresa"].astype(str).str.strip().ne("")
-        | df_empresa["Tema"].astype(str).str.strip().ne("")
-        | df_empresa["Tipo de arte"].astype(str).str.strip().ne("")
-        | df_empresa["Valor"].fillna(0).gt(0)
-        | df_empresa["Data Publicação"].notna()
-    )
+    linhas_com_conteudo = linhas_com_conteudo_mask(df_empresa)
 
     postagens_feitas = int(((status_arte_normalizado == "pronto") & linhas_com_conteudo).sum())
     postagens_a_fazer = int(((status_arte_normalizado != "pronto") & linhas_com_conteudo).sum())
@@ -3165,7 +3174,7 @@ def aplicar_estilo_grafico_legivel(fig):
     )
 
 
-def render_grafico_valores_pagamento(valor_pago, valor_a_pagar):
+def render_grafico_valores_pagamento(valor_pago, valor_a_pagar, chart_key=None):
     graf_pagamento = pd.DataFrame(
         {
             "Status": ["Pago", "A pagar"],
@@ -3195,7 +3204,7 @@ def render_grafico_valores_pagamento(valor_pago, valor_a_pagar):
     fig_pagamento.update_traces(textposition="outside")
     fig_pagamento.update_yaxes(tickformat=",.2f")
 
-    st.plotly_chart(fig_pagamento, width="stretch")
+    st.plotly_chart(fig_pagamento, width="stretch", key=chart_key)
 
 
 def render_midias_empresas(df):
@@ -4596,19 +4605,28 @@ st.markdown("<br>", unsafe_allow_html=True)
 # GRÁFICOS
 # ---------------------------------------------------
 
+filtro_key = chave_filtros_publicacoes(mes, data_inicio, data_fim, empresa)
+df_graficos = df_filtrado[linhas_com_conteudo_mask(df_filtrado)].copy()
+
 g1, g2 = st.columns(2)
 
 with g1:
     with st.container(border=True):
         st.markdown('<div class="section-title">📊 Publicações por empresa</div>', unsafe_allow_html=True)
+        st.markdown(
+            f'<div class="small-note">Período: <b>{periodo_txt}</b></div>',
+            unsafe_allow_html=True,
+        )
 
         graf_empresa = (
-            df_filtrado.groupby("Empresa", dropna=False)
+            df_graficos.groupby("Empresa", dropna=False)
             .size()
             .reset_index(name="Total")
+            .sort_values("Total", ascending=False)
         )
 
         if not graf_empresa.empty:
+            total_grafico = int(graf_empresa["Total"].sum())
             fig_empresa = px.bar(graf_empresa, x="Empresa", y="Total", text="Total")
             fig_empresa.update_layout(
                 margin=dict(l=10, r=10, t=10, b=10),
@@ -4620,14 +4638,23 @@ with g1:
             )
             aplicar_estilo_grafico_legivel(fig_empresa)
             fig_empresa.update_traces(textposition="outside")
-            st.plotly_chart(fig_empresa, width="stretch")
+            st.plotly_chart(
+                fig_empresa,
+                width="stretch",
+                key=f"graf_empresa_{filtro_key}",
+            )
+            st.caption(f"Total no período: {total_grafico} publicações")
         else:
             st.info("Sem dados para esse filtro.")
 
 with g2:
     with st.container(border=True):
         st.markdown('<div class="section-title">💳 Valor por status pagamento</div>', unsafe_allow_html=True)
-        render_grafico_valores_pagamento(valor_pago, valor_a_pagar)
+        render_grafico_valores_pagamento(
+            valor_pago,
+            valor_a_pagar,
+            chart_key=f"graf_pagamento_{filtro_key}",
+        )
 
 st.markdown("<br>", unsafe_allow_html=True)
 
