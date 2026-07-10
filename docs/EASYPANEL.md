@@ -8,7 +8,7 @@
 | **Repositório** | `oppiappsolucao-beep/midias-oppi-dashboard` |
 | **Branch** | `main` |
 | **Porta** | `8501` |
-| **Comando de start** | `streamlit run app.py --server.port=8501 --server.address=0.0.0.0 --browser.gatherUsageStats=false` |
+| **Comando de start** | `streamlit run app.py --server.port=8501 --server.address=0.0.0.0 --server.enableXsrfProtection=false --browser.gatherUsageStats=false` |
 
 Ou use o [`Dockerfile.streamlit`](Dockerfile.streamlit) se o EasyPanel deployar via Docker.
 

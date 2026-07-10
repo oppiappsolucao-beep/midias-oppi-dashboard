@@ -133,7 +133,7 @@ DIA_SEMANA_FORM_NOME = {
     "Sex": "sexta-feira",
 }
 STATUS_ARTE_EDIT_OPTIONS = ["Pronto", "Em andamento", "Pausado", "Pendente"]
-APP_UI_VERSION = "2026-07-10-lista-pendentes"
+APP_UI_VERSION = "2026-07-10-sessao-login"
 
 if "traffic_form_reset_token" not in st.session_state:
     st.session_state.traffic_form_reset_token = 0
@@ -4308,6 +4308,8 @@ if not st.session_state.logged_in:
     show_login()
     st.stop()
 
+ensure_auth_session()
+
 user_role = get_user_role()
 area_dashboard = enforce_area_access(
     st.session_state.get("area_dashboard", default_area_for_role(user_role)),
@@ -4664,10 +4666,24 @@ def load_data():
     return build_media_dataframe(rows)
 
 
+def ensure_auth_session():
+    if not st.session_state.get("logged_in"):
+        return
+
+    role = st.session_state.get("user_role") or "geral"
+    st.session_state.user_role = role
+
+    if not st.session_state.get("user_permissions"):
+        st.session_state.user_permissions = nav_options_for_role(role)
+
+    if not st.session_state.get("logged_username"):
+        st.session_state.logged_username = role
+
+
 def invalidar_cache_midias():
     load_data.clear()
     st.session_state.pop("df_midias_processado", None)
-    st.session_state["_fase_carregamento_planilha"] = "preparando"
+    st.session_state.pop("_fase_carregamento_planilha", None)
 
 
 def processar_dataframe_midias(df):
@@ -4727,41 +4743,25 @@ def carregar_dataframe_midias():
     if cache_key in st.session_state:
         return st.session_state[cache_key]
 
-    fase_key = "_fase_carregamento_planilha"
-    fase = st.session_state.get(fase_key)
-
-    if fase is None:
-        st.session_state[fase_key] = "preparando"
-        st.info("⏳ Conectando com a planilha Google...")
-        st.caption("A tela vai atualizar automaticamente em instantes.")
-        st.rerun()
-
-    if fase == "preparando":
-        try:
-            with st.status("Carregando dados da planilha...", expanded=True) as load_status:
-                df_bruto = load_data()
-                df_processado = processar_dataframe_midias(df_bruto)
-                load_status.update(
-                    label="Dados carregados",
-                    state="complete",
-                    expanded=False,
-                )
-        except Exception as exc:
-            st.error(f"❌ {mensagem_erro_carregamento_midias(exc)}")
-            st.caption(f"Detalhe técnico: {exc}")
-            if st.button("🔄 Tentar novamente", key="retry_carregar_planilha"):
-                load_data.clear()
-                invalidar_conexao_planilha()
-                st.session_state[fase_key] = "preparando"
-                st.rerun()
-            st.stop()
-        else:
-            st.session_state[cache_key] = df_processado
-            st.session_state.pop(fase_key, None)
+    try:
+        with st.status("Carregando dados da planilha...", expanded=True) as load_status:
+            df_bruto = load_data()
+            df_processado = processar_dataframe_midias(df_bruto)
+            load_status.update(
+                label="Dados carregados",
+                state="complete",
+                expanded=False,
+            )
+    except Exception as exc:
+        st.error(f"❌ {mensagem_erro_carregamento_midias(exc)}")
+        st.caption(f"Detalhe técnico: {exc}")
+        if st.button("🔄 Tentar novamente", key="retry_carregar_planilha"):
+            invalidar_cache_midias()
             st.rerun()
+        st.stop()
 
-    st.stop()
-    return None
+    st.session_state[cache_key] = df_processado
+    return df_processado
 
 
 df = carregar_dataframe_midias()
