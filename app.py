@@ -150,7 +150,8 @@ DIA_SEMANA_FORM_NOME = {
     "Sex": "sexta-feira",
 }
 STATUS_ARTE_EDIT_OPTIONS = ["Pronto", "Em andamento", "Pausado", "Pendente"]
-APP_UI_VERSION = "2026-07-10-fix-auth-v2"
+APP_UI_VERSION = "2026-07-10-load-502-v3"
+PLANILHA_CHUNK_SIZE = 60
 
 if "traffic_form_reset_token" not in st.session_state:
     st.session_state.traffic_form_reset_token = 0
@@ -2400,8 +2401,16 @@ def executar_com_timeout(operacao, timeout_segundos=25):
             ) from exc
 
 
-def carregar_linhas_planilha(worksheet, progress_callback=None, chunk_size=80):
-    row_count = max(int(getattr(worksheet, "row_count", 0) or 0), 1)
+def obter_total_linhas_planilha(worksheet):
+    coluna_a = executar_com_timeout(
+        lambda: worksheet.col_values(1),
+        timeout_segundos=25,
+    )
+    return max(len(coluna_a), 1)
+
+
+def carregar_linhas_planilha(worksheet, progress_callback=None, chunk_size=PLANILHA_CHUNK_SIZE):
+    row_count = obter_total_linhas_planilha(worksheet)
     todas_linhas = []
 
     for inicio in range(1, row_count + 1, chunk_size):
@@ -2412,7 +2421,10 @@ def carregar_linhas_planilha(worksheet, progress_callback=None, chunk_size=80):
             progress_callback(fim, row_count)
 
         parte = executar_operacao_planilha(
-            lambda intervalo=intervalo: worksheet.get_values(intervalo)
+            lambda intervalo=intervalo: executar_com_timeout(
+                lambda intervalo=intervalo: worksheet.get_values(intervalo),
+                timeout_segundos=20,
+            )
         )
         if not parte:
             if inicio == 1:
@@ -4739,6 +4751,15 @@ def invalidar_cache_midias():
     load_data.clear()
     st.session_state.pop("df_midias_processado", None)
     st.session_state.pop("_fase_carregamento_planilha", None)
+    st.session_state.pop("_planilha_linhas_buf", None)
+    st.session_state.pop("_planilha_next_row", None)
+    st.session_state.pop("_planilha_total_rows", None)
+
+
+def limpar_estado_carregamento_planilha():
+    st.session_state.pop("_planilha_linhas_buf", None)
+    st.session_state.pop("_planilha_next_row", None)
+    st.session_state.pop("_planilha_total_rows", None)
 
 
 def processar_dataframe_midias(df):
@@ -4798,23 +4819,68 @@ def carregar_dataframe_midias():
     if cache_key in st.session_state:
         return st.session_state[cache_key]
 
-    try:
-        with st.status("Carregando dados da planilha...", expanded=True) as load_status:
+    linhas_key = "_planilha_linhas_buf"
+    next_row_key = "_planilha_next_row"
+    total_rows_key = "_planilha_total_rows"
 
-            def atualizar_progresso(atual, total):
+    if linhas_key not in st.session_state:
+        st.session_state[linhas_key] = []
+        st.session_state[next_row_key] = 1
+        st.session_state.pop(total_rows_key, None)
+
+    try:
+        worksheet = connect_sheet()
+
+        if total_rows_key not in st.session_state:
+            st.session_state[total_rows_key] = obter_total_linhas_planilha(worksheet)
+
+        total_linhas = st.session_state[total_rows_key]
+        inicio = st.session_state[next_row_key]
+
+        if inicio <= total_linhas:
+            fim = min(inicio + PLANILHA_CHUNK_SIZE - 1, total_linhas)
+            with st.status(
+                f"Carregando planilha... {fim} de {total_linhas} linhas",
+                expanded=True,
+            ) as load_status:
+                intervalo = f"A{inicio}:K{fim}"
+                parte = executar_operacao_planilha(
+                    lambda intervalo=intervalo: executar_com_timeout(
+                        lambda intervalo=intervalo: worksheet.get_values(intervalo),
+                        timeout_segundos=20,
+                    )
+                )
+
+                if parte:
+                    if inicio == 1:
+                        st.session_state[linhas_key] = list(parte)
+                    else:
+                        st.session_state[linhas_key].extend(parte)
+
+                    ultima = parte[-1]
+                    if inicio > 1 and not any(str(celula).strip() for celula in ultima):
+                        st.session_state[next_row_key] = total_linhas + 1
+                    else:
+                        st.session_state[next_row_key] = fim + 1
+
                 load_status.update(
-                    label=f"Carregando planilha... {atual} de {total} linhas",
+                    label=f"Carregando planilha... {min(fim, total_linhas)} de {total_linhas} linhas",
                     state="running",
                 )
 
-            df_bruto = load_data_com_progresso(atualizar_progresso)
-            df_processado = processar_dataframe_midias(df_bruto)
-            load_status.update(
-                label="Dados carregados",
-                state="complete",
-                expanded=False,
-            )
+            if st.session_state[next_row_key] <= total_linhas:
+                st.rerun()
+
+        rows = st.session_state.get(linhas_key, [])
+        if not rows:
+            raise RuntimeError("Planilha vazia ou sem dados legíveis.")
+
+        df_processado = processar_dataframe_midias(build_media_dataframe(rows))
+        limpar_estado_carregamento_planilha()
+        st.session_state[cache_key] = df_processado
+        return df_processado
     except Exception as exc:
+        limpar_estado_carregamento_planilha()
         st.error(f"❌ {mensagem_erro_carregamento_midias(exc)}")
         st.caption(f"Detalhe técnico: {exc}")
         st.info(
@@ -4826,9 +4892,6 @@ def carregar_dataframe_midias():
             load_data.clear()
             st.rerun()
         st.stop()
-
-    st.session_state[cache_key] = df_processado
-    return df_processado
 
 
 df = carregar_dataframe_midias()
