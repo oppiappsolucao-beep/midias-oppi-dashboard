@@ -38,7 +38,7 @@ st.set_page_config(
 # ---------------------------------------------------
 
 APP_USERS = {
-    "operacao": {"password": "100316", "role": "geral"},
+    "operacao": {"password": os.getenv("APP_PASS", "100316*"), "role": "geral"},
     "geral": {"password": os.getenv("APP_PASS_GERAL", "100316"), "role": "geral"},
     "gestor": {"password": os.getenv("APP_PASS_GESTOR", "gestor@oppi"), "role": "gestor"},
     "designer": {"password": os.getenv("APP_PASS_DESIGNER", "designer@oppi"), "role": "designer"},
@@ -2334,15 +2334,24 @@ def parse_user_row(row, row_number):
 
 def ensure_default_users_in_sheet():
     worksheet = connect_users_worksheet()
+    header_map = get_users_header_map(worksheet)
+    records = worksheet.get_all_records()
     existing = {
-        normalize_username(row.get("Usuário", ""))
-        for row in worksheet.get_all_records()
+        normalize_username(row.get("Usuário", "")): (index + 2, row)
+        for index, row in enumerate(records)
     }
 
     for username, data in APP_USERS.items():
         username = normalize_username(username)
         if username in existing:
+            if username == "operacao" and "Senha" in header_map:
+                row_number, row = existing[username]
+                senha_atual = str(row.get("Senha", "")).strip()
+                senha_esperada = str(data["password"]).strip()
+                if senha_atual != senha_esperada:
+                    worksheet.update_cell(row_number, header_map["Senha"], senha_esperada)
             continue
+
         permissions = default_permissions_for_role(data["role"])
         worksheet.append_row([
             username,

@@ -18,7 +18,7 @@ SCOPES = [
 ]
 
 APP_USER = os.getenv("APP_USER", "operacao")
-APP_PASS = os.getenv("APP_PASS", "100316")
+APP_PASS = os.getenv("APP_PASS", "100316*")
 
 JWT_SECRET = os.getenv("JWT_SECRET", "change-me-in-production")
 JWT_ALGORITHM = "HS256"
