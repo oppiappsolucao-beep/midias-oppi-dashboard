@@ -5,6 +5,7 @@ import io
 import textwrap
 import os
 import re
+import time
 from pathlib import Path
 from datetime import date
 
@@ -131,7 +132,7 @@ DIA_SEMANA_FORM_NOME = {
     "Sex": "sexta-feira",
 }
 STATUS_ARTE_EDIT_OPTIONS = ["Pronto", "Em andamento", "Pausado", "Pendente"]
-APP_UI_VERSION = "2026-07-10-graficos-periodo"
+APP_UI_VERSION = "2026-07-10-salvar-atividade"
 
 if "traffic_form_reset_token" not in st.session_state:
     st.session_state.traffic_form_reset_token = 0
@@ -1963,14 +1964,18 @@ def salvar_atividade_planilha(worksheet, row_index, tema, valor_txt, pagamento, 
         return False, "Informe um valor válido."
 
     linha_planilha = row_index + 2
-    worksheet.update_cell(linha_planilha, 4, str(tema).strip())
-    worksheet.update_cell(linha_planilha, 5, valor_parsed)
-    worksheet.update_cell(
-        linha_planilha,
-        6,
-        STATUS_PAGAMENTO_SHEET_MAP.get(pagamento, pagamento),
-    )
-    worksheet.update_cell(linha_planilha, 8, status_arte)
+    try:
+        executar_operacao_planilha(worksheet.update_cell, linha_planilha, 4, str(tema).strip())
+        executar_operacao_planilha(worksheet.update_cell, linha_planilha, 5, valor_parsed)
+        executar_operacao_planilha(
+            worksheet.update_cell,
+            linha_planilha,
+            6,
+            STATUS_PAGAMENTO_SHEET_MAP.get(pagamento, pagamento),
+        )
+        executar_operacao_planilha(worksheet.update_cell, linha_planilha, 8, status_arte)
+    except Exception as exc:
+        return False, mensagem_erro_planilha(exc)
     return True, ""
 
 
@@ -1978,24 +1983,36 @@ def salvar_status_arte_inline(row_index):
     worksheet = connect_sheet()
     novo_status = st.session_state.get(f"status_inline_{row_index}")
     if novo_status:
-        worksheet.update_cell(row_index + 2, 8, novo_status)
-        st.cache_data.clear()
+        try:
+            executar_operacao_planilha(
+                worksheet.update_cell,
+                row_index + 2,
+                8,
+                novo_status,
+            )
+            invalidar_cache_midias()
+        except Exception as exc:
+            st.error(mensagem_erro_planilha(exc))
 
 
 def salvar_pagamento_inline(row_index):
     worksheet = connect_sheet()
     novo_pagamento = st.session_state.get(f"pagamento_inline_{row_index}")
     if novo_pagamento:
-        worksheet.update_cell(
-            row_index + 2,
-            6,
-            STATUS_PAGAMENTO_SHEET_MAP.get(novo_pagamento, novo_pagamento),
-        )
-        st.cache_data.clear()
+        try:
+            executar_operacao_planilha(
+                worksheet.update_cell,
+                row_index + 2,
+                6,
+                STATUS_PAGAMENTO_SHEET_MAP.get(novo_pagamento, novo_pagamento),
+            )
+            invalidar_cache_midias()
+        except Exception as exc:
+            st.error(mensagem_erro_planilha(exc))
 
 
 def excluir_atividade_planilha(worksheet, row_index):
-    worksheet.delete_rows(row_index + 2)
+    executar_operacao_planilha(worksheet.delete_rows, row_index + 2)
     return True, ""
 
 
@@ -2283,6 +2300,66 @@ def connect_spreadsheet():
 
 def connect_media_worksheet():
     return connect_spreadsheet().get_worksheet(0)
+
+
+def invalidar_conexao_planilha():
+    connect_sheet.clear()
+    connect_gspread_client.clear()
+
+
+def erro_planilha_recuperavel(exc):
+    texto = str(exc).lower()
+    if "429" in texto or "quota" in texto or "rate limit" in texto:
+        return True
+    if isinstance(exc, gspread.exceptions.APIError):
+        status = getattr(getattr(exc, "response", None), "status_code", None)
+        if status in (429, 500, 502, 503):
+            return True
+    return isinstance(
+        exc,
+        (
+            gspread.exceptions.GSpreadException,
+            ConnectionError,
+            TimeoutError,
+        ),
+    )
+
+
+def executar_operacao_planilha(operacao, *args, **kwargs):
+    ultimo_erro = None
+    for tentativa in range(3):
+        try:
+            return operacao(*args, **kwargs)
+        except Exception as exc:
+            ultimo_erro = exc
+            if tentativa >= 2 or not erro_planilha_recuperavel(exc):
+                raise
+            invalidar_conexao_planilha()
+            time.sleep(1.5 * (tentativa + 1))
+    raise ultimo_erro
+
+
+def append_linhas_midia(worksheet, linhas):
+    if not linhas:
+        return
+    executar_operacao_planilha(
+        worksheet.append_rows,
+        linhas,
+        value_input_option="USER_ENTERED",
+    )
+
+
+def mensagem_erro_planilha(exc):
+    texto = str(exc).lower()
+    if "429" in texto or "quota" in texto or "rate limit" in texto:
+        return (
+            "A planilha está temporariamente sobrecarregada. "
+            "Aguarde cerca de 1 minuto e tente salvar novamente."
+        )
+    return (
+        "Não foi possível salvar na planilha agora. "
+        "Verifique a conexão e tente de novo em alguns segundos."
+    )
 
 
 def connect_users_worksheet():
@@ -3702,6 +3779,7 @@ def render_midias_nova_arte(df):
                 recorrencia_linha,
             ]
 
+        linhas_novas = []
         if recorrencia == "Sim":
             datas_recorrencia = datas_recorrencia_mes(mes, padrao_recorrencia)
             if not datas_recorrencia:
@@ -3711,16 +3789,23 @@ def render_midias_nova_arte(df):
             for data_ref in datas_recorrencia:
                 semana_linha = SEMANA_OPTIONS[indice_semana_por_dia(data_ref.day)]
                 data_linha = data_ref.strftime("%d/%m/%Y")
-                worksheet.append_row(
+                linhas_novas.append(
                     montar_linha_planilha(semana_linha, data_linha, padrao_recorrencia)
                 )
         else:
             data_ref = datas_dia[0]
             semana = SEMANA_OPTIONS[indice_semana_por_dia(data_ref.day)]
             data_publicacao = data_ref.strftime("%d/%m/%Y")
-            worksheet.append_row(montar_linha_planilha(semana, data_publicacao, "Não"))
+            linhas_novas.append(montar_linha_planilha(semana, data_publicacao, "Não"))
 
-        st.cache_data.clear()
+        try:
+            with st.spinner("Salvando atividade na planilha..."):
+                append_linhas_midia(worksheet, linhas_novas)
+        except Exception as exc:
+            st.error(mensagem_erro_planilha(exc))
+            st.caption(f"Detalhe técnico: {exc}")
+            return
+
         for key in [
             "nova_arte_empresa_opcao",
             "nova_arte_empresa_outra",
@@ -3739,7 +3824,7 @@ def render_midias_nova_arte(df):
         if recorrencia == "Sim":
             st.success(
                 f"Nova arte cadastrada com sucesso! "
-                f"{len(datas_recorrencia)} publicação(ões) recorrente(s) criada(s)."
+                f"{len(linhas_novas)} publicação(ões) recorrente(s) criada(s)."
             )
         else:
             st.success("Nova arte cadastrada com sucesso!")
@@ -4428,6 +4513,11 @@ def load_data():
 
     return build_media_dataframe(rows)
 
+
+def invalidar_cache_midias():
+    load_data.clear()
+
+
 df = load_data()
 
 # ---------------------------------------------------
@@ -4739,7 +4829,7 @@ with st.container(border=True):
                             excluir_atividade_planilha(worksheet, index)
                             st.session_state.pop(edit_key, None)
                             st.session_state.pop(delete_confirm_key, None)
-                            st.cache_data.clear()
+                            invalidar_cache_midias()
                             st.rerun()
                     with conf2:
                         if st.button("Não excluir", key=f"cancelar_exclusao_{index}"):
@@ -4767,7 +4857,7 @@ with st.container(border=True):
                             )
                             if ok:
                                 st.session_state[edit_key] = False
-                                st.cache_data.clear()
+                                invalidar_cache_midias()
                                 st.rerun()
                             else:
                                 st.warning(msg)
