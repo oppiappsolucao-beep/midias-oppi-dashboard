@@ -133,7 +133,7 @@ DIA_SEMANA_FORM_NOME = {
     "Sex": "sexta-feira",
 }
 STATUS_ARTE_EDIT_OPTIONS = ["Pronto", "Em andamento", "Pausado", "Pendente"]
-APP_UI_VERSION = "2026-07-10-login-502"
+APP_UI_VERSION = "2026-07-10-login-502-v2"
 
 if "traffic_form_reset_token" not in st.session_state:
     st.session_state.traffic_form_reset_token = 0
@@ -2787,6 +2787,8 @@ def render_sidebar_navigation():
             st.session_state.pop("user_role", None)
             st.session_state.pop("logged_username", None)
             st.session_state.pop("user_permissions", None)
+            st.session_state.pop("df_midias_processado", None)
+            st.session_state.pop("_fase_carregamento_planilha", None)
             reset_sidebar_toggle_state()
             st.rerun()
 
@@ -4602,45 +4604,105 @@ def load_data():
 
 def invalidar_cache_midias():
     load_data.clear()
+    st.session_state.pop("df_midias_processado", None)
+    st.session_state.pop("_fase_carregamento_planilha", None)
 
 
-try:
-    with st.status("Carregando dados da planilha...", expanded=True) as load_status:
-        df = load_data()
-        load_status.update(label="Dados carregados", state="complete", expanded=False)
-except Exception as exc:
-    st.error(f"❌ {mensagem_erro_carregamento_midias(exc)}")
-    st.caption(f"Detalhe técnico: {exc}")
-    st.info("Se o erro continuar, aguarde 1 minuto e pressione **Ctrl+F5**.")
+def processar_dataframe_midias(df):
+    df = df.copy()
+
+    for col in [
+        "Mês",
+        "Semana",
+        "Empresa",
+        "Tema",
+        "Status Pagamento",
+        "Status da arte",
+        "Tipo de arte",
+        "Data Publicação",
+        "Serviços",
+        "Recorrência",
+    ]:
+        if col not in df.columns:
+            df[col] = ""
+
+    df["Data Publicação Raw"] = df["Data Publicação"].astype(str).str.strip()
+
+    if "Valor" in df.columns:
+        df["Valor"] = normalizar_valor(df["Valor"]).fillna(0)
+    else:
+        df["Valor"] = 0.0
+
+    df["Data Publicação"] = df["Data Publicação Raw"].apply(parse_data_publicacao)
+
+    if "Mês" in df.columns:
+        df["Mês"] = df["Mês"].astype(str).str.strip()
+        mascara_mes_vazio = df["Mês"].eq("") & df["Data Publicação"].notna()
+        if mascara_mes_vazio.any():
+            mapa_meses = {
+                1: "Janeiro",
+                2: "Fevereiro",
+                3: "Março",
+                4: "Abril",
+                5: "Maio",
+                6: "Junho",
+                7: "Julho",
+                8: "Agosto",
+                9: "Setembro",
+                10: "Outubro",
+                11: "Novembro",
+                12: "Dezembro",
+            }
+            df.loc[mascara_mes_vazio, "Mês"] = df.loc[
+                mascara_mes_vazio, "Data Publicação"
+            ].dt.month.map(mapa_meses)
+
+    return df
+
+
+def carregar_dataframe_midias():
+    cache_key = "df_midias_processado"
+    if cache_key in st.session_state:
+        return st.session_state[cache_key]
+
+    fase_key = "_fase_carregamento_planilha"
+    fase = st.session_state.get(fase_key)
+
+    if fase is None:
+        st.session_state[fase_key] = "preparando"
+        st.info("⏳ Conectando com a planilha Google...")
+        st.caption("A tela vai atualizar automaticamente em instantes.")
+        st.rerun()
+
+    if fase == "preparando":
+        try:
+            with st.status("Carregando dados da planilha...", expanded=True) as load_status:
+                df_bruto = load_data()
+                df_processado = processar_dataframe_midias(df_bruto)
+                load_status.update(
+                    label="Dados carregados",
+                    state="complete",
+                    expanded=False,
+                )
+        except Exception as exc:
+            st.error(f"❌ {mensagem_erro_carregamento_midias(exc)}")
+            st.caption(f"Detalhe técnico: {exc}")
+            if st.button("🔄 Tentar novamente", key="retry_carregar_planilha"):
+                load_data.clear()
+                invalidar_conexao_planilha()
+                st.session_state[fase_key] = "preparando"
+                st.rerun()
+            st.stop()
+        else:
+            st.session_state[cache_key] = df_processado
+            st.session_state.pop(fase_key, None)
+            st.rerun()
+
     st.stop()
+    return None
 
-# ---------------------------------------------------
-# TRATAMENTO
-# ---------------------------------------------------
 
-for col in ["Mês", "Semana", "Empresa", "Tema", "Status Pagamento", "Status da arte", "Tipo de arte", "Data Publicação", "Serviços", "Recorrência"]:
-    if col not in df.columns:
-        df[col] = ""
-
-df["Data Publicação Raw"] = df["Data Publicação"].astype(str).str.strip()
-
-if "Valor" in df.columns:
-    df["Valor"] = normalizar_valor(df["Valor"]).fillna(0)
-else:
-    df["Valor"] = 0.0
-
-df["Data Publicação"] = df["Data Publicação Raw"].apply(parse_data_publicacao)
-
-if "Mês" in df.columns:
-    df["Mês"] = df["Mês"].astype(str).str.strip()
-    mascara_mes_vazio = df["Mês"].eq("") & df["Data Publicação"].notna()
-    if mascara_mes_vazio.any():
-        mapa_meses = {
-            1: "Janeiro", 2: "Fevereiro", 3: "Março", 4: "Abril",
-            5: "Maio", 6: "Junho", 7: "Julho", 8: "Agosto",
-            9: "Setembro", 10: "Outubro", 11: "Novembro", 12: "Dezembro"
-        }
-        df.loc[mascara_mes_vazio, "Mês"] = df.loc[mascara_mes_vazio, "Data Publicação"].dt.month.map(mapa_meses)
+df = carregar_dataframe_midias()
 
 # ---------------------------------------------------
 # MÍDIAS
