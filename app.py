@@ -93,7 +93,7 @@ def ensure_auth_session():
         st.session_state.logged_username = role
 
 
-@st.fragment(run_every=timedelta(seconds=25))
+@st.fragment(run_every=timedelta(seconds=120))
 def manter_conexao_viva():
     st.session_state["_sessao_keepalive"] = time.time()
 
@@ -155,7 +155,7 @@ DIA_SEMANA_FORM_NOME = {
     "Sex": "sexta-feira",
 }
 STATUS_ARTE_EDIT_OPTIONS = ["Pronto", "Em andamento", "Pausado", "Pendente"]
-APP_UI_VERSION = "2026-07-13-gravar-fix"
+APP_UI_VERSION = "2026-07-13-sem-429"
 
 if "traffic_form_reset_token" not in st.session_state:
     st.session_state.traffic_form_reset_token = 0
@@ -2037,17 +2037,25 @@ def ajustar_mapa_colunas_gravacao(col_map):
     return ajustado
 
 
-def obter_mapa_colunas_para_gravacao(rows=None):
-    if rows is None:
-        def ler_planilha():
-            worksheet = connect_media_worksheet()
-            return worksheet.get_all_values()
+def obter_mapa_colunas_para_gravacao(rows=None, force_refresh=False):
+    if not force_refresh:
+        cached = st.session_state.get("_media_col_map")
+        if cached:
+            return cached
 
-        rows = executar_operacao_planilha(ler_planilha)
+    if rows is None:
+        rows = load_raw_rows()
 
     col_map = ajustar_mapa_colunas_gravacao(mapa_colunas_midias_por_nome(rows))
     st.session_state["_media_col_map"] = col_map
     return col_map
+
+
+def atualizar_valor_midia_cache(row_index, campo, valor):
+    df_cache = st.session_state.get("df_midias_processado")
+    if df_cache is None or row_index not in df_cache.index:
+        return
+    df_cache.at[row_index, campo] = valor
 
 
 def preparar_valores_gravacao(col_map, valores, campos_obrigatorios):
@@ -2100,7 +2108,7 @@ def montar_linha_para_gravacao(col_map, valores_por_campo):
 
 
 def atualizar_celula_midia(row_index, campo, valor):
-    col_map = obter_mapa_colunas_para_gravacao()
+    col_map = get_media_column_map()
     col_num = col_map.get(campo)
     if not col_num:
         raise ValueError(f"Coluna '{campo}' não encontrada na planilha.")
@@ -2112,6 +2120,7 @@ def atualizar_celula_midia(row_index, campo, valor):
         worksheet.update_cell(sheet_row, col_num, valor)
 
     executar_operacao_planilha(gravar)
+    atualizar_valor_midia_cache(row_index, campo, valor)
 
 
 def salvar_atividade_planilha(row_index, tema, valor_txt, pagamento, status_arte):
@@ -2134,9 +2143,10 @@ def salvar_atividade_planilha(row_index, tema, valor_txt, pagamento, status_arte
     ]
 
     try:
+        col_map = get_media_column_map()
+
         def gravar():
             worksheet = connect_media_worksheet()
-            col_map = obter_mapa_colunas_para_gravacao()
             sheet_row = row_index + 2
             for campo, valor_campo in campos_valores:
                 col_num = col_map.get(campo)
@@ -2145,6 +2155,8 @@ def salvar_atividade_planilha(row_index, tema, valor_txt, pagamento, status_arte
                 worksheet.update_cell(sheet_row, col_num, valor_campo)
 
         executar_operacao_planilha(gravar)
+        for campo, valor_campo in campos_valores:
+            atualizar_valor_midia_cache(row_index, campo, valor_campo)
     except Exception as exc:
         return False, mensagem_erro_planilha(exc)
     return True, ""
@@ -2155,7 +2167,6 @@ def salvar_status_arte_inline(row_index):
     if novo_status:
         try:
             atualizar_celula_midia(row_index, "Status da arte", novo_status)
-            invalidar_cache_midias()
         except Exception as exc:
             st.error(mensagem_erro_planilha(exc))
 
@@ -2169,7 +2180,6 @@ def salvar_pagamento_inline(row_index):
                 "Status Pagamento",
                 STATUS_PAGAMENTO_SHEET_MAP.get(novo_pagamento, novo_pagamento),
             )
-            invalidar_cache_midias()
         except Exception as exc:
             st.error(mensagem_erro_planilha(exc))
 
@@ -2520,8 +2530,12 @@ def executar_operacao_planilha(operacao, *args, **kwargs):
             ultimo_erro = exc
             if tentativa >= 2 or not erro_planilha_recuperavel(exc):
                 raise
-            invalidar_conexao_planilha()
-            time.sleep(1.5 * (tentativa + 1))
+            texto = str(exc).lower()
+            if "429" in texto or "quota" in texto or "rate limit" in texto:
+                time.sleep(8 + tentativa * 12)
+            else:
+                invalidar_conexao_planilha()
+                time.sleep(1.5 * (tentativa + 1))
     raise ultimo_erro
 
 
@@ -2556,7 +2570,8 @@ def append_linhas_midia(linhas):
     def gravar():
         worksheet = connect_media_worksheet()
         rows = worksheet.get_all_values()
-        col_map = obter_mapa_colunas_para_gravacao(rows)
+        col_map = ajustar_mapa_colunas_gravacao(mapa_colunas_midias_por_nome(rows))
+        st.session_state["_media_col_map"] = col_map
         validar_colunas_gravacao(col_map, campos_obrigatorios)
         proxima_linha = len(rows) + 1
         linhas_gravadas = []
@@ -5305,7 +5320,6 @@ with st.container(border=True):
                             )
                             if ok:
                                 st.session_state[edit_key] = False
-                                invalidar_cache_midias()
                                 st.rerun()
                             else:
                                 st.warning(msg)
