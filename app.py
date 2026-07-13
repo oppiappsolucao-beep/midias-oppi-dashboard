@@ -162,7 +162,8 @@ DIA_SEMANA_FORM_NOME = {
     "Sex": "sexta-feira",
 }
 STATUS_ARTE_EDIT_OPTIONS = ["Pronto", "Em andamento", "Pausado", "Pendente"]
-APP_UI_VERSION = "2026-07-13-atualizar-filtro"
+APP_UI_VERSION = "2026-07-13-ultimos-7-dias-v2"
+PUB_FILTROS_VERSION = 3
 MEDIA_COL_MAP_VERSION = 3
 
 if "traffic_form_reset_token" not in st.session_state:
@@ -3907,39 +3908,28 @@ def intervalo_semana_atual(ref=None):
     return date(ref.year, ref.month, inicio_dia), date(ref.year, ref.month, fim_dia)
 
 
-def intervalo_semana_anterior(ref=None):
-    """Retorna os 7 dias da semana anterior à semana corrente do mês."""
+def intervalo_ultimos_7_dias(ref=None):
+    """Retorna de hoje menos 7 dias até hoje (ex.: 06/07 a 13/07)."""
     ref = ref or date.today()
-    limites = [(1, 7), (8, 14), (15, 21), (22, 28), (29, 31)]
-    idx_atual = indice_semana_por_dia(ref.day)
-
-    if idx_atual > 0:
-        inicio_dia, fim_dia = limites[idx_atual - 1]
-        ultimo_dia_mes = calendar.monthrange(ref.year, ref.month)[1]
-        fim_dia = min(fim_dia, ultimo_dia_mes)
-        return date(ref.year, ref.month, inicio_dia), date(ref.year, ref.month, fim_dia)
-
-    if ref.month == 1:
-        prev_year, prev_month = ref.year - 1, 12
-    else:
-        prev_year, prev_month = ref.year, ref.month - 1
-
-    ultimo_dia_prev = calendar.monthrange(prev_year, prev_month)[1]
-    idx_prev = indice_semana_por_dia(ultimo_dia_prev)
-    inicio_dia, fim_dia = limites[idx_prev]
-    fim_dia = min(fim_dia, ultimo_dia_prev)
-    return date(prev_year, prev_month, inicio_dia), date(prev_year, prev_month, fim_dia)
+    return ref - timedelta(days=7), ref
 
 
 def inicializar_filtros_publicacoes():
-    if st.session_state.get("pub_filtros_inicializados"):
-        return
+    hoje = date.today()
+    inicio, fim = intervalo_ultimos_7_dias(hoje)
+    precisa_atualizar = (
+        st.session_state.get("pub_filtros_version") != PUB_FILTROS_VERSION
+        or st.session_state.get("pub_filtros_dia_referencia") != hoje.isoformat()
+    )
 
-    inicio, fim = intervalo_semana_anterior()
-    st.session_state["pub_data_inicio"] = inicio
-    st.session_state["pub_data_fim"] = fim
-    st.session_state["pub_mes_select"] = MESES_ORDEM[inicio.month - 1]
-    st.session_state["pub_filtros_inicializados"] = True
+    if precisa_atualizar:
+        st.session_state["pub_data_inicio"] = inicio
+        st.session_state["pub_data_fim"] = fim
+        st.session_state["pub_filtros_version"] = PUB_FILTROS_VERSION
+        st.session_state["pub_filtros_dia_referencia"] = hoje.isoformat()
+
+    if "pub_mes_select" not in st.session_state:
+        st.session_state["pub_mes_select"] = MESES_ORDEM[hoje.month - 1]
 
 
 def intervalo_mes(mes_nome, ref_year=None):
@@ -3962,11 +3952,10 @@ def alinhar_filtro_publicacoes_apos_cadastro(data_ref, mes_nome):
 
 
 def atualizar_datas_por_mes_selecionado():
-    mes_sel = st.session_state.get("pub_mes_select", "Todos")
-    if mes_sel and mes_sel != "Todos":
-        data_ini, data_fim_mes = intervalo_mes(mes_sel)
-        st.session_state["pub_data_inicio"] = data_ini
-        st.session_state["pub_data_fim"] = data_fim_mes
+    hoje = date.today()
+    inicio, fim = intervalo_ultimos_7_dias(hoje)
+    st.session_state["pub_data_inicio"] = inicio
+    st.session_state["pub_data_fim"] = fim
 
 
 def semana_atual_em_opcoes(semanas_disponiveis):
@@ -5199,7 +5188,7 @@ st.markdown('<div id="publicacoes-page"></div>', unsafe_allow_html=True)
 hoje = date.today()
 mes_corrente = mes_atual_nome()
 inicializar_filtros_publicacoes()
-data_inicio_default, data_fim_default = intervalo_semana_anterior(hoje)
+data_inicio_default, data_fim_default = intervalo_ultimos_7_dias(hoje)
 
 # ---------------------------------------------------
 # FILTROS
@@ -5262,6 +5251,11 @@ with st.container(border=True):
         form_field_label("\u00a0")
         if st.button("Atualizar", key="pub_atualizar", use_container_width=True):
             invalidar_cache_midias()
+            hoje = date.today()
+            inicio, fim = intervalo_ultimos_7_dias(hoje)
+            st.session_state["pub_data_inicio"] = inicio
+            st.session_state["pub_data_fim"] = fim
+            st.session_state["pub_filtros_dia_referencia"] = hoje.isoformat()
             st.rerun()
 
 periodo_txt = f"{format_date_br(data_inicio)} até {format_date_br(data_fim)}"
