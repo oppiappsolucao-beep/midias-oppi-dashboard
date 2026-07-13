@@ -162,7 +162,7 @@ DIA_SEMANA_FORM_NOME = {
     "Sex": "sexta-feira",
 }
 STATUS_ARTE_EDIT_OPTIONS = ["Pronto", "Em andamento", "Pausado", "Pendente"]
-APP_UI_VERSION = "2026-07-13-chips-planilha"
+APP_UI_VERSION = "2026-07-13-atualizar-filtro"
 MEDIA_COL_MAP_VERSION = 3
 
 if "traffic_form_reset_token" not in st.session_state:
@@ -3907,6 +3907,41 @@ def intervalo_semana_atual(ref=None):
     return date(ref.year, ref.month, inicio_dia), date(ref.year, ref.month, fim_dia)
 
 
+def intervalo_semana_anterior(ref=None):
+    """Retorna os 7 dias da semana anterior à semana corrente do mês."""
+    ref = ref or date.today()
+    limites = [(1, 7), (8, 14), (15, 21), (22, 28), (29, 31)]
+    idx_atual = indice_semana_por_dia(ref.day)
+
+    if idx_atual > 0:
+        inicio_dia, fim_dia = limites[idx_atual - 1]
+        ultimo_dia_mes = calendar.monthrange(ref.year, ref.month)[1]
+        fim_dia = min(fim_dia, ultimo_dia_mes)
+        return date(ref.year, ref.month, inicio_dia), date(ref.year, ref.month, fim_dia)
+
+    if ref.month == 1:
+        prev_year, prev_month = ref.year - 1, 12
+    else:
+        prev_year, prev_month = ref.year, ref.month - 1
+
+    ultimo_dia_prev = calendar.monthrange(prev_year, prev_month)[1]
+    idx_prev = indice_semana_por_dia(ultimo_dia_prev)
+    inicio_dia, fim_dia = limites[idx_prev]
+    fim_dia = min(fim_dia, ultimo_dia_prev)
+    return date(prev_year, prev_month, inicio_dia), date(prev_year, prev_month, fim_dia)
+
+
+def inicializar_filtros_publicacoes():
+    if st.session_state.get("pub_filtros_inicializados"):
+        return
+
+    inicio, fim = intervalo_semana_anterior()
+    st.session_state["pub_data_inicio"] = inicio
+    st.session_state["pub_data_fim"] = fim
+    st.session_state["pub_mes_select"] = MESES_ORDEM[inicio.month - 1]
+    st.session_state["pub_filtros_inicializados"] = True
+
+
 def intervalo_mes(mes_nome, ref_year=None):
     ref_year = ref_year or date.today().year
     mes_int = MESES_ORDEM.index(mes_nome) + 1
@@ -5163,7 +5198,8 @@ st.markdown('<div id="publicacoes-page"></div>', unsafe_allow_html=True)
 
 hoje = date.today()
 mes_corrente = mes_atual_nome()
-data_inicio_default, data_fim_default = intervalo_semana_atual(hoje)
+inicializar_filtros_publicacoes()
+data_inicio_default, data_fim_default = intervalo_semana_anterior(hoje)
 
 # ---------------------------------------------------
 # FILTROS
@@ -5177,16 +5213,18 @@ if mes_corrente not in mes_opcoes:
     mes_opcoes.insert(1, mes_corrente)
 
 empresas_disponiveis = [x for x in df["Empresa"].dropna().astype(str).unique().tolist() if str(x).strip()]
+mes_selecionado = st.session_state.get("pub_mes_select", mes_corrente)
+index_mes = mes_opcoes.index(mes_selecionado) if mes_selecionado in mes_opcoes else 0
 
 with st.container(border=True):
-    f1, f2, f3, f4 = st.columns(4)
+    f1, f2, f3, f4, f5 = st.columns([2, 2, 2, 2, 1.2])
 
     with f1:
         form_field_label("Mês")
         mes = st.selectbox(
             "Mês",
             mes_opcoes,
-            index=mes_opcoes.index(mes_corrente),
+            index=index_mes,
             key="pub_mes_select",
             on_change=atualizar_datas_por_mes_selecionado,
             label_visibility="collapsed",
@@ -5196,7 +5234,7 @@ with st.container(border=True):
         form_field_label("De")
         data_inicio = st.date_input(
             "De",
-            value=data_inicio_default,
+            value=st.session_state.get("pub_data_inicio", data_inicio_default),
             format="DD/MM/YYYY",
             key="pub_data_inicio",
             label_visibility="collapsed",
@@ -5206,7 +5244,7 @@ with st.container(border=True):
         form_field_label("Até")
         data_fim = st.date_input(
             "Até",
-            value=data_fim_default,
+            value=st.session_state.get("pub_data_fim", data_fim_default),
             format="DD/MM/YYYY",
             key="pub_data_fim",
             label_visibility="collapsed",
@@ -5219,6 +5257,12 @@ with st.container(border=True):
             ["Todas"] + sorted(empresas_disponiveis),
             label_visibility="collapsed",
         )
+
+    with f5:
+        form_field_label("\u00a0")
+        if st.button("Atualizar", key="pub_atualizar", use_container_width=True):
+            invalidar_cache_midias()
+            st.rerun()
 
 periodo_txt = f"{format_date_br(data_inicio)} até {format_date_br(data_fim)}"
 if mes != "Todos":
