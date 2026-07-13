@@ -155,7 +155,7 @@ DIA_SEMANA_FORM_NOME = {
     "Sex": "sexta-feira",
 }
 STATUS_ARTE_EDIT_OPTIONS = ["Pronto", "Em andamento", "Pausado", "Pendente"]
-APP_UI_VERSION = "2026-07-13-gravar-planilha"
+APP_UI_VERSION = "2026-07-13-colunas-planilha"
 
 if "traffic_form_reset_token" not in st.session_state:
     st.session_state.traffic_form_reset_token = 0
@@ -1968,7 +1968,7 @@ def resolver_indices_colunas_midias(rows):
     used_indexes = set()
 
     for expected_header in EXPECTED_MEDIA_HEADERS:
-        if expected_header == "Data Publicação":
+        if expected_header in ("Data Publicação", "Status Pagamento"):
             continue
 
         candidates = find_header_candidates(raw_headers, expected_header)
@@ -1985,6 +1985,12 @@ def resolver_indices_colunas_midias(rows):
     date_index = detect_date_column(raw_headers, data_rows, used_indexes)
     if date_index is not None:
         selected_indexes["Data Publicação"] = date_index
+        used_indexes.add(date_index)
+
+    payment_index = detect_payment_column(raw_headers, data_rows, used_indexes)
+    if payment_index is not None:
+        selected_indexes["Status Pagamento"] = payment_index
+        used_indexes.add(payment_index)
 
     valor_index = detect_valor_column(raw_headers, data_rows, selected_indexes, used_indexes)
     if valor_index is not None:
@@ -1999,12 +2005,7 @@ def resolver_indices_colunas_midias(rows):
 
 def mapa_colunas_midias_por_nome(rows):
     indices = resolver_indices_colunas_midias(rows)
-    col_map = {nome: indice + 1 for nome, indice in indices.items()}
-
-    for fallback_index, nome in enumerate(EXPECTED_MEDIA_HEADERS, start=1):
-        col_map.setdefault(nome, fallback_index)
-
-    return col_map
+    return {nome: indice + 1 for nome, indice in indices.items()}
 
 
 def atualizar_mapa_colunas_midias(rows):
@@ -2021,14 +2022,23 @@ def get_media_column_map():
     return st.session_state.get("_media_col_map") or {}
 
 
+def validar_colunas_gravacao(col_map, campos_obrigatorios):
+    faltando = [campo for campo in campos_obrigatorios if not col_map.get(campo)]
+    if faltando:
+        raise ValueError(
+            "Não foi possível localizar na planilha as colunas: "
+            + ", ".join(faltando)
+            + ". Confira os cabeçalhos da primeira linha."
+        )
+
+
 def montar_linha_para_gravacao(col_map, valores_por_campo):
-    max_col = max(max(col_map.values(), default=0), len(EXPECTED_MEDIA_HEADERS))
+    validar_colunas_gravacao(col_map, list(valores_por_campo.keys()))
+    max_col = max(col_map.values())
     linha = [""] * max_col
 
     for campo, valor in valores_por_campo.items():
-        col = col_map.get(campo)
-        if not col:
-            continue
+        col = col_map[campo]
         if col > len(linha):
             linha.extend([""] * (col - len(linha)))
         linha[col - 1] = valor
@@ -2467,27 +2477,44 @@ def append_linhas_midia(linhas):
     if not linhas:
         return
 
-    campos_ordem = [
-        "Mês",
-        "Semana",
-        "Empresa",
-        "Tema",
-        "Valor",
-        "Status Pagamento",
-        "Tipo de arte",
-        "Status da arte",
-        "Data Publicação",
-        "Serviços",
-        "Recorrência",
-    ]
-
     def gravar():
         worksheet = connect_media_worksheet()
         col_map = get_media_column_map()
+        campos_ordem = [
+            "Mês",
+            "Semana",
+            "Empresa",
+            "Tema",
+            "Valor",
+            "Status Pagamento",
+            "Tipo de arte",
+            "Status da arte",
+            "Data Publicação",
+            "Serviços",
+            "Recorrência",
+        ]
+        campos_obrigatorios = [
+            "Mês",
+            "Empresa",
+            "Tema",
+            "Semana",
+            "Data Publicação",
+            "Valor",
+            "Status da arte",
+            "Status Pagamento",
+        ]
+        validar_colunas_gravacao(col_map, campos_obrigatorios)
 
         for linha_valores in linhas:
             valores = dict(zip(campos_ordem, linha_valores))
-            linha_planilha = montar_linha_para_gravacao(col_map, valores)
+            valores_gravar = {}
+            for campo in campos_ordem:
+                if campo not in col_map:
+                    continue
+                valor = valores.get(campo, "")
+                if campo in campos_obrigatorios or str(valor).strip() != "":
+                    valores_gravar[campo] = valor
+            linha_planilha = montar_linha_para_gravacao(col_map, valores_gravar)
             worksheet.append_row(linha_planilha, value_input_option="USER_ENTERED")
 
     executar_operacao_planilha(gravar)
@@ -4520,7 +4547,6 @@ HEADER_ALIASES = {
     "Status da arte": [
         "status da arte",
         "status arte",
-        "status",
     ],
     "Data Publicação": [
         "data publicacao",
@@ -4587,6 +4613,45 @@ def count_parseable_valores(rows, column_index):
             total += 1
 
     return total
+
+
+def count_payment_status_values(rows, column_index):
+    total = 0
+
+    for row in rows:
+        if column_index >= len(row):
+            continue
+
+        texto = str(row[column_index]).strip().lower()
+        if texto in ("pago", "a pagar", "a pagar"):
+            total += 1
+        elif "pagar" in texto and "data" not in texto:
+            total += 1
+
+    return total
+
+
+def detect_payment_column(raw_headers, data_rows, used_indexes):
+    candidates = find_header_candidates(raw_headers, "Status Pagamento")
+    if candidates:
+        return max(
+            candidates,
+            key=lambda index: count_payment_status_values(data_rows, index),
+        )
+
+    best_index = None
+    best_score = 0
+
+    for index in range(len(raw_headers)):
+        if index in used_indexes:
+            continue
+
+        score = count_payment_status_values(data_rows, index)
+        if score > best_score:
+            best_score = score
+            best_index = index
+
+    return best_index if best_score > 0 else None
 
 
 def detect_valor_column(raw_headers, data_rows, selected_indexes, used_indexes):
@@ -4678,12 +4743,19 @@ def detect_date_column(raw_headers, data_rows, already_selected):
     candidates = find_header_candidates(raw_headers, "Data Publicação")
 
     if candidates:
+        valid_candidates = [
+            index
+            for index in candidates
+            if count_payment_status_values(data_rows, index)
+            <= count_parseable_dates(data_rows, index)
+        ]
+        pool = valid_candidates or candidates
         return max(
-            candidates,
+            pool,
             key=lambda index: (
                 count_parseable_dates(data_rows, index),
                 count_non_empty_column(data_rows, index),
-            )
+            ),
         )
 
     available_indexes = [
@@ -4695,14 +4767,22 @@ def detect_date_column(raw_headers, data_rows, already_selected):
     if not available_indexes:
         return None
 
-    scored_columns = [
-        (
-            count_parseable_dates(data_rows, index),
-            count_non_empty_column(data_rows, index),
-            index,
+    scored_columns = []
+    for index in available_indexes:
+        dates = count_parseable_dates(data_rows, index)
+        payments = count_payment_status_values(data_rows, index)
+        if payments > dates:
+            continue
+        scored_columns.append(
+            (
+                dates,
+                count_non_empty_column(data_rows, index),
+                index,
+            )
         )
-        for index in available_indexes
-    ]
+
+    if not scored_columns:
+        return None
 
     best_dates, _, best_index = max(scored_columns)
 
