@@ -155,7 +155,8 @@ DIA_SEMANA_FORM_NOME = {
     "Sex": "sexta-feira",
 }
 STATUS_ARTE_EDIT_OPTIONS = ["Pronto", "Em andamento", "Pausado", "Pendente"]
-APP_UI_VERSION = "2026-07-13-sem-429"
+APP_UI_VERSION = "2026-07-13-layout-planilha"
+MEDIA_COL_MAP_VERSION = 3
 
 if "traffic_form_reset_token" not in st.session_state:
     st.session_state.traffic_form_reset_token = 0
@@ -2004,17 +2005,19 @@ def resolver_indices_colunas_midias(rows):
 
 
 def mapa_colunas_midias_por_nome(rows):
-    indices = resolver_indices_colunas_midias(rows)
-    return {nome: indice + 1 for nome, indice in indices.items()}
+    if not rows:
+        return {}
+    return mapear_colunas_pelo_cabecalho(rows[0])
 
 
 def atualizar_mapa_colunas_midias(rows):
     st.session_state["_media_col_map"] = mapa_colunas_midias_por_nome(rows)
+    st.session_state["_media_col_map_version"] = MEDIA_COL_MAP_VERSION
 
 
 def get_media_column_map():
     cached = st.session_state.get("_media_col_map")
-    if cached:
+    if cached and st.session_state.get("_media_col_map_version") == MEDIA_COL_MAP_VERSION:
         return cached
 
     rows = load_raw_rows()
@@ -2030,15 +2033,11 @@ def coluna_letra(numero):
     return letra
 
 
-def ajustar_mapa_colunas_gravacao(col_map):
-    ajustado = dict(col_map)
-    if "Serviços" not in ajustado and "Tipo de arte" in ajustado:
-        ajustado["Serviços"] = ajustado["Tipo de arte"]
-    return ajustado
-
-
 def obter_mapa_colunas_para_gravacao(rows=None, force_refresh=False):
-    if not force_refresh:
+    if (
+        not force_refresh
+        and st.session_state.get("_media_col_map_version") == MEDIA_COL_MAP_VERSION
+    ):
         cached = st.session_state.get("_media_col_map")
         if cached:
             return cached
@@ -2046,9 +2045,19 @@ def obter_mapa_colunas_para_gravacao(rows=None, force_refresh=False):
     if rows is None:
         rows = load_raw_rows()
 
-    col_map = ajustar_mapa_colunas_gravacao(mapa_colunas_midias_por_nome(rows))
+    col_map = mapa_colunas_midias_por_nome(rows)
     st.session_state["_media_col_map"] = col_map
+    st.session_state["_media_col_map_version"] = MEDIA_COL_MAP_VERSION
     return col_map
+
+
+def valores_para_gravacao(valores, col_map, campos_obrigatorios):
+    return {
+        campo: valores[campo]
+        for campo in valores
+        if campo in col_map
+        and (campo in campos_obrigatorios or str(valores.get(campo, "")).strip() != "")
+    }
 
 
 def atualizar_valor_midia_cache(row_index, campo, valor):
@@ -2056,23 +2065,6 @@ def atualizar_valor_midia_cache(row_index, campo, valor):
     if df_cache is None or row_index not in df_cache.index:
         return
     df_cache.at[row_index, campo] = valor
-
-
-def preparar_valores_gravacao(col_map, valores, campos_obrigatorios):
-    ajustados = dict(valores)
-
-    if str(ajustados.get("Serviços", "")).strip() and "Tipo de arte" in col_map:
-        if "Serviços" not in col_map or col_map.get("Serviços") == col_map.get("Tipo de arte"):
-            ajustados["Tipo de arte"] = ajustados["Serviços"]
-
-    valores_gravar = {}
-    for campo, valor in ajustados.items():
-        if campo not in col_map:
-            continue
-        if campo in campos_obrigatorios or str(valor).strip() != "":
-            valores_gravar[campo] = valor
-
-    return valores_gravar
 
 
 def gravar_linha_na_planilha(worksheet, col_map, proxima_linha, valores_por_campo):
@@ -2543,19 +2535,6 @@ def append_linhas_midia(linhas):
     if not linhas:
         return
 
-    campos_ordem = [
-        "Mês",
-        "Semana",
-        "Empresa",
-        "Tema",
-        "Valor",
-        "Status Pagamento",
-        "Tipo de arte",
-        "Status da arte",
-        "Data Publicação",
-        "Serviços",
-        "Recorrência",
-    ]
     campos_obrigatorios = [
         "Mês",
         "Empresa",
@@ -2570,29 +2549,21 @@ def append_linhas_midia(linhas):
     def gravar():
         worksheet = connect_media_worksheet()
         rows = worksheet.get_all_values()
-        col_map = ajustar_mapa_colunas_gravacao(mapa_colunas_midias_por_nome(rows))
+        col_map = mapa_colunas_midias_por_nome(rows)
         st.session_state["_media_col_map"] = col_map
+        st.session_state["_media_col_map_version"] = MEDIA_COL_MAP_VERSION
         validar_colunas_gravacao(col_map, campos_obrigatorios)
         proxima_linha = len(rows) + 1
-        linhas_gravadas = []
 
-        for linha_valores in linhas:
-            valores = dict(zip(campos_ordem, linha_valores))
-            valores_gravar = preparar_valores_gravacao(
-                col_map,
-                valores,
-                campos_obrigatorios,
-            )
-            linha_planilha = gravar_linha_na_planilha(
+        for valores in linhas:
+            valores_gravar = valores_para_gravacao(valores, col_map, campos_obrigatorios)
+            gravar_linha_na_planilha(
                 worksheet,
                 col_map,
                 proxima_linha,
                 valores_gravar,
             )
-            linhas_gravadas.append(linha_planilha)
             proxima_linha += 1
-
-        return linhas_gravadas
 
     executar_operacao_planilha(gravar)
 
@@ -3726,19 +3697,18 @@ def montar_linha_nova_arte(
     servico,
     recorrencia_linha,
 ):
-    return [
-        mes,
-        semana_linha,
-        empresa_final,
-        tema.strip(),
-        float(valor_num_val),
-        status_pagamento_planilha,
-        tipo_arte,
-        status_arte_planilha,
-        data_linha,
-        servico,
-        recorrencia_linha,
-    ]
+    return {
+        "Mês": mes,
+        "Empresa": empresa_final,
+        "Tipo de arte": servico or tipo_arte,
+        "Tema": tema.strip(),
+        "Semana": semana_linha,
+        "Data Publicação": data_linha,
+        "Valor": float(valor_num_val),
+        "Status da arte": status_arte_planilha,
+        "Status Pagamento": status_pagamento_planilha,
+        "Recorrência": recorrencia_linha,
+    }
 
 
 def weekday_do_padrao_recorrencia(padrao):
@@ -4654,6 +4624,47 @@ HEADER_ALIASES = {
 }
 
 
+def aliases_campo_planilha(campo):
+    aliases = {
+        normalize_header_key(alias)
+        for alias in HEADER_ALIASES.get(campo, [campo])
+    }
+    aliases.add(normalize_header_key(campo))
+    return aliases
+
+
+def mapear_colunas_pelo_cabecalho(headers):
+    """
+    Mapeia cada campo para a coluna correta usando os nomes da linha 1.
+    Layout esperado: Mês | Empresa | Tipo de arte | Tema | Semana | Data | Valor | Status da arte | Pagamento
+    """
+    raw_headers = [normalize_header_name(header) for header in headers]
+    col_map = {}
+    usados = set()
+
+    for campo in EXPECTED_MEDIA_HEADERS:
+        aliases = aliases_campo_planilha(campo)
+        for idx, header in enumerate(raw_headers):
+            if idx in usados or not header:
+                continue
+            if normalize_header_key(header) in aliases:
+                col_map[campo] = idx + 1
+                usados.add(idx)
+                break
+
+    if "Status Pagamento" not in col_map:
+        for idx, header in enumerate(raw_headers):
+            if idx not in usados and not header.strip():
+                col_map["Status Pagamento"] = idx + 1
+                usados.add(idx)
+                break
+
+    if "Status Pagamento" not in col_map and raw_headers:
+        col_map["Status Pagamento"] = len(raw_headers)
+
+    return col_map
+
+
 def count_non_empty_column(rows, column_index):
     total = 0
 
@@ -4889,7 +4900,7 @@ def build_media_dataframe(rows):
     if not rows:
         return pd.DataFrame(columns=EXPECTED_MEDIA_HEADERS)
 
-    selected_indexes = resolver_indices_colunas_midias(rows)
+    col_map = mapear_colunas_pelo_cabecalho(rows[0])
     data_rows = rows[1:]
     records = []
 
@@ -4897,12 +4908,14 @@ def build_media_dataframe(rows):
         record = {}
 
         for expected_header in EXPECTED_MEDIA_HEADERS:
-            selected_index = selected_indexes.get(expected_header)
-
-            if selected_index is None:
+            col_num = col_map.get(expected_header)
+            if col_num is None:
                 record[expected_header] = ""
-            elif selected_index < len(row):
-                record[expected_header] = row[selected_index]
+                continue
+
+            col_idx = col_num - 1
+            if col_idx < len(row):
+                record[expected_header] = row[col_idx]
             else:
                 record[expected_header] = ""
 
@@ -4929,6 +4942,7 @@ def invalidar_cache_midias():
     load_raw_rows.clear()
     st.session_state.pop("df_midias_processado", None)
     st.session_state.pop("_media_col_map", None)
+    st.session_state.pop("_media_col_map_version", None)
 
 
 def processar_dataframe_midias(df):
