@@ -155,7 +155,7 @@ DIA_SEMANA_FORM_NOME = {
     "Sex": "sexta-feira",
 }
 STATUS_ARTE_EDIT_OPTIONS = ["Pronto", "Em andamento", "Pausado", "Pendente"]
-APP_UI_VERSION = "2026-07-13-salvar-colunas"
+APP_UI_VERSION = "2026-07-13-gravar-planilha"
 
 if "traffic_form_reset_token" not in st.session_state:
     st.session_state.traffic_form_reset_token = 0
@@ -2011,32 +2011,47 @@ def atualizar_mapa_colunas_midias(rows):
     st.session_state["_media_col_map"] = mapa_colunas_midias_por_nome(rows)
 
 
-def get_media_column_map(worksheet):
+def get_media_column_map():
     cached = st.session_state.get("_media_col_map")
     if cached:
         return cached
 
-    rows = executar_operacao_planilha(
-        lambda: get_all_values_com_timeout(worksheet)
-    )
+    rows = load_raw_rows()
     atualizar_mapa_colunas_midias(rows)
-    return st.session_state["_media_col_map"]
+    return st.session_state.get("_media_col_map") or {}
 
 
-def atualizar_celula_midia(worksheet, row_index, campo, valor):
-    col_map = get_media_column_map(worksheet)
+def montar_linha_para_gravacao(col_map, valores_por_campo):
+    max_col = max(max(col_map.values(), default=0), len(EXPECTED_MEDIA_HEADERS))
+    linha = [""] * max_col
+
+    for campo, valor in valores_por_campo.items():
+        col = col_map.get(campo)
+        if not col:
+            continue
+        if col > len(linha):
+            linha.extend([""] * (col - len(linha)))
+        linha[col - 1] = valor
+
+    return linha
+
+
+def atualizar_celula_midia(row_index, campo, valor):
+    col_map = get_media_column_map()
     col_num = col_map.get(campo)
     if not col_num:
         raise ValueError(f"Coluna '{campo}' não encontrada na planilha.")
-    executar_operacao_planilha(
-        worksheet.update_cell,
-        row_index + 2,
-        col_num,
-        valor,
-    )
+
+    sheet_row = row_index + 2
+
+    def gravar():
+        worksheet = connect_media_worksheet()
+        worksheet.update_cell(sheet_row, col_num, valor)
+
+    executar_operacao_planilha(gravar)
 
 
-def salvar_atividade_planilha(worksheet, row_index, tema, valor_txt, pagamento, status_arte):
+def salvar_atividade_planilha(row_index, tema, valor_txt, pagamento, status_arte):
     valor_txt = str(valor_txt).strip()
     if not valor_txt:
         return False, "Informe um valor."
@@ -2045,39 +2060,49 @@ def salvar_atividade_planilha(worksheet, row_index, tema, valor_txt, pagamento, 
     if valor_parsed < 0:
         return False, "Informe um valor válido."
 
-    try:
-        atualizar_celula_midia(worksheet, row_index, "Tema", str(tema).strip())
-        atualizar_celula_midia(worksheet, row_index, "Valor", valor_parsed)
-        atualizar_celula_midia(
-            worksheet,
-            row_index,
+    campos_valores = [
+        ("Tema", str(tema).strip()),
+        ("Valor", valor_parsed),
+        (
             "Status Pagamento",
             STATUS_PAGAMENTO_SHEET_MAP.get(pagamento, pagamento),
-        )
-        atualizar_celula_midia(worksheet, row_index, "Status da arte", status_arte)
+        ),
+        ("Status da arte", status_arte),
+    ]
+
+    try:
+        col_map = get_media_column_map()
+
+        def gravar():
+            worksheet = connect_media_worksheet()
+            sheet_row = row_index + 2
+            for campo, valor_campo in campos_valores:
+                col_num = col_map.get(campo)
+                if not col_num:
+                    raise ValueError(f"Coluna '{campo}' não encontrada na planilha.")
+                worksheet.update_cell(sheet_row, col_num, valor_campo)
+
+        executar_operacao_planilha(gravar)
     except Exception as exc:
         return False, mensagem_erro_planilha(exc)
     return True, ""
 
 
 def salvar_status_arte_inline(row_index):
-    worksheet = connect_sheet()
     novo_status = st.session_state.get(f"status_inline_{row_index}")
     if novo_status:
         try:
-            atualizar_celula_midia(worksheet, row_index, "Status da arte", novo_status)
+            atualizar_celula_midia(row_index, "Status da arte", novo_status)
             invalidar_cache_midias()
         except Exception as exc:
             st.error(mensagem_erro_planilha(exc))
 
 
 def salvar_pagamento_inline(row_index):
-    worksheet = connect_sheet()
     novo_pagamento = st.session_state.get(f"pagamento_inline_{row_index}")
     if novo_pagamento:
         try:
             atualizar_celula_midia(
-                worksheet,
                 row_index,
                 "Status Pagamento",
                 STATUS_PAGAMENTO_SHEET_MAP.get(novo_pagamento, novo_pagamento),
@@ -2087,8 +2112,12 @@ def salvar_pagamento_inline(row_index):
             st.error(mensagem_erro_planilha(exc))
 
 
-def excluir_atividade_planilha(worksheet, row_index):
-    executar_operacao_planilha(worksheet.delete_rows, row_index + 2)
+def excluir_atividade_planilha(row_index):
+    def gravar():
+        worksheet = connect_media_worksheet()
+        worksheet.delete_rows(row_index + 2)
+
+    executar_operacao_planilha(gravar)
     return True, ""
 
 
@@ -2390,7 +2419,6 @@ def connect_media_worksheet():
     return connect_spreadsheet().get_worksheet(0)
 
 
-@st.cache_resource(show_spinner=False)
 def connect_sheet():
     try:
         return connect_media_worksheet()
@@ -2399,7 +2427,6 @@ def connect_sheet():
 
 
 def invalidar_conexao_planilha():
-    connect_sheet.clear()
     connect_gspread_client.clear()
     connect_spreadsheet.clear()
 
@@ -2440,17 +2467,28 @@ def append_linhas_midia(linhas):
     if not linhas:
         return
 
+    campos_ordem = [
+        "Mês",
+        "Semana",
+        "Empresa",
+        "Tema",
+        "Valor",
+        "Status Pagamento",
+        "Tipo de arte",
+        "Status da arte",
+        "Data Publicação",
+        "Serviços",
+        "Recorrência",
+    ]
+
     def gravar():
-        worksheet = connect_sheet()
-        headers = worksheet.row_values(1)
-        linhas_planilha = [
-            converter_linha_midia_para_planilha(headers, linha)
-            for linha in linhas
-        ]
-        if len(linhas_planilha) == 1:
-            worksheet.append_row(linhas_planilha[0], value_input_option="USER_ENTERED")
-        else:
-            worksheet.append_rows(linhas_planilha, value_input_option="USER_ENTERED")
+        worksheet = connect_media_worksheet()
+        col_map = get_media_column_map()
+
+        for linha_valores in linhas:
+            valores = dict(zip(campos_ordem, linha_valores))
+            linha_planilha = montar_linha_para_gravacao(col_map, valores)
+            worksheet.append_row(linha_planilha, value_input_option="USER_ENTERED")
 
     executar_operacao_planilha(gravar)
 
@@ -4706,7 +4744,7 @@ def build_media_dataframe(rows):
 
 @st.cache_data(ttl=3600, show_spinner=False)
 def load_raw_rows():
-    worksheet = connect_sheet()
+    worksheet = connect_media_worksheet()
     return executar_operacao_planilha(
         lambda: get_all_values_com_timeout(worksheet)
     )
@@ -5032,8 +5070,6 @@ with st.container(border=True):
             | df_status["Tema"].astype(str).str.lower().str.contains(termo, na=False)
         ]
 
-    worksheet = connect_sheet()
-
     for index, row in df_status.iterrows():
         empresa_txt = str(row.get("Empresa", "")).strip() or "-"
         tema_txt = str(row.get("Tema", "")).strip() or "-"
@@ -5085,7 +5121,7 @@ with st.container(border=True):
                     conf1, conf2 = st.columns(2)
                     with conf1:
                         if st.button("Sim, excluir", key=f"confirmar_exclusao_{index}"):
-                            excluir_atividade_planilha(worksheet, index)
+                            excluir_atividade_planilha(index)
                             st.session_state.pop(edit_key, None)
                             st.session_state.pop(delete_confirm_key, None)
                             invalidar_cache_midias()
@@ -5107,7 +5143,6 @@ with st.container(border=True):
                                 status_atual,
                             )
                             ok, msg = salvar_atividade_planilha(
-                                worksheet,
                                 index,
                                 novo_tema,
                                 novo_valor,
