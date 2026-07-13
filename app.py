@@ -162,7 +162,7 @@ DIA_SEMANA_FORM_NOME = {
     "Sex": "sexta-feira",
 }
 STATUS_ARTE_EDIT_OPTIONS = ["Pronto", "Em andamento", "Pausado", "Pendente"]
-APP_UI_VERSION = "2026-07-13-ultimos-7-dias-v2"
+APP_UI_VERSION = "2026-07-13-cadastro-empresas"
 PUB_FILTROS_VERSION = 3
 MEDIA_COL_MAP_VERSION = 3
 
@@ -239,6 +239,7 @@ SCOPES = [
 ]
 
 USERS_SHEET_NAME = os.getenv("USERS_SHEET_NAME", "Acessos")
+EMPRESAS_SHEET_NAME = os.getenv("EMPRESAS_SHEET_NAME", "Empresas")
 USERS_HEADERS = [
     "Usuário",
     "Senha",
@@ -249,6 +250,14 @@ USERS_HEADERS = [
     "Nova Arte",
     "Gestão de Tráfego",
     NAV_ACESSOS,
+]
+EMPRESAS_HEADERS = [
+    "Nome da empresa",
+    "CNPJ",
+    "Contato",
+    "Email",
+    "Endereço",
+    "CEP",
 ]
 PERMISSION_OPTIONS = ["Sim", "Não"]
 ROLE_FORM_OPTIONS = ["geral", "gestor", "designer"]
@@ -391,6 +400,9 @@ st.markdown("""
     .stApp:has(#nova-arte-page) section.main label[data-testid="stWidgetLabel"] p,
     .stApp:has(#nova-arte-page) section.main div[data-testid="stTextInput"] label p,
     .stApp:has(#nova-arte-page) section.main div[data-testid="stSelectbox"] label p,
+    .stApp:has(#empresas-page) section.main label[data-testid="stWidgetLabel"] p,
+    .stApp:has(#empresas-page) section.main div[data-testid="stTextInput"] label p,
+    .stApp:has(#empresas-page) section.main div[data-testid="stSelectbox"] label p,
     .stApp:has(#publicacoes-filtros) section.main label[data-testid="stWidgetLabel"] p,
     .stApp:has(#publicacoes-filtros) section.main div[data-testid="stTextInput"] label p,
     .stApp:has(#publicacoes-filtros) section.main div[data-testid="stSelectbox"] label p,
@@ -404,6 +416,9 @@ st.markdown("""
     .stApp:has(#nova-arte-page) section.main div[data-testid="stTextInput"] input,
     .stApp:has(#nova-arte-page) section.main div[data-testid="stTextInput"] [data-baseweb="input"],
     .stApp:has(#nova-arte-page) section.main div[data-testid="stTextInput"] [data-baseweb="input"] > div,
+    .stApp:has(#empresas-page) section.main div[data-testid="stTextInput"] input,
+    .stApp:has(#empresas-page) section.main div[data-testid="stTextInput"] [data-baseweb="input"],
+    .stApp:has(#empresas-page) section.main div[data-testid="stTextInput"] [data-baseweb="input"] > div,
     .stApp:has(#publicacoes-filtros) section.main div[data-testid="stTextInput"] input,
     .stApp:has(#publicacoes-filtros) section.main div[data-testid="stTextInput"] [data-baseweb="input"],
     .stApp:has(#publicacoes-filtros) section.main div[data-testid="stTextInput"] [data-baseweb="input"] > div {
@@ -418,6 +433,7 @@ st.markdown("""
     }
 
     .stApp:has(#nova-arte-page) section.main div[data-testid="stTextInput"] input::placeholder,
+    .stApp:has(#empresas-page) section.main div[data-testid="stTextInput"] input::placeholder,
     .stApp:has(#publicacoes-filtros) section.main div[data-testid="stTextInput"] input::placeholder {
         color: #94a3b8 !important;
     }
@@ -2754,6 +2770,143 @@ def connect_users_worksheet():
     return worksheet
 
 
+def connect_empresas_worksheet():
+    sheet = connect_spreadsheet()
+    try:
+        worksheet = sheet.worksheet(EMPRESAS_SHEET_NAME)
+    except gspread.exceptions.WorksheetNotFound:
+        worksheet = sheet.add_worksheet(
+            title=EMPRESAS_SHEET_NAME,
+            rows=500,
+            cols=len(EMPRESAS_HEADERS),
+        )
+        worksheet.append_row(EMPRESAS_HEADERS)
+        return worksheet
+    ensure_empresas_headers(worksheet)
+    return worksheet
+
+
+def ensure_empresas_headers(worksheet):
+    current = [str(item).strip() for item in worksheet.row_values(1) if str(item).strip()]
+    if not current:
+        worksheet.update("A1", [EMPRESAS_HEADERS])
+        return
+
+    updated = list(current)
+    changed = False
+    for header in EMPRESAS_HEADERS:
+        if header not in updated:
+            updated.append(header)
+            changed = True
+
+    if changed:
+        worksheet.update("A1", [updated])
+
+
+@st.cache_data(ttl=300, show_spinner=False)
+def load_empresas_cadastro_rows():
+    worksheet = connect_empresas_worksheet()
+    return worksheet.get_all_records()
+
+
+def clear_empresas_cache():
+    load_empresas_cadastro_rows.clear()
+
+
+def normalizar_cnpj(value):
+    return re.sub(r"\D", "", str(value))
+
+
+def formatar_cnpj(value):
+    digits = normalizar_cnpj(value)
+    if len(digits) != 14:
+        return str(value).strip()
+    return f"{digits[:2]}.{digits[2:5]}.{digits[5:8]}/{digits[8:12]}-{digits[12:]}"
+
+
+def normalizar_cep(value):
+    return re.sub(r"\D", "", str(value))
+
+
+def formatar_cep(value):
+    digits = normalizar_cep(value)
+    if len(digits) != 8:
+        return str(value).strip()
+    return f"{digits[:5]}-{digits[5:]}"
+
+
+def email_empresa_valido(value):
+    texto = str(value).strip()
+    if not texto:
+        return False
+    return re.fullmatch(r"[^@]+@[^@]+\.[^@]+", texto) is not None
+
+
+def listar_nomes_empresas(df):
+    nomes_media = {
+        str(item).strip()
+        for item in df["Empresa"].dropna().astype(str).tolist()
+        if str(item).strip()
+    }
+    try:
+        nomes_cadastro = {
+            str(row.get("Nome da empresa", "")).strip()
+            for row in load_empresas_cadastro_rows()
+            if str(row.get("Nome da empresa", "")).strip()
+        }
+    except Exception:
+        nomes_cadastro = set()
+    return sorted(nomes_media | nomes_cadastro)
+
+
+def salvar_empresa_cadastro(nome, cnpj, contato, email, endereco, cep):
+    nome = str(nome).strip()
+    cnpj_txt = str(cnpj).strip()
+    contato_txt = str(contato).strip()
+    email_txt = str(email).strip()
+    endereco_txt = str(endereco).strip()
+    cep_txt = str(cep).strip()
+
+    if not nome:
+        return False, "Informe o nome da empresa."
+    if len(normalizar_cnpj(cnpj_txt)) != 14:
+        return False, "Informe um CNPJ válido com 14 dígitos."
+    if not contato_txt:
+        return False, "Informe o contato da empresa."
+    if not email_empresa_valido(email_txt):
+        return False, "Informe um e-mail válido."
+    if not endereco_txt:
+        return False, "Informe o endereço."
+    if len(normalizar_cep(cep_txt)) != 8:
+        return False, "Informe um CEP válido com 8 dígitos."
+
+    for row in load_empresas_cadastro_rows():
+        existente = str(row.get("Nome da empresa", "")).strip()
+        if existente.lower() == nome.lower():
+            return False, "Essa empresa já está cadastrada."
+
+    linha = [
+        nome,
+        formatar_cnpj(cnpj_txt),
+        contato_txt,
+        email_txt,
+        endereco_txt,
+        formatar_cep(cep_txt),
+    ]
+
+    def gravar():
+        worksheet = connect_empresas_worksheet()
+        worksheet.append_row(linha)
+
+    try:
+        executar_operacao_planilha(gravar)
+        clear_empresas_cache()
+    except Exception as exc:
+        return False, mensagem_erro_planilha(exc)
+
+    return True, f"Empresa '{nome}' cadastrada com sucesso!"
+
+
 def ensure_users_headers(worksheet):
     current = [str(item).strip() for item in worksheet.row_values(1) if str(item).strip()]
     if not current:
@@ -3667,21 +3820,94 @@ def render_midias_empresas(df):
     )
     st.markdown('<div id="empresas-page"></div>', unsafe_allow_html=True)
 
-    df_empresas = df[df["Empresa"].astype(str).str.strip().ne("")].copy()
-
-    if df_empresas.empty:
-        st.info("Nenhuma empresa encontrada na planilha.")
-        return
-
-    empresas_disponiveis = sorted(df_empresas["Empresa"].astype(str).str.strip().unique())
+    if st.session_state.get("empresa_cadastro_msg_sucesso"):
+        st.success(st.session_state.pop("empresa_cadastro_msg_sucesso"))
 
     with st.container(border=True):
+        form_field_label("Cadastrar nova empresa")
+
+        with st.form("cadastro_empresa_form", clear_on_submit=True):
+            c1, c2 = st.columns(2)
+
+            with c1:
+                form_field_label("Nome da empresa")
+                nome_empresa = st.text_input(
+                    "Nome da empresa",
+                    placeholder="Digite o nome da empresa",
+                    key="empresa_cadastro_nome",
+                    label_visibility="collapsed",
+                )
+                form_field_label("CNPJ")
+                cnpj_empresa = st.text_input(
+                    "CNPJ",
+                    placeholder="00.000.000/0001-00",
+                    key="empresa_cadastro_cnpj",
+                    label_visibility="collapsed",
+                )
+                form_field_label("Contato da empresa")
+                contato_empresa = st.text_input(
+                    "Contato da empresa",
+                    placeholder="Telefone ou responsável",
+                    key="empresa_cadastro_contato",
+                    label_visibility="collapsed",
+                )
+
+            with c2:
+                form_field_label("Email")
+                email_empresa = st.text_input(
+                    "Email",
+                    placeholder="contato@empresa.com.br",
+                    key="empresa_cadastro_email",
+                    label_visibility="collapsed",
+                )
+                form_field_label("Endereço")
+                endereco_empresa = st.text_input(
+                    "Endereço",
+                    placeholder="Rua, número, bairro, cidade",
+                    key="empresa_cadastro_endereco",
+                    label_visibility="collapsed",
+                )
+                form_field_label("CEP")
+                cep_empresa = st.text_input(
+                    "CEP",
+                    placeholder="00000-000",
+                    key="empresa_cadastro_cep",
+                    label_visibility="collapsed",
+                )
+
+            cadastrar = st.form_submit_button("Cadastrar empresa", width="stretch")
+
+        if cadastrar:
+            ok, mensagem = salvar_empresa_cadastro(
+                nome_empresa,
+                cnpj_empresa,
+                contato_empresa,
+                email_empresa,
+                endereco_empresa,
+                cep_empresa,
+            )
+            if ok:
+                st.session_state["empresa_cadastro_msg_sucesso"] = mensagem
+                st.rerun()
+            else:
+                st.warning(mensagem)
+
+    empresas_disponiveis = listar_nomes_empresas(df)
+
+    if not empresas_disponiveis:
+        st.info("Nenhuma empresa encontrada. Cadastre a primeira empresa acima.")
+        return
+
+    with st.container(border=True):
+        form_field_label("Selecione a empresa")
         empresa_selecionada = st.selectbox(
             "Empresa",
             options=empresas_disponiveis,
             key="empresa_selecionada_midias",
+            label_visibility="collapsed",
         )
 
+    df_empresas = df[df["Empresa"].astype(str).str.strip().ne("")].copy()
     df_selecionado = df_empresas[
         df_empresas["Empresa"].astype(str).str.strip() == empresa_selecionada
     ]
@@ -4010,13 +4236,7 @@ def render_midias_nova_arte(df):
     if st.session_state.get("nova_arte_msg_sucesso"):
         st.success(st.session_state.pop("nova_arte_msg_sucesso"))
 
-    empresas_planilha = sorted(
-        {
-            str(item).strip()
-            for item in df["Empresa"].dropna().astype(str).tolist()
-            if str(item).strip()
-        }
-    )
+    empresas_planilha = listar_nomes_empresas(df)
     opcoes_empresa = empresas_planilha + ["Outra"]
 
     with st.container(border=True):
