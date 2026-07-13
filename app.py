@@ -155,7 +155,7 @@ DIA_SEMANA_FORM_NOME = {
     "Sex": "sexta-feira",
 }
 STATUS_ARTE_EDIT_OPTIONS = ["Pronto", "Em andamento", "Pausado", "Pendente"]
-APP_UI_VERSION = "2026-07-13-colunas-planilha"
+APP_UI_VERSION = "2026-07-13-gravar-fix"
 
 if "traffic_form_reset_token" not in st.session_state:
     st.session_state.traffic_form_reset_token = 0
@@ -2022,6 +2022,59 @@ def get_media_column_map():
     return st.session_state.get("_media_col_map") or {}
 
 
+def coluna_letra(numero):
+    letra = ""
+    while numero:
+        numero, resto = divmod(numero - 1, 26)
+        letra = chr(65 + resto) + letra
+    return letra
+
+
+def ajustar_mapa_colunas_gravacao(col_map):
+    ajustado = dict(col_map)
+    if "Serviços" not in ajustado and "Tipo de arte" in ajustado:
+        ajustado["Serviços"] = ajustado["Tipo de arte"]
+    return ajustado
+
+
+def obter_mapa_colunas_para_gravacao(rows=None):
+    if rows is None:
+        def ler_planilha():
+            worksheet = connect_media_worksheet()
+            return worksheet.get_all_values()
+
+        rows = executar_operacao_planilha(ler_planilha)
+
+    col_map = ajustar_mapa_colunas_gravacao(mapa_colunas_midias_por_nome(rows))
+    st.session_state["_media_col_map"] = col_map
+    return col_map
+
+
+def preparar_valores_gravacao(col_map, valores, campos_obrigatorios):
+    ajustados = dict(valores)
+
+    if str(ajustados.get("Serviços", "")).strip() and "Tipo de arte" in col_map:
+        if "Serviços" not in col_map or col_map.get("Serviços") == col_map.get("Tipo de arte"):
+            ajustados["Tipo de arte"] = ajustados["Serviços"]
+
+    valores_gravar = {}
+    for campo, valor in ajustados.items():
+        if campo not in col_map:
+            continue
+        if campo in campos_obrigatorios or str(valor).strip() != "":
+            valores_gravar[campo] = valor
+
+    return valores_gravar
+
+
+def gravar_linha_na_planilha(worksheet, col_map, proxima_linha, valores_por_campo):
+    linha = montar_linha_para_gravacao(col_map, valores_por_campo)
+    ultima_coluna = coluna_letra(len(linha))
+    intervalo = f"A{proxima_linha}:{ultima_coluna}{proxima_linha}"
+    worksheet.update(intervalo, [linha], value_input_option="USER_ENTERED")
+    return proxima_linha
+
+
 def validar_colunas_gravacao(col_map, campos_obrigatorios):
     faltando = [campo for campo in campos_obrigatorios if not col_map.get(campo)]
     if faltando:
@@ -2047,7 +2100,7 @@ def montar_linha_para_gravacao(col_map, valores_por_campo):
 
 
 def atualizar_celula_midia(row_index, campo, valor):
-    col_map = get_media_column_map()
+    col_map = obter_mapa_colunas_para_gravacao()
     col_num = col_map.get(campo)
     if not col_num:
         raise ValueError(f"Coluna '{campo}' não encontrada na planilha.")
@@ -2081,10 +2134,9 @@ def salvar_atividade_planilha(row_index, tema, valor_txt, pagamento, status_arte
     ]
 
     try:
-        col_map = get_media_column_map()
-
         def gravar():
             worksheet = connect_media_worksheet()
+            col_map = obter_mapa_colunas_para_gravacao()
             sheet_row = row_index + 2
             for campo, valor_campo in campos_valores:
                 col_num = col_map.get(campo)
@@ -2477,45 +2529,55 @@ def append_linhas_midia(linhas):
     if not linhas:
         return
 
+    campos_ordem = [
+        "Mês",
+        "Semana",
+        "Empresa",
+        "Tema",
+        "Valor",
+        "Status Pagamento",
+        "Tipo de arte",
+        "Status da arte",
+        "Data Publicação",
+        "Serviços",
+        "Recorrência",
+    ]
+    campos_obrigatorios = [
+        "Mês",
+        "Empresa",
+        "Tema",
+        "Semana",
+        "Data Publicação",
+        "Valor",
+        "Status da arte",
+        "Status Pagamento",
+    ]
+
     def gravar():
         worksheet = connect_media_worksheet()
-        col_map = get_media_column_map()
-        campos_ordem = [
-            "Mês",
-            "Semana",
-            "Empresa",
-            "Tema",
-            "Valor",
-            "Status Pagamento",
-            "Tipo de arte",
-            "Status da arte",
-            "Data Publicação",
-            "Serviços",
-            "Recorrência",
-        ]
-        campos_obrigatorios = [
-            "Mês",
-            "Empresa",
-            "Tema",
-            "Semana",
-            "Data Publicação",
-            "Valor",
-            "Status da arte",
-            "Status Pagamento",
-        ]
+        rows = worksheet.get_all_values()
+        col_map = obter_mapa_colunas_para_gravacao(rows)
         validar_colunas_gravacao(col_map, campos_obrigatorios)
+        proxima_linha = len(rows) + 1
+        linhas_gravadas = []
 
         for linha_valores in linhas:
             valores = dict(zip(campos_ordem, linha_valores))
-            valores_gravar = {}
-            for campo in campos_ordem:
-                if campo not in col_map:
-                    continue
-                valor = valores.get(campo, "")
-                if campo in campos_obrigatorios or str(valor).strip() != "":
-                    valores_gravar[campo] = valor
-            linha_planilha = montar_linha_para_gravacao(col_map, valores_gravar)
-            worksheet.append_row(linha_planilha, value_input_option="USER_ENTERED")
+            valores_gravar = preparar_valores_gravacao(
+                col_map,
+                valores,
+                campos_obrigatorios,
+            )
+            linha_planilha = gravar_linha_na_planilha(
+                worksheet,
+                col_map,
+                proxima_linha,
+                valores_gravar,
+            )
+            linhas_gravadas.append(linha_planilha)
+            proxima_linha += 1
+
+        return linhas_gravadas
 
     executar_operacao_planilha(gravar)
 
@@ -2557,6 +2619,8 @@ def mensagem_erro_carregamento_midias(exc):
 
 
 def mensagem_erro_planilha(exc):
+    if isinstance(exc, ValueError):
+        return str(exc)
     texto = str(exc).lower()
     if "429" in texto or "quota" in texto or "rate limit" in texto:
         return (
@@ -2565,7 +2629,7 @@ def mensagem_erro_planilha(exc):
         )
     return (
         "Não foi possível salvar na planilha agora. "
-        "Verifique a conexão e tente de novo em alguns segundos."
+        f"Detalhe: {exc}"
     )
 
 
@@ -4065,8 +4129,11 @@ def render_midias_nova_arte(df):
             st.error("❌ Não foi possível conectar com a planilha Google.")
             st.caption(f"Detalhe técnico: {exc}")
             return
+        except ValueError as exc:
+            st.error(f"❌ {exc}")
+            return
         except Exception as exc:
-            st.error(mensagem_erro_planilha(exc))
+            st.error(f"❌ {mensagem_erro_planilha(exc)}")
             st.caption(f"Detalhe técnico: {exc}")
             return
 
@@ -4650,6 +4717,13 @@ def detect_payment_column(raw_headers, data_rows, used_indexes):
         if score > best_score:
             best_score = score
             best_index = index
+
+    if best_index is None and raw_headers:
+        last_index = len(raw_headers) - 1
+        if last_index not in used_indexes:
+            last_score = count_payment_status_values(data_rows, last_index)
+            if last_score > 0:
+                return last_index
 
     return best_index if best_score > 0 else None
 
