@@ -162,7 +162,7 @@ DIA_SEMANA_FORM_NOME = {
     "Sex": "sexta-feira",
 }
 STATUS_ARTE_EDIT_OPTIONS = ["Pronto", "Em andamento", "Pausado", "Pendente"]
-APP_UI_VERSION = "2026-07-13-cadastro-empresas"
+APP_UI_VERSION = "2026-07-13-logo-empresa"
 PUB_FILTROS_VERSION = 3
 MEDIA_COL_MAP_VERSION = 3
 
@@ -258,7 +258,10 @@ EMPRESAS_HEADERS = [
     "Email",
     "Endereço",
     "CEP",
+    "Logo",
 ]
+EMPRESAS_LOGO_MAX_BYTES = 2 * 1024 * 1024
+EMPRESAS_LOGO_TIPOS = {"image/png", "image/jpeg", "image/jpg", "image/webp"}
 PERMISSION_OPTIONS = ["Sim", "Não"]
 ROLE_FORM_OPTIONS = ["geral", "gestor", "designer"]
 CONTENT_AREAS = ["Empresas", "Publicações", "Nova Arte", "Gestão de Tráfego", NAV_ACESSOS]
@@ -2350,8 +2353,59 @@ def normalize_empresa_key(nome):
     return re.sub(r"\s+", " ", texto).strip()
 
 
-def logo_empresa_path(empresa_nome):
+def slug_logo_empresa(nome):
+    chave = normalize_empresa_key(nome)
+    slug = re.sub(r"[^a-z0-9]+", "-", chave).strip("-")
+    return slug or "empresa"
+
+
+def extensao_logo_upload(uploaded_file):
+    tipo = str(getattr(uploaded_file, "type", "") or "").lower()
+    nome = str(getattr(uploaded_file, "name", "") or "").lower()
+    if "png" in tipo or nome.endswith(".png"):
+        return ".png"
+    if "webp" in tipo or nome.endswith(".webp"):
+        return ".webp"
+    return ".jpg"
+
+
+def salvar_logo_empresa_arquivo(nome, uploaded_file):
+    EMPRESAS_LOGOS_DIR.mkdir(parents=True, exist_ok=True)
+    extensao = extensao_logo_upload(uploaded_file)
+    nome_arquivo = f"logo-{slug_logo_empresa(nome)}{extensao}"
+    destino = EMPRESAS_LOGOS_DIR / nome_arquivo
+    destino.write_bytes(uploaded_file.getvalue())
+    return nome_arquivo
+
+
+def logo_arquivo_cadastro(empresa_nome):
     chave = normalize_empresa_key(empresa_nome)
+    try:
+        for row in load_empresas_cadastro_rows():
+            if normalize_empresa_key(row.get("Nome da empresa", "")) != chave:
+                continue
+            logo_file = str(row.get("Logo", "")).strip()
+            if not logo_file:
+                return None
+            candidato = EMPRESAS_LOGOS_DIR / logo_file
+            if candidato.exists():
+                return candidato
+    except Exception:
+        return None
+    return None
+
+
+def logo_empresa_path(empresa_nome):
+    cadastro_logo = logo_arquivo_cadastro(empresa_nome)
+    if cadastro_logo is not None:
+        return cadastro_logo
+
+    chave = normalize_empresa_key(empresa_nome)
+    slug = slug_logo_empresa(empresa_nome)
+    for extensao in (".png", ".jpg", ".jpeg", ".webp"):
+        candidato = EMPRESAS_LOGOS_DIR / f"logo-{slug}{extensao}"
+        if candidato.exists():
+            return candidato
 
     if chave in EMPRESA_LOGO_MAP:
         caminho = EMPRESA_LOGO_MAP[chave]
@@ -2859,7 +2913,7 @@ def listar_nomes_empresas(df):
     return sorted(nomes_media | nomes_cadastro)
 
 
-def salvar_empresa_cadastro(nome, cnpj, contato, email, endereco, cep):
+def salvar_empresa_cadastro(nome, cnpj, contato, email, endereco, cep, logo_arquivo=None):
     nome = str(nome).strip()
     cnpj_txt = str(cnpj).strip()
     contato_txt = str(contato).strip()
@@ -2869,6 +2923,17 @@ def salvar_empresa_cadastro(nome, cnpj, contato, email, endereco, cep):
 
     if not nome:
         return False, "Informe o nome da empresa."
+    if logo_arquivo is None:
+        return False, "Anexe a logo da empresa."
+    if getattr(logo_arquivo, "size", 0) > EMPRESAS_LOGO_MAX_BYTES:
+        return False, "A logo deve ter no máximo 2 MB."
+    tipo_logo = str(getattr(logo_arquivo, "type", "") or "").lower()
+    nome_logo_upload = str(getattr(logo_arquivo, "name", "") or "").lower()
+    extensoes_validas = (".png", ".jpg", ".jpeg", ".webp")
+    if tipo_logo and tipo_logo not in EMPRESAS_LOGO_TIPOS:
+        return False, "Use uma imagem PNG, JPG ou WEBP."
+    if not tipo_logo and not any(nome_logo_upload.endswith(ext) for ext in extensoes_validas):
+        return False, "Use uma imagem PNG, JPG ou WEBP."
     if len(normalizar_cnpj(cnpj_txt)) != 14:
         return False, "Informe um CNPJ válido com 14 dígitos."
     if not contato_txt:
@@ -2885,6 +2950,7 @@ def salvar_empresa_cadastro(nome, cnpj, contato, email, endereco, cep):
         if existente.lower() == nome.lower():
             return False, "Essa empresa já está cadastrada."
 
+    nome_logo = salvar_logo_empresa_arquivo(nome, logo_arquivo)
     linha = [
         nome,
         formatar_cnpj(cnpj_txt),
@@ -2892,6 +2958,7 @@ def salvar_empresa_cadastro(nome, cnpj, contato, email, endereco, cep):
         email_txt,
         endereco_txt,
         formatar_cep(cep_txt),
+        nome_logo,
     ]
 
     def gravar():
@@ -3875,6 +3942,15 @@ def render_midias_empresas(df):
                     label_visibility="collapsed",
                 )
 
+            form_field_label("Logo da empresa")
+            logo_empresa = st.file_uploader(
+                "Logo da empresa",
+                type=["png", "jpg", "jpeg", "webp"],
+                key="empresa_cadastro_logo",
+                label_visibility="collapsed",
+                help="Envie a logo em PNG, JPG ou WEBP (máx. 2 MB).",
+            )
+
             cadastrar = st.form_submit_button("Cadastrar empresa", width="stretch")
 
         if cadastrar:
@@ -3885,6 +3961,7 @@ def render_midias_empresas(df):
                 email_empresa,
                 endereco_empresa,
                 cep_empresa,
+                logo_empresa,
             )
             if ok:
                 st.session_state["empresa_cadastro_msg_sucesso"] = mensagem

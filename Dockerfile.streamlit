@@ -10,6 +10,7 @@ COPY .streamlit/ ./.streamlit/
 COPY logo-oppi.png* ./
 COPY LOGOS.png* ./
 COPY logos-empresas/ ./logos-empresas/
+RUN mkdir -p logos-empresas
 
 ENV PYTHONUNBUFFERED=1
 
