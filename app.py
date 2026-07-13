@@ -155,7 +155,7 @@ DIA_SEMANA_FORM_NOME = {
     "Sex": "sexta-feira",
 }
 STATUS_ARTE_EDIT_OPTIONS = ["Pronto", "Em andamento", "Pausado", "Pendente"]
-APP_UI_VERSION = "2026-07-10-menu"
+APP_UI_VERSION = "2026-07-13-salvar-colunas"
 
 if "traffic_form_reset_token" not in st.session_state:
     st.session_state.traffic_form_reset_token = 0
@@ -1958,6 +1958,84 @@ def indice_select(opcoes, valor):
         return 0
 
 
+def resolver_indices_colunas_midias(rows):
+    if not rows:
+        return {}
+
+    raw_headers = [normalize_header_name(header) for header in rows[0]]
+    data_rows = rows[1:]
+    selected_indexes = {}
+    used_indexes = set()
+
+    for expected_header in EXPECTED_MEDIA_HEADERS:
+        if expected_header == "Data Publicação":
+            continue
+
+        candidates = find_header_candidates(raw_headers, expected_header)
+        if not candidates:
+            continue
+
+        best_index = max(
+            candidates,
+            key=lambda index: count_non_empty_column(data_rows, index),
+        )
+        selected_indexes[expected_header] = best_index
+        used_indexes.add(best_index)
+
+    date_index = detect_date_column(raw_headers, data_rows, used_indexes)
+    if date_index is not None:
+        selected_indexes["Data Publicação"] = date_index
+
+    valor_index = detect_valor_column(raw_headers, data_rows, selected_indexes, used_indexes)
+    if valor_index is not None:
+        previous_valor_index = selected_indexes.get("Valor")
+        if previous_valor_index in used_indexes:
+            used_indexes.discard(previous_valor_index)
+        selected_indexes["Valor"] = valor_index
+        used_indexes.add(valor_index)
+
+    return selected_indexes
+
+
+def mapa_colunas_midias_por_nome(rows):
+    indices = resolver_indices_colunas_midias(rows)
+    col_map = {nome: indice + 1 for nome, indice in indices.items()}
+
+    for fallback_index, nome in enumerate(EXPECTED_MEDIA_HEADERS, start=1):
+        col_map.setdefault(nome, fallback_index)
+
+    return col_map
+
+
+def atualizar_mapa_colunas_midias(rows):
+    st.session_state["_media_col_map"] = mapa_colunas_midias_por_nome(rows)
+
+
+def get_media_column_map(worksheet):
+    cached = st.session_state.get("_media_col_map")
+    if cached:
+        return cached
+
+    rows = executar_operacao_planilha(
+        lambda: get_all_values_com_timeout(worksheet)
+    )
+    atualizar_mapa_colunas_midias(rows)
+    return st.session_state["_media_col_map"]
+
+
+def atualizar_celula_midia(worksheet, row_index, campo, valor):
+    col_map = get_media_column_map(worksheet)
+    col_num = col_map.get(campo)
+    if not col_num:
+        raise ValueError(f"Coluna '{campo}' não encontrada na planilha.")
+    executar_operacao_planilha(
+        worksheet.update_cell,
+        row_index + 2,
+        col_num,
+        valor,
+    )
+
+
 def salvar_atividade_planilha(worksheet, row_index, tema, valor_txt, pagamento, status_arte):
     valor_txt = str(valor_txt).strip()
     if not valor_txt:
@@ -1967,17 +2045,16 @@ def salvar_atividade_planilha(worksheet, row_index, tema, valor_txt, pagamento, 
     if valor_parsed < 0:
         return False, "Informe um valor válido."
 
-    linha_planilha = row_index + 2
     try:
-        executar_operacao_planilha(worksheet.update_cell, linha_planilha, 4, str(tema).strip())
-        executar_operacao_planilha(worksheet.update_cell, linha_planilha, 5, valor_parsed)
-        executar_operacao_planilha(
-            worksheet.update_cell,
-            linha_planilha,
-            6,
+        atualizar_celula_midia(worksheet, row_index, "Tema", str(tema).strip())
+        atualizar_celula_midia(worksheet, row_index, "Valor", valor_parsed)
+        atualizar_celula_midia(
+            worksheet,
+            row_index,
+            "Status Pagamento",
             STATUS_PAGAMENTO_SHEET_MAP.get(pagamento, pagamento),
         )
-        executar_operacao_planilha(worksheet.update_cell, linha_planilha, 8, status_arte)
+        atualizar_celula_midia(worksheet, row_index, "Status da arte", status_arte)
     except Exception as exc:
         return False, mensagem_erro_planilha(exc)
     return True, ""
@@ -1988,12 +2065,7 @@ def salvar_status_arte_inline(row_index):
     novo_status = st.session_state.get(f"status_inline_{row_index}")
     if novo_status:
         try:
-            executar_operacao_planilha(
-                worksheet.update_cell,
-                row_index + 2,
-                8,
-                novo_status,
-            )
+            atualizar_celula_midia(worksheet, row_index, "Status da arte", novo_status)
             invalidar_cache_midias()
         except Exception as exc:
             st.error(mensagem_erro_planilha(exc))
@@ -2004,10 +2076,10 @@ def salvar_pagamento_inline(row_index):
     novo_pagamento = st.session_state.get(f"pagamento_inline_{row_index}")
     if novo_pagamento:
         try:
-            executar_operacao_planilha(
-                worksheet.update_cell,
-                row_index + 2,
-                6,
+            atualizar_celula_midia(
+                worksheet,
+                row_index,
+                "Status Pagamento",
                 STATUS_PAGAMENTO_SHEET_MAP.get(novo_pagamento, novo_pagamento),
             )
             invalidar_cache_midias()
@@ -4610,42 +4682,8 @@ def build_media_dataframe(rows):
     if not rows:
         return pd.DataFrame(columns=EXPECTED_MEDIA_HEADERS)
 
-    raw_headers = [normalize_header_name(header) for header in rows[0]]
+    selected_indexes = resolver_indices_colunas_midias(rows)
     data_rows = rows[1:]
-
-    selected_indexes = {}
-    used_indexes = set()
-
-    for expected_header in EXPECTED_MEDIA_HEADERS:
-        if expected_header == "Data Publicação":
-            continue
-
-        candidates = find_header_candidates(raw_headers, expected_header)
-
-        if not candidates:
-            continue
-
-        best_index = max(
-            candidates,
-            key=lambda index: count_non_empty_column(data_rows, index)
-        )
-
-        selected_indexes[expected_header] = best_index
-        used_indexes.add(best_index)
-
-    date_index = detect_date_column(raw_headers, data_rows, used_indexes)
-
-    if date_index is not None:
-        selected_indexes["Data Publicação"] = date_index
-
-    valor_index = detect_valor_column(raw_headers, data_rows, selected_indexes, used_indexes)
-    if valor_index is not None:
-        previous_valor_index = selected_indexes.get("Valor")
-        if previous_valor_index in used_indexes:
-            used_indexes.discard(previous_valor_index)
-        selected_indexes["Valor"] = valor_index
-        used_indexes.add(valor_index)
-
     records = []
 
     for row in data_rows:
@@ -4667,17 +4705,23 @@ def build_media_dataframe(rows):
 
 
 @st.cache_data(ttl=3600, show_spinner=False)
-def load_data():
+def load_raw_rows():
     worksheet = connect_sheet()
-    rows = executar_operacao_planilha(
+    return executar_operacao_planilha(
         lambda: get_all_values_com_timeout(worksheet)
     )
-    return build_media_dataframe(rows)
+
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def load_data():
+    return build_media_dataframe(load_raw_rows())
 
 
 def invalidar_cache_midias():
     load_data.clear()
+    load_raw_rows.clear()
     st.session_state.pop("df_midias_processado", None)
+    st.session_state.pop("_media_col_map", None)
 
 
 def processar_dataframe_midias(df):
@@ -4739,7 +4783,9 @@ def carregar_dataframe_midias():
 
     try:
         with st.spinner("Carregando dados da planilha..."):
-            df_processado = processar_dataframe_midias(load_data())
+            rows = load_raw_rows()
+            atualizar_mapa_colunas_midias(rows)
+            df_processado = processar_dataframe_midias(build_media_dataframe(rows))
     except Exception as exc:
         st.error(f"❌ {mensagem_erro_carregamento_midias(exc)}")
         st.caption(f"Detalhe técnico: {exc}")
