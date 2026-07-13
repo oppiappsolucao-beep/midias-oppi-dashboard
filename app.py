@@ -108,6 +108,13 @@ SEMANA_OPTIONS = [
     "Quarta Semana",
     "Quinta Semana",
 ]
+SEMANA_SHEET_MAP = {
+    "Primeira Semana": "Primeira",
+    "Segunda Semana": "Segunda",
+    "Terceira Semana": "Terceira",
+    "Quarta Semana": "Quarta",
+    "Quinta Semana": "Quinta",
+}
 SERVICO_OPTIONS = [
     "Post único",
     "Carrossel",
@@ -127,7 +134,7 @@ STATUS_ARTE_SHEET_MAP = {
 STATUS_PAGAMENTO_FORM_OPTIONS = ["Pago", "A Pagar"]
 STATUS_PAGAMENTO_SHEET_MAP = {
     "Pago": "Pago",
-    "A Pagar": "A pagar",
+    "A Pagar": "A Pagar",
 }
 RECORRENCIA_OPTIONS = ["Não", "Sim"]
 DIAS_SEMANA_RECORRENCIA = [
@@ -155,7 +162,7 @@ DIA_SEMANA_FORM_NOME = {
     "Sex": "sexta-feira",
 }
 STATUS_ARTE_EDIT_OPTIONS = ["Pronto", "Em andamento", "Pausado", "Pendente"]
-APP_UI_VERSION = "2026-07-13-layout-planilha"
+APP_UI_VERSION = "2026-07-13-chips-planilha"
 MEDIA_COL_MAP_VERSION = 3
 
 if "traffic_form_reset_token" not in st.session_state:
@@ -2068,10 +2075,17 @@ def atualizar_valor_midia_cache(row_index, campo, valor):
 
 
 def gravar_linha_na_planilha(worksheet, col_map, proxima_linha, valores_por_campo):
-    linha = montar_linha_para_gravacao(col_map, valores_por_campo)
+    valores_normalizados = normalizar_valores_chip_planilha(valores_por_campo)
+    linha = montar_linha_para_gravacao(col_map, valores_normalizados)
     ultima_coluna = coluna_letra(len(linha))
     intervalo = f"A{proxima_linha}:{ultima_coluna}{proxima_linha}"
     worksheet.update(intervalo, [linha], value_input_option="USER_ENTERED")
+    aplicar_formato_chips_linha(
+        worksheet,
+        proxima_linha,
+        col_map,
+        valores_normalizados,
+    )
     return proxima_linha
 
 
@@ -2099,6 +2113,93 @@ def montar_linha_para_gravacao(col_map, valores_por_campo):
     return linha
 
 
+LINHA_MODELO_FORMATO_CHIPS = 2
+CAMPOS_COM_CHIP = (
+    "Empresa",
+    "Tipo de arte",
+    "Semana",
+    "Status da arte",
+    "Status Pagamento",
+)
+
+
+def semana_para_planilha(semana):
+    texto = str(semana).strip()
+    if texto in SEMANA_SHEET_MAP:
+        return SEMANA_SHEET_MAP[texto]
+    return texto.replace(" Semana", "").strip()
+
+
+def normalizar_valor_chip_planilha(campo, valor):
+    texto = str(valor).strip() if valor is not None else ""
+    if not texto:
+        return texto
+    if campo == "Semana":
+        return semana_para_planilha(texto)
+    if campo == "Status Pagamento" and texto.lower() == "a pagar":
+        return "A Pagar"
+    return valor
+
+
+def normalizar_valores_chip_planilha(valores_por_campo):
+    valores = dict(valores_por_campo)
+    for campo in CAMPOS_COM_CHIP:
+        if campo in valores:
+            valores[campo] = normalizar_valor_chip_planilha(campo, valores[campo])
+    return valores
+
+
+def aplicar_formato_chips_linha(worksheet, linha_planilha, col_map, valores_por_campo=None):
+    colunas = [col_map[campo] for campo in CAMPOS_COM_CHIP if col_map.get(campo)]
+    if not colunas:
+        return
+
+    modelo = LINHA_MODELO_FORMATO_CHIPS
+    if linha_planilha <= modelo:
+        return
+
+    sheet_id = worksheet.id
+    requests = []
+    for col_num in colunas:
+        col_idx = col_num - 1
+        for paste_type in ("PASTE_DATA_VALIDATION", "PASTE_FORMAT"):
+            requests.append(
+                {
+                    "copyPaste": {
+                        "source": {
+                            "sheetId": sheet_id,
+                            "startRowIndex": modelo - 1,
+                            "endRowIndex": modelo,
+                            "startColumnIndex": col_idx,
+                            "endColumnIndex": col_idx + 1,
+                        },
+                        "destination": {
+                            "sheetId": sheet_id,
+                            "startRowIndex": linha_planilha - 1,
+                            "endRowIndex": linha_planilha,
+                            "startColumnIndex": col_idx,
+                            "endColumnIndex": col_idx + 1,
+                        },
+                        "pasteType": paste_type,
+                        "pasteOrientation": "NORMAL",
+                    }
+                }
+            )
+
+    worksheet.spreadsheet.batch_update({"requests": requests})
+
+    if not valores_por_campo:
+        return
+
+    for campo in CAMPOS_COM_CHIP:
+        col_num = col_map.get(campo)
+        if not col_num or campo not in valores_por_campo:
+            continue
+        valor = normalizar_valor_chip_planilha(campo, valores_por_campo[campo])
+        if str(valor).strip():
+            worksheet.update_cell(linha_planilha, col_num, valor)
+
+
 def atualizar_celula_midia(row_index, campo, valor):
     col_map = get_media_column_map()
     col_num = col_map.get(campo)
@@ -2106,13 +2207,21 @@ def atualizar_celula_midia(row_index, campo, valor):
         raise ValueError(f"Coluna '{campo}' não encontrada na planilha.")
 
     sheet_row = row_index + 2
+    valor_gravar = normalizar_valor_chip_planilha(campo, valor)
 
     def gravar():
         worksheet = connect_media_worksheet()
-        worksheet.update_cell(sheet_row, col_num, valor)
+        worksheet.update_cell(sheet_row, col_num, valor_gravar)
+        if campo in CAMPOS_COM_CHIP:
+            aplicar_formato_chips_linha(
+                worksheet,
+                sheet_row,
+                col_map,
+                {campo: valor_gravar},
+            )
 
     executar_operacao_planilha(gravar)
-    atualizar_valor_midia_cache(row_index, campo, valor)
+    atualizar_valor_midia_cache(row_index, campo, valor_gravar)
 
 
 def salvar_atividade_planilha(row_index, tema, valor_txt, pagamento, status_arte):
@@ -2129,9 +2238,12 @@ def salvar_atividade_planilha(row_index, tema, valor_txt, pagamento, status_arte
         ("Valor", valor_parsed),
         (
             "Status Pagamento",
-            STATUS_PAGAMENTO_SHEET_MAP.get(pagamento, pagamento),
+            normalizar_valor_chip_planilha(
+                "Status Pagamento",
+                STATUS_PAGAMENTO_SHEET_MAP.get(pagamento, pagamento),
+            ),
         ),
-        ("Status da arte", status_arte),
+        ("Status da arte", normalizar_valor_chip_planilha("Status da arte", status_arte)),
     ]
 
     try:
@@ -2140,11 +2252,21 @@ def salvar_atividade_planilha(row_index, tema, valor_txt, pagamento, status_arte
         def gravar():
             worksheet = connect_media_worksheet()
             sheet_row = row_index + 2
+            valores_chip = {}
             for campo, valor_campo in campos_valores:
                 col_num = col_map.get(campo)
                 if not col_num:
                     raise ValueError(f"Coluna '{campo}' não encontrada na planilha.")
                 worksheet.update_cell(sheet_row, col_num, valor_campo)
+                if campo in CAMPOS_COM_CHIP:
+                    valores_chip[campo] = valor_campo
+            if valores_chip:
+                aplicar_formato_chips_linha(
+                    worksheet,
+                    sheet_row,
+                    col_map,
+                    valores_chip,
+                )
 
         executar_operacao_planilha(gravar)
         for campo, valor_campo in campos_valores:
